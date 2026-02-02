@@ -306,13 +306,13 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             
             .invoice {
               width: 210mm;
-              min-height: 297mm;
+              height: auto;
               padding: 20mm;
               margin: 0 auto;
-              page-break-after: always;
               /* Asegurar espacio para el footer fijo */
               padding-bottom: 50mm; 
-              display: block; /* Cambiar de flex a block para mejor comportamiento en impresión */
+              display: block;
+              position: relative;
             }
 
             @page {
