@@ -8,7 +8,6 @@ interface PageProps {
   params: { id: string }
 }
 
-// Formatea precio
 function formatPrecio(precio: number): string {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -16,7 +15,6 @@ function formatPrecio(precio: number): string {
   }).format(precio)
 }
 
-// Formatea fecha
 function formatFecha(fecha: string): string {
   return new Date(fecha).toLocaleDateString("es-ES", {
     day: "2-digit",
@@ -25,23 +23,15 @@ function formatFecha(fecha: string): string {
   })
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const supabase = await createClient()
-  const { data: factura } = await supabase
-    .from("facturas")
-    .select("numero")
-    .eq("id", params.id)
-    .single()
-
+export async function generateMetadata() {
   return {
-    title: `Factura ${factura?.numero || ""}`,
+    title: " ",
   }
 }
 
 export default async function FacturaPrintPage({ params }: PageProps) {
   const supabase = await createClient()
 
-  // Obtener factura con cliente y líneas
   const { data: factura, error } = await supabase
     .from("facturas")
     .select(`
@@ -56,7 +46,6 @@ export default async function FacturaPrintPage({ params }: PageProps) {
     notFound()
   }
 
-  // Obtener datos de la empresa
   const { data: empresa } = await supabase
     .from("empresa")
     .select("*")
@@ -71,24 +60,27 @@ export default async function FacturaPrintPage({ params }: PageProps) {
   const footerFixed = empresa?.footer_bottom_fixed ?? true
 
   return (
-    <>
+    <div className="print-container">
       <style dangerouslySetInnerHTML={{
         __html: `
         @page {
           size: A4;
-          margin: 0mm !important;
+          margin: 0 !important;
         }
 
         @media print {
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto;
-            background: white !important;
-          }
-          .print-button {
-            display: none !important;
-          }
+            @page {
+                margin: 0 !important;
+            }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .print-button-container {
+                display: none !important;
+            }
         }
 
         * {
@@ -97,18 +89,10 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           box-sizing: border-box;
         }
         
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          font-size: 12px;
-          color: #1e293b;
-          line-height: 1.5;
-          background: white;
-        }
-        
         .invoice {
           width: 210mm;
           min-height: 297mm;
-          padding: 20mm;
+          padding: 2.5cm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
@@ -119,8 +103,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
         .header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 40px;
+          margin-bottom: 1.5cm;
           padding-bottom: 20px;
           border-bottom: 2px solid #e2e8f0;
         }
@@ -132,203 +115,105 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           margin-bottom: 4px;
         }
         
-        .logo-section p {
-          color: #64748b;
-          font-size: 11px;
-        }
-        
-        .invoice-number {
-          text-align: right;
-        }
-        
-        .invoice-number h2 {
-          font-size: ${tituloFontSize}px;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 4px;
-        }
-        
-        .invoice-number p {
-          color: #64748b;
-          font-size: 12px;
-        }
+        .logo-section p { color: #64748b; font-size: 11px; }
+        .invoice-number { text-align: right; }
+        .invoice-number h2 { font-size: ${tituloFontSize}px; font-weight: 700; }
         
         .parties {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 40px;
+          margin-bottom: 1.5cm;
         }
         
-        .party {
-          width: 48%;
-        }
-        
-        .party-label {
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #64748b;
-          margin-bottom: 8px;
-          font-weight: 600;
-        }
-        
-        .party-name {
-          font-size: 14px;
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-        
-        .party-details {
-          color: #64748b;
-          font-size: 11px;
-        }
+        .party { width: 48%; }
+        .party-label { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 5px; }
+        .party-name { font-size: 14px; font-weight: 700; }
+        .party-details { color: #64748b; font-size: 11px; }
         
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 30px;
-        }
-        
-        thead {
-          background-color: #f8fafc;
+          margin-bottom: 1cm;
         }
         
         th {
-          padding: 12px;
+          padding: 10px;
           text-align: left;
-          font-weight: 600;
-          font-size: 10px;
+          font-size: 9px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
           color: #64748b;
           border-bottom: 2px solid #e2e8f0;
+          background: #f8fafc;
         }
         
-        th.right { text-align: right; }
-        th.center { text-align: center; }
-        td {
-          padding: 12px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: top;
-        }
-        td.right { text-align: right; font-variant-numeric: tabular-nums; }
-        td.center { text-align: center; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
+        .right { text-align: right; }
+        .center { text-align: center; }
         
-        .totals {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: 20px;
-        }
-        
-        .totals-table {
-          width: 250px;
-        }
-        
-        .totals-table .row {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        
-        .totals-table .row.total {
-          border-bottom: none;
-          border-top: 2px solid #e2e8f0;
-          margin-top: 4px;
-          padding-top: 12px;
-        }
-        
-        .totals-table .label { color: #64748b; }
-        .totals-table .value { font-weight: 600; }
-        .totals-table .row.total .value {
-          font-size: 18px;
-          color: ${color};
-        }
+        .totals { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .totals-table { width: 220px; }
+        .totals-table .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+        .totals-table .row.total { border-bottom: none; border-top: 2px solid #e2e8f0; margin-top: 5px; padding-top: 8px; }
+        .totals-table .value { font-weight: 700; }
+        .totals-table .row.total .value { font-size: 16px; color: ${color}; }
         
         .footer {
           ${footerFixed ? `
             position: absolute;
-            bottom: 20mm;
-            left: 20mm;
-            right: 20mm;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 10px;
-            text-align: center;
+            bottom: 2cm;
+            left: 2.5cm;
+            right: 2.5cm;
           ` : `
             margin-top: auto;
-            padding-top: 40px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
+            padding-top: 1cm;
           `}
+          text-align: center;
+          padding-top: 10px;
+          border-top: 1px solid #e2e8f0;
         }
         
-        .footer-bank-number {
-          font-size: ${bankFontSize}px;
-          font-weight: 600;
-          font-family: monospace;
-          margin-bottom: 8px;
-        }
-        
-        .footer-message {
-          color: #64748b;
-          font-size: 11px;
-          white-space: pre-wrap;
-        }
-
-        @media print {
-          tr { page-break-inside: avoid; }
-          .header, .parties, .totals { page-break-inside: avoid; }
-        }
+        .bank-info { font-size: ${bankFontSize}px; font-weight: 700; margin-bottom: 5px; font-family: monospace; }
+        .footer-msg { color: #64748b; font-size: 10px; }
       `}} />
 
       <div className="invoice">
-        {/* Header */}
         <div className="header">
           <div className="logo-section">
             {mostrarLogo && (
               <img
                 src={empresa?.logo_url || "/logo-pauleta.png"}
                 alt="Logo"
-                style={{ height: `${logoWidth}px`, marginBottom: '10px', objectFit: 'contain' }}
+                style={{ height: `${logoWidth}px`, marginBottom: '10px' }}
               />
             )}
-            <h1>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
+            <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
             <p>CIF: {empresa?.cif || "B70853163"}</p>
-            {empresa?.direccion && <p>{empresa.direccion}</p>}
-            {empresa?.ciudad && <p>{empresa.ciudad}, {empresa?.provincia}</p>}
           </div>
           <div className="invoice-number">
             <h2>{factura.numero}</h2>
-            <p>Fecha: {formatFecha(factura.fecha)}</p>
-            {factura.fecha_vencimiento && (
-              <p>Vencimiento: {formatFecha(factura.fecha_vencimiento)}</p>
-            )}
+            <p style={{ fontSize: '12px', color: '#64748b' }}>{formatFecha(factura.fecha)}</p>
           </div>
         </div>
 
-        {/* Parties */}
         <div className="parties">
           <div className="party">
             <div className="party-label">Facturar a:</div>
-            <div className="party-name">{factura.cliente?.nombre || "Cliente"}</div>
+            <div className="party-name">{factura.cliente?.nombre}</div>
             <div className="party-details">
-              {factura.cliente?.cif && <p>CIF: {factura.cliente.cif}</p>}
-              {factura.cliente?.direccion && <p>{factura.cliente.direccion}</p>}
-              {factura.cliente?.ciudad && (
-                <p>{factura.cliente.codigo_postal} {factura.cliente.ciudad}</p>
-              )}
+              <p>{factura.cliente?.cif}</p>
+              <p>{factura.cliente?.direccion}</p>
+              <p>{factura.cliente?.codigo_postal} {factura.cliente?.ciudad}</p>
             </div>
           </div>
         </div>
 
-        {/* Items Table */}
         <table>
           <thead>
             <tr>
-              <th style={{ width: "50%" }}>Descripción</th>
+              <th style={{ width: '50%' }}>Descripción</th>
               <th className="center">Cant.</th>
               <th className="right">Precio</th>
-              <th className="center">IGIC</th>
+              <th className="center">IVA</th>
               <th className="right">Total</th>
             </tr>
           </thead>
@@ -345,36 +230,34 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           </tbody>
         </table>
 
-        {/* Totals */}
         <div className="totals">
           <div className="totals-table">
             <div className="row">
-              <span className="label">Base</span>
+              <span>Base Imponible</span>
               <span className="value">{formatPrecio(factura.base_imponible)}</span>
             </div>
             <div className="row">
-              <span className="label">IGIC</span>
+              <span>IGIC (7%)</span>
               <span className="value">{formatPrecio(factura.igic)}</span>
             </div>
             <div className="row total">
-              <span className="label">Total</span>
+              <span>Total</span>
               <span className="value">{formatPrecio(factura.total)}</span>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="footer">
           {empresa?.cuenta_bancaria && (
-            <div className="footer-bank-number">{empresa.cuenta_bancaria}</div>
+            <div className="bank-info">{empresa.cuenta_bancaria}</div>
           )}
-          <div className="footer-message">{textoPie}</div>
+          <div className="footer-msg">{textoPie}</div>
         </div>
       </div>
 
-      <div className="print-button print:hidden">
+      <div className="print-button-container print:hidden">
         <PrintButton color={color} />
       </div>
-    </>
+    </div>
   )
 }
