@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { FacturaForm } from "@/components/facturas/FacturaForm"
+import { SendEmailButton } from "@/components/facturas/SendEmailButton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -143,6 +144,10 @@ export default async function FacturaDetailPage({
                             Imprimir PDF
                         </Link>
                     </Button>
+                    <SendEmailButton
+                        facturaId={params.id}
+                        clienteEmail={factura.cliente?.email}
+                    />
                     {factura.estado === "borrador" && (
                         <>
                             <Button variant="outline" asChild>
