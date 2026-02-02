@@ -29,6 +29,7 @@ const empresaSchema = z.object({
     telefono: z.string().optional(),
     email: z.string().email("Email inválido").optional().or(z.literal("")),
     cuenta_bancaria: z.string().optional(),
+    logo_url: z.string().optional(),
     serie_factura: z.string().min(1, "La serie es obligatoria"),
 })
 
@@ -52,6 +53,7 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
             telefono: initialData?.telefono || "",
             email: initialData?.email || "",
             cuenta_bancaria: initialData?.cuenta_bancaria || "",
+            logo_url: initialData?.logo_url || "",
             serie_factura: initialData?.serie_factura || "F",
         },
     })
@@ -179,6 +181,23 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
                                     <FormControl>
                                         <Input placeholder="Calle, Número, Ciudad, Provincia" {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="logo_url"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>URL del Logo</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://..." {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                        URL de tu logo (aparecerá en facturas y emails)
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
