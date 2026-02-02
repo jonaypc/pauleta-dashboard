@@ -1,38 +1,45 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy initialization to prevent build errors when API key is not set
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY no está configurada')
+  }
+  return new Resend(apiKey)
+}
 
 interface SendInvoiceEmailParams {
-    to: string
-    facturaNumero: string
-    clienteNombre: string
-    total: number
-    fecha: string
-    empresaNombre: string
-    printUrl: string
+  to: string
+  facturaNumero: string
+  clienteNombre: string
+  total: number
+  fecha: string
+  empresaNombre: string
+  printUrl: string
 }
 
 export async function sendInvoiceEmail({
-    to,
-    facturaNumero,
-    clienteNombre,
-    total,
-    fecha,
-    empresaNombre,
-    printUrl,
+  to,
+  facturaNumero,
+  clienteNombre,
+  total,
+  fecha,
+  empresaNombre,
+  printUrl,
 }: SendInvoiceEmailParams) {
-    const formattedTotal = new Intl.NumberFormat("es-ES", {
-        style: "currency",
-        currency: "EUR",
-    }).format(total)
+  const formattedTotal = new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  }).format(total)
 
-    const formattedFecha = new Date(fecha).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    })
+  const formattedFecha = new Date(fecha).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -124,16 +131,17 @@ export async function sendInvoiceEmail({
 </html>
   `
 
-    const { data, error } = await resend.emails.send({
-        from: `${empresaNombre} <noreply@resend.dev>`,
-        to: [to],
-        subject: `Factura ${facturaNumero} - ${empresaNombre}`,
-        html,
-    })
+  const resend = getResendClient()
+  const { data, error } = await resend.emails.send({
+    from: `${empresaNombre} <noreply@resend.dev>`,
+    to: [to],
+    subject: `Factura ${facturaNumero} - ${empresaNombre}`,
+    html,
+  })
 
-    if (error) {
-        throw error
-    }
+  if (error) {
+    throw error
+  }
 
-    return data
+  return data
 }
