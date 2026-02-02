@@ -281,17 +281,51 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           }
           
           @media print {
-            .print-button {
-              display: none;
-            }
-            
             body {
               print-color-adjust: exact;
               -webkit-print-color-adjust: exact;
+              margin: 0;
+              background: white;
             }
             
             .albaran {
-              padding: 20px;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 20mm;
+              margin: 0 auto;
+              display: flex;
+              flex-direction: column;
+              background: white;
+              position: relative;
+              box-sizing: border-box;
+            }
+
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            
+            .print-button {
+              display: none !important;
+            }
+
+            .footer {
+              position: absolute;
+              bottom: 20mm;
+              left: 20mm;
+              right: 20mm;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 10px;
+              text-align: center;
+              background: white;
+            }
+
+            tr {
+              page-break-inside: avoid;
+            }
+            
+            .header, .parties, .totals, .signature-section {
+              page-break-inside: avoid;
             }
           }
         `}} />
