@@ -19,7 +19,9 @@ function formatFecha(fecha: string): string {
 
 export async function generateMetadata() {
   return {
-    title: " ", // Título casi vacío para intentar ocultarlo en el pie de impresión
+    title: {
+      absolute: " "
+    }
   }
 }
 
