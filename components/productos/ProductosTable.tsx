@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import Link from "next/link"
 import { MoreHorizontal, Eye, Pencil, Power } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,8 +15,6 @@ import type { Producto } from "@/types"
 
 interface ProductosTableProps {
     productos: Producto[]
-    onView?: (producto: Producto) => void
-    onEdit?: (producto: Producto) => void
     onToggleActive?: (producto: Producto) => void
 }
 
@@ -40,8 +38,6 @@ function formatUnidad(unidad: string): string {
 
 export function ProductosTable({
     productos,
-    onView,
-    onEdit,
     onToggleActive,
 }: ProductosTableProps) {
     return (
@@ -125,19 +121,17 @@ export function ProductosTable({
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-40">
-                                            <DropdownMenuItem
-                                                onClick={() => onView?.(producto)}
-                                                className="cursor-pointer"
-                                            >
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                Ver
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/productos/${producto.id}`}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    Ver
+                                                </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => onEdit?.(producto)}
-                                                className="cursor-pointer"
-                                            >
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                Editar
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/productos/${producto.id}?editar=true`}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </Link>
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
