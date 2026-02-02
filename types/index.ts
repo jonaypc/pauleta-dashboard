@@ -30,6 +30,9 @@ export interface Empresa {
   serie_factura: string
   ultimo_num_factura: number
   igic_default: number
+  color_primario?: string
+  texto_pie?: string
+  mostrar_logo?: boolean
   created_at: string
   updated_at?: string
 }
