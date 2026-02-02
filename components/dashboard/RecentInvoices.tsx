@@ -6,10 +6,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, FileText } from "lucide-react"
-import type { Factura, EstadoFactura } from "@/types"
+
+interface FacturaResumen {
+  id: string
+  numero: string
+  fecha: string
+  total: number
+  estado: string
+  cliente: { nombre: string } | null
+}
 
 interface RecentInvoicesProps {
-  facturas: (Factura & { cliente: { nombre: string } })[]
+  facturas: FacturaResumen[]
 }
 
 export function RecentInvoices({ facturas }: RecentInvoicesProps) {
@@ -76,8 +84,11 @@ export function RecentInvoices({ facturas }: RecentInvoicesProps) {
                     {formatDate(factura.fecha)}
                   </p>
                 </div>
-                <Badge variant={factura.estado as EstadoFactura} dot>
-                  {estadoFacturaLabels[factura.estado]}
+                <Badge
+                  variant={factura.estado as "borrador" | "emitida" | "cobrada" | "anulada"}
+                  dot
+                >
+                  {estadoFacturaLabels[factura.estado as keyof typeof estadoFacturaLabels] || factura.estado}
                 </Badge>
               </div>
             </Link>
