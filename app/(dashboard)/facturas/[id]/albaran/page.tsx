@@ -331,11 +331,14 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         `}} />
       </head>
       <body>
+        <div style={{ background: 'yellow', padding: '10px', textAlign: 'center', fontWeight: 'bold', fontSize: '20px' }} className="print:hidden">
+          DEBUG: VERSION CON PRECIOS OCULTOS - SI VES ESTO, ESTAS EN EL ARCHIVO CORRECTO
+        </div>
         <div className="albaran">
           {/* Header */}
-          <div className="header">
+          <div className="header" style={{ borderBottomColor: '#8b5cf6' }}>
             <div className="logo-section">
-              <h1>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
+              <h1 style={{ color: '#8b5cf6' }}>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
               <p>CIF: {empresa?.cif || "B70853163"}</p>
               {empresa?.direccion && <p>{empresa.direccion}</p>}
               {empresa?.ciudad && <p>{empresa.ciudad}, {empresa?.provincia}</p>}
