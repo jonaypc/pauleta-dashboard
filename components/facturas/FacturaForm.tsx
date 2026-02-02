@@ -203,9 +203,9 @@ export function FacturaForm({
 
             router.push("/facturas")
             router.refresh()
-        } catch (error: unknown) {
-            const errorMessage =
-                error instanceof Error ? error.message : "Error desconocido"
+        } catch (error: any) {
+            console.error("Error creating/updating invoice:", error)
+            const errorMessage = error?.message || error?.error_description || "Error desconocido"
             toast({
                 title: "Error",
                 description: errorMessage,
