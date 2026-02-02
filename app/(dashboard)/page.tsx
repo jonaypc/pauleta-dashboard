@@ -66,10 +66,24 @@ async function getDashboardData() {
     .order('created_at', { ascending: false })
     .limit(5)
 
-  const facturasFormateadas = ultimasFacturas?.map(f => ({
-    ...f,
-    cliente: Array.isArray(f.clientes) ? f.clientes[0] : f.clientes
-  })) || []
+  const facturasFormateadas = ultimasFacturas?.map(f => {
+    const clientesData = f.clientes as unknown
+    let clienteNombre = 'Sin nombre'
+    if (Array.isArray(clientesData) && clientesData[0]?.nombre) {
+      clienteNombre = clientesData[0].nombre
+    } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
+      clienteNombre = (clientesData as { nombre: string }).nombre
+    }
+    return {
+      id: f.id,
+      numero: f.numero,
+      fecha: f.fecha,
+      total: f.total,
+      estado: f.estado,
+      cliente_id: f.cliente_id,
+      cliente: { nombre: clienteNombre }
+    }
+  }) || []
 
   const { data: pagosFijos } = await supabase
     .from('pagos_fijos')
@@ -90,11 +104,17 @@ async function getDashboardData() {
 
   facturasClientes?.forEach(factura => {
     if (!factura.cliente_id) return
-    const clienteData = factura.clientes as { nombre: string } | null
+    const clientesData = factura.clientes as unknown
+    let clienteNombre = 'Sin nombre'
+    if (Array.isArray(clientesData) && clientesData[0]?.nombre) {
+      clienteNombre = clientesData[0].nombre
+    } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
+      clienteNombre = (clientesData as { nombre: string }).nombre
+    }
     if (!clienteStats[factura.cliente_id]) {
       clienteStats[factura.cliente_id] = {
         cliente_id: factura.cliente_id,
-        nombre: clienteData?.nombre || 'Sin nombre',
+        nombre: clienteNombre,
         total_facturado: 0,
         num_facturas: 0,
       }
