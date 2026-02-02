@@ -301,25 +301,53 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               print-color-adjust: exact;
               -webkit-print-color-adjust: exact;
               margin: 0;
-            }
-            .invoice {
-              padding: 20px 40px;
-              max-width: 100%;
-              min-height: auto;
-            }
-            @page {
-              margin: 0;
-              size: auto; 
+              background: white;
             }
             
+            .invoice {
+              width: 210mm;
+              min-height: 297mm;
+              padding: 20mm;
+              margin: 0 auto;
+              page-break-after: always;
+              /* Asegurar espacio para el footer fijo */
+              padding-bottom: 50mm; 
+              display: block; /* Cambiar de flex a block para mejor comportamiento en impresión */
+            }
+
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            
+            /* Ocultar elementos de UI */
+            .print-button {
+              display: none !important;
+            }
+
             .footer {
                ${footerFixed ? `
                  position: fixed;
-                 bottom: 15mm;
+                 bottom: 10mm;
                  left: 20mm;
                  right: 20mm;
-                 width: auto;
-               ` : ''}
+                 width: 170mm; /* 210mm - 20mm left - 20mm right */
+                 border-top: 1px solid #e2e8f0;
+                 padding-top: 10px;
+                 background: white;
+               ` : `
+                 margin-top: auto;
+                 padding-top: 20px;
+               `}
+            }
+
+            /* Evitar cortes feos en tablas y bloques */
+            tr {
+              page-break-inside: avoid;
+            }
+            
+            .header, .parties, .totals {
+              page-break-inside: avoid;
             }
           }
         `}} />
