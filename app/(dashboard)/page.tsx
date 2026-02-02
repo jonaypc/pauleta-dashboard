@@ -41,6 +41,14 @@ async function getDashboardData() {
 
   const cobrosPendientes = facturasPendientes?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
 
+  // Cobros realizados este mes
+  const { data: cobrosMesData } = await supabase
+    .from('cobros')
+    .select('importe')
+    .gte('fecha', primerDiaMes)
+
+  const cobrosMes = cobrosMesData?.reduce((sum, c) => sum + (c.importe || 0), 0) || 0
+
   const { count: facturasEmitidas } = await supabase
     .from('facturas')
     .select('*', { count: 'exact', head: true })
@@ -131,6 +139,7 @@ async function getDashboardData() {
     facturacionMes,
     facturacionMesAnterior,
     cobrosPendientes,
+    cobrosMes,
     facturasEmitidas: facturasEmitidas || 0,
     totalClientes: totalClientes || 0,
     ultimasFacturas: facturasFormateadas,
@@ -165,6 +174,7 @@ export default async function DashboardPage() {
         facturacionMes={data.facturacionMes}
         facturacionMesAnterior={data.facturacionMesAnterior}
         cobrosPendientes={data.cobrosPendientes}
+        cobrosMes={data.cobrosMes}
         facturasEmitidas={data.facturasEmitidas}
         totalClientes={data.totalClientes}
       />
