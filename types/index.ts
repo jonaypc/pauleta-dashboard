@@ -35,6 +35,8 @@ export interface Empresa {
   mostrar_logo?: boolean
   logo_width?: number
   titulo_font_size?: number
+  bank_font_size?: number
+  footer_bottom_fixed?: boolean
   created_at: string
   updated_at?: string
 }

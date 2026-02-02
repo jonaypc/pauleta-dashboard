@@ -39,6 +39,8 @@ const empresaSchema = z.object({
     mostrar_logo: z.boolean().optional(),
     logo_width: z.number().optional(),
     titulo_font_size: z.number().optional(),
+    bank_font_size: z.number().optional(),
+    footer_bottom_fixed: z.boolean().optional(),
 })
 
 type EmpresaFormValues = z.infer<typeof empresaSchema>
@@ -68,6 +70,8 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
             mostrar_logo: initialData?.mostrar_logo ?? true,
             logo_width: initialData?.logo_width || 60,
             titulo_font_size: initialData?.titulo_font_size || 24,
+            bank_font_size: initialData?.bank_font_size || 14,
+            footer_bottom_fixed: initialData?.footer_bottom_fixed ?? true,
         },
     })
 
