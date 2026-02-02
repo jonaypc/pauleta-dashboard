@@ -28,3 +28,9 @@ ts-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Data
+*.xls
+*.xlsx
+~$*
+

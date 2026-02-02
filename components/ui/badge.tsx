@@ -34,6 +34,9 @@ const badgeVariants = cva(
           "bg-purple-100 text-purple-700 border border-purple-200",
         tarjeta:
           "bg-cyan-100 text-cyan-700 border border-cyan-200",
+        // General
+        success:
+          "bg-green-100 text-green-700 border border-green-200",
       },
     },
     defaultVariants: {
@@ -44,7 +47,7 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {
+  VariantProps<typeof badgeVariants> {
   dot?: boolean
 }
 
