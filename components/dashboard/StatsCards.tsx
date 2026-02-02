@@ -1,12 +1,13 @@
 "use client"
 
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Euro, 
-  FileText, 
-  Clock, 
-  Users 
+import {
+  TrendingUp,
+  TrendingDown,
+  Euro,
+  FileText,
+  Clock,
+  Users,
+  CreditCard
 } from "lucide-react"
 import { cn, formatCurrency, calculatePercentageChange } from "@/lib/utils"
 
@@ -53,7 +54,7 @@ function StatCard({ title, value, description, icon, trend, color = "blue" }: St
           </div>
         </div>
       </div>
-      
+
       {trend && (
         <div className="mt-4 flex items-center gap-1.5">
           {trend.value >= 0 ? (
@@ -81,6 +82,7 @@ interface StatsCardsProps {
   facturacionMes: number
   facturacionMesAnterior: number
   cobrosPendientes: number
+  cobrosMes: number
   facturasEmitidas: number
   totalClientes: number
 }
@@ -89,6 +91,7 @@ export function StatsCards({
   facturacionMes,
   facturacionMesAnterior,
   cobrosPendientes,
+  cobrosMes,
   facturasEmitidas,
   totalClientes,
 }: StatsCardsProps) {
@@ -105,6 +108,13 @@ export function StatsCards({
           value: porcentajeCambio,
           label: "vs mes anterior",
         }}
+      />
+      <StatCard
+        title="Cobros del mes"
+        value={formatCurrency(cobrosMes)}
+        description="Dinero recibido este mes"
+        icon={<CreditCard className="h-5 w-5" />}
+        color="green"
       />
       <StatCard
         title="Pendiente de cobro"
