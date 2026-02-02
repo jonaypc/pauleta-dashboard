@@ -140,7 +140,7 @@ export default async function FacturaDetailPage({
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" asChild>
-                        <Link href={`/facturas/${params.id}/print`} target="_blank">
+                        <Link href={`/print/facturas/${params.id}`} target="_blank">
                             <Printer className="mr-2 h-4 w-4" />
                             Imprimir PDF
                         </Link>

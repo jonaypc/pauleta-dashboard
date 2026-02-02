@@ -42,7 +42,7 @@ export async function POST(
 
         // Construir URL de la factura
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-        const printUrl = `${baseUrl}/facturas/${params.id}/print`
+        const printUrl = `${baseUrl}/print/facturas/${params.id}`
 
         // Enviar email
         await sendInvoiceEmail({
