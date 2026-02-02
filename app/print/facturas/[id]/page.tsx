@@ -25,7 +25,9 @@ function formatFecha(fecha: string): string {
 
 export async function generateMetadata() {
   return {
-    title: " ",
+    title: {
+      absolute: " "
+    }
   }
 }
 
