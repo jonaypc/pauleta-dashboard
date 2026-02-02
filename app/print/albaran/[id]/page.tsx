@@ -20,7 +20,7 @@ function formatFecha(fecha: string): string {
 export async function generateMetadata() {
   return {
     title: {
-      absolute: " "
+      absolute: " " // Espacio para Safari
     }
   }
 }
@@ -66,6 +66,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                     html, body {
                         margin: 0 !important;
                         padding: 0 !important;
+                        height: 100% !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
@@ -108,6 +109,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 .logo-section p {
                     color: #64748b;
                     font-size: 11px;
+                    margin-bottom: 2px;
                 }
 
                 .albaran-number {
@@ -204,6 +206,8 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
             <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
             <p>CIF: {empresa?.cif || "B70853163"}</p>
             {empresa?.direccion && <p>{empresa.direccion}</p>}
+            {empresa?.telefono && <p>Tel: {empresa.telefono}</p>}
+            {empresa?.email && <p>Email: {empresa.email}</p>}
           </div>
           <div className="albaran-number">
             <div className="label">Albarán de entrega</div>

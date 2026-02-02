@@ -26,7 +26,7 @@ function formatFecha(fecha: string): string {
 export async function generateMetadata() {
   return {
     title: {
-      absolute: " "
+      absolute: " " // Espacio para intentar engañar a Safari
     }
   }
 }
@@ -77,6 +77,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             html, body {
                 margin: 0 !important;
                 padding: 0 !important;
+                height: 100% !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -117,7 +118,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           margin-bottom: 4px;
         }
         
-        .logo-section p { color: #64748b; font-size: 11px; }
+        .logo-section p { color: #64748b; font-size: 11px; margin-bottom: 2px; }
         .invoice-number { text-align: right; }
         .invoice-number h2 { font-size: ${tituloFontSize}px; font-weight: 700; }
         
@@ -190,6 +191,9 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             )}
             <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
             <p>CIF: {empresa?.cif || "B70853163"}</p>
+            {empresa?.direccion && <p>{empresa.direccion}</p>}
+            {empresa?.telefono && <p>Tel: {empresa.telefono}</p>}
+            {empresa?.email && <p>Email: {empresa.email}</p>}
           </div>
           <div className="invoice-number">
             <h2>{factura.numero}</h2>
