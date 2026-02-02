@@ -33,6 +33,8 @@ export interface Empresa {
   color_primario?: string
   texto_pie?: string
   mostrar_logo?: boolean
+  logo_width?: number
+  titulo_font_size?: number
   created_at: string
   updated_at?: string
 }

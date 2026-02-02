@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Slider } from "@/components/ui/slider"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -36,6 +37,8 @@ const empresaSchema = z.object({
     color_primario: z.string().optional(),
     texto_pie: z.string().optional(),
     mostrar_logo: z.boolean().optional(),
+    logo_width: z.number().optional(),
+    titulo_font_size: z.number().optional(),
 })
 
 type EmpresaFormValues = z.infer<typeof empresaSchema>
@@ -63,6 +66,8 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
             color_primario: initialData?.color_primario || "#2563EB",
             texto_pie: initialData?.texto_pie || "",
             mostrar_logo: initialData?.mostrar_logo ?? true,
+            logo_width: initialData?.logo_width || 60,
+            titulo_font_size: initialData?.titulo_font_size || 24,
         },
     })
 
@@ -330,6 +335,48 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
                                 </FormItem>
                             )}
                         />
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                                control={form.control}
+                                name="logo_width"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tamaño Logo: {field.value}px</FormLabel>
+                                        <FormControl>
+                                            <Slider
+                                                min={30}
+                                                max={200}
+                                                step={5}
+                                                defaultValue={[field.value || 60]}
+                                                onValueChange={(vals) => field.onChange(vals[0])}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="titulo_font_size"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tamaño Título: {field.value}px</FormLabel>
+                                        <FormControl>
+                                            <Slider
+                                                min={12}
+                                                max={48}
+                                                step={2}
+                                                defaultValue={[field.value || 24]}
+                                                onValueChange={(vals) => field.onChange(vals[0])}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 
