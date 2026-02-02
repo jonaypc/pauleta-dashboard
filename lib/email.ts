@@ -133,8 +133,9 @@ export async function sendInvoiceEmail({
 
   const resend = getResendClient()
   const { data, error } = await resend.emails.send({
-    from: `${empresaNombre} <noreply@resend.dev>`,
+    from: `${empresaNombre} <facturas@pauletacanaria.es>`,
     to: [to],
+    reply_to: 'contacto@pauletacanaria.es',
     subject: `Factura ${facturaNumero} - ${empresaNombre}`,
     html,
   })
