@@ -44,7 +44,7 @@ export function PagosFijosTable({ pagos, onEdit }: PagosFijosTableProps) {
             toast({
                 title: "Pago fijo eliminado",
                 description: "El pago fijo se ha eliminado correctamente",
-                variant: "success",
+                className: "bg-green-600 text-white", // Manual styling instead of variant="success"
             })
             router.refresh()
         } catch (error) {
@@ -100,7 +100,8 @@ export function PagosFijosTable({ pagos, onEdit }: PagosFijosTableProps) {
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <Badge
-                                        variant={pago.activo ? "success" : "secondary"}
+                                        // Changed from "success" to "cobrada" to match existing variants
+                                        variant={pago.activo ? "cobrada" : "secondary"}
                                         className={
                                             pago.activo
                                                 ? "bg-green-100 text-green-700 hover:bg-green-200"
