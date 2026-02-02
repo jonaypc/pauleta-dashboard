@@ -11,7 +11,7 @@ export const revalidate = 60
 
 async function getDashboardData() {
   const supabase = await createClient()
-  
+
   const now = new Date()
   const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
@@ -68,7 +68,7 @@ async function getDashboardData() {
 
   const facturasFormateadas = ultimasFacturas?.map(f => ({
     ...f,
-    cliente: f.clientes as { nombre: string } | null
+    cliente: Array.isArray(f.clientes) ? f.clientes[0] : f.clientes
   })) || []
 
   const { data: pagosFijos } = await supabase
@@ -87,7 +87,7 @@ async function getDashboardData() {
     .neq('estado', 'anulada')
 
   const clienteStats: Record<string, { cliente_id: string; nombre: string; total_facturado: number; num_facturas: number }> = {}
-  
+
   facturasClientes?.forEach(factura => {
     if (!factura.cliente_id) return
     const clienteData = factura.clientes as { nombre: string } | null
