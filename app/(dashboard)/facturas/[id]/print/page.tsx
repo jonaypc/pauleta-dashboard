@@ -63,6 +63,8 @@ export default async function FacturaPrintPage({ params }: PageProps) {
   const color = empresa?.color_primario || "#2563EB"
   const mostrarLogo = empresa?.mostrar_logo ?? true
   const textoPie = empresa?.texto_pie || `Gracias por confiar en ${empresa?.nombre || "Pauleta Canaria"}.`
+  const logoWidth = empresa?.logo_width || 60
+  const tituloFontSize = empresa?.titulo_font_size || 28
 
   return (
     <html>
@@ -89,6 +91,9 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             max-width: 800px;
             margin: 0 auto;
             padding: 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
           }
           
           .header {
@@ -117,7 +122,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           }
           
           .invoice-number h2 {
-            font-size: 28px;
+            font-size: ${tituloFontSize}px;
             font-weight: 700;
             color: #1e293b;
             margin-bottom: 4px;
@@ -250,10 +255,11 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           }
           
           .footer {
-            margin-top: 60px;
-            padding-top: 20px;
+            margin-top: auto;
+            padding-top: 40px;
             border-top: 1px solid #e2e8f0;
             text-align: center;
+            page-break-inside: avoid;
           }
           
           .footer-bank {
@@ -285,9 +291,16 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             body {
               print-color-adjust: exact;
               -webkit-print-color-adjust: exact;
+              margin: 0;
             }
             .invoice {
-              padding: 20px;
+              padding: 20px 40px;
+              max-width: 100%;
+              min-height: auto;
+            }
+            @page {
+              margin: 10mm;
+              size: auto; 
             }
           }
         `}} />
@@ -303,13 +316,13 @@ export default async function FacturaPrintPage({ params }: PageProps) {
                     <img
                       src={empresa.logo_url}
                       alt="Logo"
-                      style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
+                      style={{ height: `${logoWidth}px`, marginBottom: '10px', objectFit: 'contain' }}
                     />
                   ) : (
                     <img
                       src="/logo-pauleta.png"
                       alt="Logo Pauleta"
-                      style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
+                      style={{ height: `${logoWidth}px`, marginBottom: '10px', objectFit: 'contain' }}
                       onError={(e: any) => {
                         // Fallback si no existe la imagen
                         e.target.style.display = 'none';
