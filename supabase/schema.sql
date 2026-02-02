@@ -228,14 +228,15 @@ CREATE TRIGGER update_pagos_fijos_updated_at
 CREATE OR REPLACE FUNCTION generar_numero_factura()
 RETURNS TEXT AS $$
 DECLARE
+    v_empresa_id UUID;
     v_serie VARCHAR(10);
     v_numero INTEGER;
     v_year VARCHAR(2);
     v_factura_numero TEXT;
 BEGIN
     -- Obtener configuración de empresa
-    SELECT serie_factura, ultimo_num_factura + 1
-    INTO v_serie, v_numero
+    SELECT id, serie_factura, ultimo_num_factura + 1
+    INTO v_empresa_id, v_serie, v_numero
     FROM empresa
     LIMIT 1;
     
@@ -252,7 +253,9 @@ BEGIN
     v_factura_numero := v_serie || v_year || LPAD(v_numero::TEXT, 4, '0');
     
     -- Actualizar contador en empresa
-    UPDATE empresa SET ultimo_num_factura = v_numero;
+    IF v_empresa_id IS NOT NULL THEN
+        UPDATE empresa SET ultimo_num_factura = v_numero WHERE id = v_empresa_id;
+    END IF;
     
     RETURN v_factura_numero;
 END;
