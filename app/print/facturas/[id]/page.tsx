@@ -307,13 +307,14 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             
             .invoice {
               width: 210mm;
-              height: auto;
+              min-height: 297mm;
               padding: 20mm;
               margin: 0 auto;
-              /* Asegurar espacio para el footer fijo */
-              padding-bottom: 50mm; 
-              display: block;
+              display: flex;
+              flex-direction: column;
+              background: white;
               position: relative;
+              box-sizing: border-box;
             }
 
             @page {
@@ -328,14 +329,13 @@ export default async function FacturaPrintPage({ params }: PageProps) {
 
             .footer {
                ${footerFixed ? `
-                 position: fixed;
-                 bottom: 10mm;
+                 position: absolute;
+                 bottom: 20mm;
                  left: 20mm;
                  right: 20mm;
-                 width: 170mm; /* 210mm - 20mm left - 20mm right */
                  border-top: 1px solid #e2e8f0;
                  padding-top: 10px;
-                 background: white;
+                 text-align: center;
                ` : `
                  margin-top: auto;
                  padding-top: 20px;
