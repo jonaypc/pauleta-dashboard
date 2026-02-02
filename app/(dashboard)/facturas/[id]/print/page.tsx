@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { PrintButton } from "@/components/facturas/PrintButton"
 
 interface PageProps {
   params: { id: string }
@@ -59,6 +60,10 @@ export default async function FacturaPrintPage({ params }: PageProps) {
     .select("*")
     .single()
 
+  const color = empresa?.color_primario || "#2563EB"
+  const mostrarLogo = empresa?.mostrar_logo ?? true
+  const textoPie = empresa?.texto_pie || `Gracias por confiar en ${empresa?.nombre || "Pauleta Canaria"}.`
+
   return (
     <html>
       <head>
@@ -98,7 +103,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           .logo-section h1 {
             font-size: 24px;
             font-weight: 700;
-            color: #2563eb;
+            color: ${color};
             margin-bottom: 4px;
           }
           
@@ -241,7 +246,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           
           .totals-table .row.total .value {
             font-size: 18px;
-            color: #2563eb;
+            color: ${color};
           }
           
           .footer {
@@ -273,37 +278,14 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           .footer-message {
             color: #64748b;
             font-size: 11px;
+            white-space: pre-wrap;
           }
-          
-          .print-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-          }
-          
-          .print-button:hover {
-            background: #1d4ed8;
-          }
-          
+
           @media print {
-            .print-button {
-              display: none;
-            }
-            
             body {
               print-color-adjust: exact;
               -webkit-print-color-adjust: exact;
             }
-            
             .invoice {
               padding: 20px;
             }
@@ -315,22 +297,26 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           {/* Header */}
           <div className="header">
             <div className="logo-section">
-              {empresa?.logo_url ? (
-                <img
-                  src={empresa.logo_url}
-                  alt="Logo"
-                  style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
-                />
-              ) : (
-                <img
-                  src="/logo-pauleta.png"
-                  alt="Logo Pauleta"
-                  style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
-                  onError={(e) => {
-                    // Fallback si no existe la imagen
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+              {mostrarLogo && (
+                <>
+                  {empresa?.logo_url ? (
+                    <img
+                      src={empresa.logo_url}
+                      alt="Logo"
+                      style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <img
+                      src="/logo-pauleta.png"
+                      alt="Logo Pauleta"
+                      style={{ height: '60px', marginBottom: '10px', objectFit: 'contain' }}
+                      onError={(e: any) => {
+                        // Fallback si no existe la imagen
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  )}
+                </>
               )}
               <h1>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
               <p>CIF: {empresa?.cif || "B70853163"}</p>
@@ -422,21 +408,12 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               </div>
             )}
             <div className="footer-message">
-              Gracias por confiar en {empresa?.nombre || "Pauleta Canaria"}.
+              {textoPie}
             </div>
           </div>
         </div>
 
-        {/* Print Button */}
-        <button className="print-button" id="print-btn">
-          Imprimir / Guardar PDF
-        </button>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-                    document.getElementById('print-btn').addEventListener('click', function() {
-                        window.print();
-                    });
-                `}} />
+        <PrintButton color={color} />
       </body>
     </html>
   )
