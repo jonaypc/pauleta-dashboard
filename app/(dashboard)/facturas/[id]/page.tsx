@@ -17,6 +17,7 @@ import {
     CheckCircle,
     XCircle,
     Printer,
+    Truck,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import type { EstadoFactura } from "@/types"
@@ -148,6 +149,12 @@ export default async function FacturaDetailPage({
                         facturaId={params.id}
                         clienteEmail={factura.cliente?.email}
                     />
+                    <Button variant="outline" asChild>
+                        <Link href={`/facturas/${params.id}/albaran`} target="_blank">
+                            <Truck className="mr-2 h-4 w-4" />
+                            Albarán
+                        </Link>
+                    </Button>
                     {factura.estado === "borrador" && (
                         <>
                             <Button variant="outline" asChild>
