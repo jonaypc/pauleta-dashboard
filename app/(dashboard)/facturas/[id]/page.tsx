@@ -15,6 +15,7 @@ import {
     Send,
     CheckCircle,
     XCircle,
+    Printer,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import type { EstadoFactura } from "@/types"
@@ -136,6 +137,12 @@ export default async function FacturaDetailPage({
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href={`/facturas/${params.id}/print`} target="_blank">
+                            <Printer className="mr-2 h-4 w-4" />
+                            Imprimir PDF
+                        </Link>
+                    </Button>
                     {factura.estado === "borrador" && (
                         <>
                             <Button variant="outline" asChild>
