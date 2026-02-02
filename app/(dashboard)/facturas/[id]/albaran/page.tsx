@@ -2,73 +2,73 @@ import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 
 interface PageProps {
-    params: { id: string }
+  params: { id: string }
 }
 
 // Formatea precio
 function formatPrecio(precio: number): string {
-    return new Intl.NumberFormat("es-ES", {
-        style: "currency",
-        currency: "EUR",
-    }).format(precio)
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  }).format(precio)
 }
 
 // Formatea fecha
 function formatFecha(fecha: string): string {
-    return new Date(fecha).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    })
+  return new Date(fecha).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
 }
 
 export async function generateMetadata({ params }: PageProps) {
-    const supabase = await createClient()
-    const { data: factura } = await supabase
-        .from("facturas")
-        .select("numero")
-        .eq("id", params.id)
-        .single()
+  const supabase = await createClient()
+  const { data: factura } = await supabase
+    .from("facturas")
+    .select("numero")
+    .eq("id", params.id)
+    .single()
 
-    return {
-        title: `Albarán ${factura?.numero || ""}`,
-    }
+  return {
+    title: `Albarán ${factura?.numero || ""}`,
+  }
 }
 
 export default async function AlbaranPrintPage({ params }: PageProps) {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    // Obtener factura con cliente y líneas
-    const { data: factura, error } = await supabase
-        .from("facturas")
-        .select(`
+  // Obtener factura con cliente y líneas
+  const { data: factura, error } = await supabase
+    .from("facturas")
+    .select(`
       *,
       cliente:clientes(*),
       lineas:lineas_factura(*)
     `)
-        .eq("id", params.id)
-        .single()
+    .eq("id", params.id)
+    .single()
 
-    if (error || !factura) {
-        notFound()
-    }
+  if (error || !factura) {
+    notFound()
+  }
 
-    // Obtener datos de la empresa
-    const { data: empresa } = await supabase
-        .from("empresa")
-        .select("*")
-        .single()
+  // Obtener datos de la empresa
+  const { data: empresa } = await supabase
+    .from("empresa")
+    .select("*")
+    .single()
 
-    // Generar número de albarán (basado en factura)
-    const numeroAlbaran = factura.numero.replace("F", "A")
+  // Generar número de albarán (basado en factura)
+  const numeroAlbaran = factura.numero.replace("F", "A")
 
-    return (
-        <html>
-            <head>
-                <meta charSet="utf-8" />
-                <title>Albarán {numeroAlbaran}</title>
-                <style dangerouslySetInnerHTML={{
-                    __html: `
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <title>Albarán {numeroAlbaran}</title>
+        <style dangerouslySetInnerHTML={{
+          __html: `
           * {
             margin: 0;
             padding: 0;
@@ -295,101 +295,99 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
             }
           }
         `}} />
-            </head>
-            <body>
-                <div className="albaran">
-                    {/* Header */}
-                    <div className="header">
-                        <div className="logo-section">
-                            <h1>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
-                            <p>CIF: {empresa?.cif || "B70853163"}</p>
-                            {empresa?.direccion && <p>{empresa.direccion}</p>}
-                            {empresa?.ciudad && <p>{empresa.ciudad}, {empresa?.provincia}</p>}
-                        </div>
-                        <div className="albaran-number">
-                            <div className="label">Albarán de entrega</div>
-                            <h2>{numeroAlbaran}</h2>
-                            <p>Fecha: {formatFecha(factura.fecha)}</p>
-                        </div>
-                    </div>
+      </head>
+      <body>
+        <div className="albaran">
+          {/* Header */}
+          <div className="header">
+            <div className="logo-section">
+              <h1>{empresa?.nombre || "Pauleta Canaria S.L."}</h1>
+              <p>CIF: {empresa?.cif || "B70853163"}</p>
+              {empresa?.direccion && <p>{empresa.direccion}</p>}
+              {empresa?.ciudad && <p>{empresa.ciudad}, {empresa?.provincia}</p>}
+            </div>
+            <div className="albaran-number">
+              <div className="label">Albarán de entrega</div>
+              <h2>{numeroAlbaran}</h2>
+              <p>Fecha: {formatFecha(factura.fecha)}</p>
+            </div>
+          </div>
 
-                    {/* Parties */}
-                    <div className="parties">
-                        <div className="party">
-                            <div className="party-label">Entregar a:</div>
-                            <div className="party-name">{factura.cliente?.nombre || "Cliente"}</div>
-                            <div className="party-details">
-                                {factura.cliente?.direccion && <p>{factura.cliente.direccion}</p>}
-                                {factura.cliente?.ciudad && (
-                                    <p>
-                                        {factura.cliente.codigo_postal} {factura.cliente.ciudad}
-                                        {factura.cliente.provincia && `, ${factura.cliente.provincia}`}
-                                    </p>
-                                )}
-                                {factura.cliente?.telefono && <p>Tel: {factura.cliente.telefono}</p>}
-                            </div>
-                        </div>
-                    </div>
+          {/* Parties */}
+          <div className="parties">
+            <div className="party">
+              <div className="party-label">Entregar a:</div>
+              <div className="party-name">{factura.cliente?.nombre || "Cliente"}</div>
+              <div className="party-details">
+                {factura.cliente?.direccion && <p>{factura.cliente.direccion}</p>}
+                {factura.cliente?.ciudad && (
+                  <p>
+                    {factura.cliente.codigo_postal} {factura.cliente.ciudad}
+                    {factura.cliente.provincia && `, ${factura.cliente.provincia}`}
+                  </p>
+                )}
+                {factura.cliente?.telefono && <p>Tel: {factura.cliente.telefono}</p>}
+              </div>
+            </div>
+          </div>
 
-                    {/* Items Table */}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ width: "60%" }}>Descripción</th>
-                                <th className="center" style={{ width: "20%" }}>Cantidad</th>
-                                <th className="right" style={{ width: "20%" }}>Precio</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {factura.lineas?.map((linea: {
-                                id: string;
-                                descripcion: string;
-                                cantidad: number;
-                                precio_unitario: number;
-                            }) => (
-                                <tr key={linea.id}>
-                                    <td>{linea.descripcion}</td>
-                                    <td className="center">{linea.cantidad}</td>
-                                    <td className="right">{formatPrecio(linea.precio_unitario)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+          {/* Items Table */}
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "80%" }}>Descripción</th>
+                <th className="center" style={{ width: "20%" }}>Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {factura.lineas?.map((linea: {
+                id: string;
+                descripcion: string;
+                cantidad: number;
+                precio_unitario: number;
+              }) => (
+                <tr key={linea.id}>
+                  <td>{linea.descripcion}</td>
+                  <td className="center">{linea.cantidad}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-                    {/* Signature Section */}
-                    <div className="signature-section">
-                        <div className="signature-box">
-                            <div className="signature-space"></div>
-                            <div className="signature-label">Firma del cliente</div>
-                        </div>
-                        <div className="signature-box">
-                            <div className="signature-space"></div>
-                            <div className="signature-label">Entregado por</div>
-                        </div>
-                    </div>
+          {/* Signature Section */}
+          <div className="signature-section">
+            <div className="signature-box">
+              <div className="signature-space"></div>
+              <div className="signature-label">Firma del cliente</div>
+            </div>
+            <div className="signature-box">
+              <div className="signature-space"></div>
+              <div className="signature-label">Entregado por</div>
+            </div>
+          </div>
 
-                    {/* Footer */}
-                    <div className="footer">
-                        <div className="factura-ref">
-                            Referencia factura: {factura.numero} · Total: {formatPrecio(factura.total)}
-                        </div>
-                        <div className="footer-message" style={{ marginTop: "12px" }}>
-                            {empresa?.nombre || "Pauleta Canaria"} · Helados artesanales de fruta
-                        </div>
-                    </div>
-                </div>
+          {/* Footer */}
+          <div className="footer">
+            <div className="factura-ref">
+              Referencia factura: {factura.numero}
+            </div>
+            <div className="footer-message" style={{ marginTop: "12px" }}>
+              {empresa?.nombre || "Pauleta Canaria"} · Helados artesanales de fruta
+            </div>
+          </div>
+        </div>
 
-                {/* Print Button */}
-                <button className="print-button" id="print-btn">
-                    Imprimir Albarán
-                </button>
-                <script dangerouslySetInnerHTML={{
-                    __html: `
+        {/* Print Button */}
+        <button className="print-button" id="print-btn">
+          Imprimir Albarán
+        </button>
+        <script dangerouslySetInnerHTML={{
+          __html: `
                     document.getElementById('print-btn').addEventListener('click', function() {
                         window.print();
                     });
                 `}} />
-            </body>
-        </html>
-    )
+      </body>
+    </html>
+  )
 }
