@@ -319,7 +319,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
 
             @page {
               size: A4;
-              margin: 0;
+              margin: 0mm !important;
             }
             
             /* Ocultar elementos de UI */

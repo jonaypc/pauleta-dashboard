@@ -150,7 +150,7 @@ export default async function FacturaDetailPage({
                         clienteEmail={factura.cliente?.email}
                     />
                     <Button variant="outline" asChild>
-                        <Link href={`/facturas/${params.id}/albaran`} target="_blank">
+                        <Link href={`/print/albaran/${params.id}`} target="_blank">
                             <Truck className="mr-2 h-4 w-4" />
                             Albarán
                         </Link>
