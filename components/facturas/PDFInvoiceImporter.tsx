@@ -170,20 +170,10 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     return true
                 }
                 
-                // Combinar el final del bloque anterior (solo la última parte después del último SUBTOTAL)
-                // con el bloque actual para buscar el cliente correcto
-                
-                // Primero intentar buscar en el bloque anterior SOLO si no hay FACTURAR A en el actual
-                const hasClienteInCurrentBlock = /FACTURAR\s*A[\s\S]*?ENVIAR\s*A/i.test(block)
-                
-                if (hasClienteInCurrentBlock) {
-                    // Si hay cliente en el bloque actual, usarlo
-                    extractLastCliente(block)
-                } else {
-                    // Si no hay cliente en el bloque actual, buscar el ÚLTIMO del bloque anterior
-                    // Pero solo si el bloque anterior no contiene otra factura completa
-                    extractLastCliente(prevBlock)
-                }
+                // SIEMPRE buscar en el bloque anterior, porque el FACTURAR A de esta factura
+                // está ANTES de "FACTURA N.º", es decir, en el bloque anterior.
+                // El FACTURAR A que está en el bloque actual es de la SIGUIENTE factura.
+                extractLastCliente(prevBlock)
                 
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
                 
