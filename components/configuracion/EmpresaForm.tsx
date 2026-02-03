@@ -37,6 +37,7 @@ const empresaSchema = z.object({
     cuenta_bancaria: z.string().optional(),
     logo_url: z.string().optional(),
     serie_factura: z.string().min(1, "La serie es obligatoria"),
+    ultimo_num_factura: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
     color_primario: z.string().optional(),
     texto_pie: z.string().optional(),
     mostrar_logo: z.boolean().optional(),
@@ -71,6 +72,7 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
             cuenta_bancaria: initialData?.cuenta_bancaria || "",
             logo_url: initialData?.logo_url || "",
             serie_factura: initialData?.serie_factura || "F",
+            ultimo_num_factura: initialData?.ultimo_num_factura || 0,
             color_primario: initialData?.color_primario || "#2563EB",
             texto_pie: initialData?.texto_pie || "",
             mostrar_logo: initialData?.mostrar_logo ?? true,
@@ -287,7 +289,9 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
                                     </FormItem>
                                 )}
                             />
+                        </div>
 
+                        <div className="grid gap-4 md:grid-cols-2">
                             <FormField
                                 control={form.control}
                                 name="serie_factura"
@@ -298,7 +302,27 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
                                             <Input placeholder="F" {...field} />
                                         </FormControl>
                                         <FormDescription>
-                                            Prefijo para tus facturas (ej: F25001)
+                                            Prefijo (ej: F25)
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="ultimo_num_factura"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Último Nº Factura</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                placeholder="0"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            El siguiente será X + 1
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
