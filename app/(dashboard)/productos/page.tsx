@@ -41,12 +41,19 @@ export default async function ProductosPage({ searchParams }: PageProps) {
                         Gestiona el catálogo de productos de Pauleta Canaria
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/productos/nuevo">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo producto
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button asChild variant="outline">
+                        <Link href="/productos/importar">
+                            Importar Códigos
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/productos/nuevo">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nuevo producto
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             {/* Filtros */}
