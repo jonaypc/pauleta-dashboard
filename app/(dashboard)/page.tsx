@@ -175,22 +175,26 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <StatsCards
+      {/* <StatsCards
         facturacionMes={data.facturacionMes}
         facturacionMesAnterior={data.facturacionMesAnterior}
         cobrosPendientes={data.cobrosPendientes}
         cobrosMes={data.cobrosMes}
         facturasEmitidas={data.facturasEmitidas}
         totalClientes={data.totalClientes}
-      />
+      /> */}
+      <div>StatsCards Placeholder</div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          <RecentInvoices facturas={data.ultimasFacturas} />
+          {/* <RecentInvoices facturas={data.ultimasFacturas} /> */}
+          <div>Recent Invoices Placeholder</div>
         </div>
         <div className="space-y-6">
-          <UpcomingPayments pagos={data.pagosFijos} />
-          <TopClientes clientes={data.topClientes} />
+          {/* <UpcomingPayments pagos={data.pagosFijos} /> */}
+          <div>Upcoming Payments Placeholder</div>
+          {/* <TopClientes clientes={data.topClientes} /> */}
+          <div>Top Clients Placeholder</div>
         </div>
       </div>
     </div>
