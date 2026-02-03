@@ -90,35 +90,17 @@ export function ProductBarcodeUpdater({ productosExistentes }: ProductBarcodeUpd
         return ""
     }
 
-    // Función para buscar columna de nombre de producto
-    const findNameValue = (row: any): string => {
-        const keys = Object.keys(row).map(k => k.toLowerCase())
-        const nameKey = keys.find(k => k.includes("nombre") || k.includes("producto") || k.includes("articulo") || k.includes("descrip"))
-
-        if (nameKey) {
-            const originalKey = Object.keys(row).find(k => k.toLowerCase() === nameKey)
-            return originalKey ? row[originalKey]?.toString().trim() : ""
-        }
-        // Si no hay ninguna clara, usar la primera columna que tenga texto largo? 
-        // Por ahora, si no hay match, devolver vacío
-        return ""
-    }
-
     const procesarDatos = (rows: ExcelRow[]) => {
         const resultados: ProcessedProduct[] = []
         let matchesCount = 0
         let nuevosCount = 0
 
-        console.log("Procesando filas de Excel:", rows.length)
+        rows.forEach(row => {
+            const nombreExcel = row.Nombre?.toString().trim()
+            if (!nombreExcel) return
 
-        rows.forEach((row, idx) => {
-            const nombreExcel = findNameValue(row)
             const codigoNuevo = findBarcodeValue(row)
-
-            if (!nombreExcel || !codigoNuevo) {
-                if (idx < 5) console.warn("Fila ignorada (faltan datos):", row)
-                return
-            }
+            if (!codigoNuevo) return
 
             // Buscar producto existente
             const producto = productosExistentes.find(p =>
@@ -130,8 +112,11 @@ export function ProductBarcodeUpdater({ productosExistentes }: ProductBarcodeUpd
 
                 if (producto.codigo_barras === codigoNuevo) {
                     estado = 'sin_cambio'
+                } else if (!producto.codigo_barras) {
+                    estado = 'match' // Nuevo código
+                    nuevosCount++
                 } else {
-                    estado = 'match'
+                    estado = 'match' // Sobreescritura (avisar?)
                     nuevosCount++
                 }
 
