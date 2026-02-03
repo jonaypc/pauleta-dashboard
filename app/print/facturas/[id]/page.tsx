@@ -183,10 +183,13 @@ export default async function FacturaPrintPage({ params }: PageProps) {
         <div className="header">
           <div className="logo-section">
             {mostrarLogo && (
-              <img
+              <NextImage
                 src={empresa?.logo_url || "/logo-pauleta.png"}
                 alt="Logo"
-                style={{ height: `${logoWidth}px`, marginBottom: '10px' }}
+                width={150} // Width ficticio para que NexImage no se queje
+                height={logoWidth}
+                style={{ height: `${logoWidth}px`, width: "auto", marginBottom: '10px' }}
+                unoptimized
               />
             )}
             <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>

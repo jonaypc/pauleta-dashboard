@@ -120,6 +120,9 @@ importers:
       '@types/node':
         specifier: ^20.11.16
         version: 20.19.30
+      '@types/pdfjs-dist':
+        specifier: ^2.10.378
+        version: 2.10.378
       '@types/react':
         specifier: ^18.2.52
         version: 18.3.27
@@ -1049,6 +1052,10 @@ packages:
 
   '@types/node@20.19.30':
     resolution: {integrity: sha512-WJtwWJu7UdlvzEAUm484QNg5eAoq5QR08KDNx7g45Usrs2NtOPiX8ugDqmKdXkyL03rBqU5dYNYVQetEpBHq2g==}
+
+  '@types/pdfjs-dist@2.10.378':
+    resolution: {integrity: sha512-TRdIPqdsvKmPla44kVy4jv5Nt5vjMfVjbIEke1CRULIrwKNRC4lIiZvNYDJvbUMNCFPNIUcOKhXTyMJrX18IMA==}
+    deprecated: This is a stub types definition. pdfjs-dist provides its own type definitions, so you do not need this installed.
 
   '@types/phoenix@1.6.7':
     resolution: {integrity: sha512-oN9ive//QSBkf19rfDv45M7eZPi0eEXylht2OLEXicu5b4KoQ1OzXIw+xDSGWxSxe1JmepRR/ZH283vsu518/Q==}
@@ -3828,6 +3835,10 @@ snapshots:
   '@types/node@20.19.30':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/pdfjs-dist@2.10.378':
+    dependencies:
+      pdfjs-dist: 5.4.624
 
   '@types/phoenix@1.6.7': {}
 
