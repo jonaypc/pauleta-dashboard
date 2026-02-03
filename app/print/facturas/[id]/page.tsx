@@ -245,10 +245,29 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               <span>Base Imponible</span>
               <span className="value">{formatPrecio(factura.base_imponible)}</span>
             </div>
-            <div className="row">
-              <span>IGIC (7%)</span>
-              <span className="value">{formatPrecio(factura.igic)}</span>
-            </div>
+
+            {/* Desglose de IGIC por tipos */}
+            {(() => {
+              const desglose = (factura.lineas || []).reduce((acc: any, linea: any) => {
+                const tasa = linea.igic || 0;
+                if (!acc[tasa]) {
+                  acc[tasa] = { base: 0, cuota: 0 };
+                }
+                const baseLinea = linea.cantidad * linea.precio_unitario;
+                const cuotaLinea = baseLinea * (tasa / 100);
+                acc[tasa].base += baseLinea;
+                acc[tasa].cuota += cuotaLinea;
+                return acc;
+              }, {});
+
+              return Object.entries(desglose).map(([tasa, info]: [string, any]) => (
+                <div className="row" key={tasa}>
+                  <span>IGIC ({tasa}%)</span>
+                  <span className="value">{formatPrecio(info.cuota)}</span>
+                </div>
+              ));
+            })()}
+
             <div className="row total">
               <span>Total</span>
               <span className="value">{formatPrecio(factura.total)}</span>
