@@ -70,7 +70,7 @@ async function getDashboardData() {
         total,
         estado,
         cliente_id,
-        clientes (nombre)
+        clientes (nombre, persona_contacto)
       `)
       .order('created_at', { ascending: false })
       .limit(5)
@@ -78,11 +78,18 @@ async function getDashboardData() {
     const facturasFormateadas = ultimasFacturas?.map(f => {
       const clientesData = f.clientes as unknown
       let clienteNombre = 'Sin nombre'
-      if (Array.isArray(clientesData) && clientesData[0]?.nombre) {
+      let clienteContacto = undefined
+
+      if (Array.isArray(clientesData) && clientesData[0]) {
         clienteNombre = clientesData[0].nombre
+        clienteContacto = clientesData[0].persona_contacto
       } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
-        clienteNombre = (clientesData as { nombre: string }).nombre
+        // @ts-ignore
+        clienteNombre = clientesData.nombre
+        // @ts-ignore
+        clienteContacto = clientesData.persona_contacto
       }
+
       return {
         id: f.id,
         numero: f.numero,
@@ -90,7 +97,10 @@ async function getDashboardData() {
         total: f.total,
         estado: f.estado,
         cliente_id: f.cliente_id,
-        cliente: { nombre: clienteNombre }
+        cliente: {
+          nombre: clienteNombre,
+          persona_contacto: clienteContacto
+        }
       }
     }) || []
 
@@ -105,7 +115,7 @@ async function getDashboardData() {
       .select(`
         cliente_id,
         total,
-        clientes (nombre)
+        clientes (nombre, persona_contacto)
       `)
       .neq('estado', 'anulada')
 
@@ -115,11 +125,15 @@ async function getDashboardData() {
       if (!factura.cliente_id) return
       const clientesData = factura.clientes as unknown
       let clienteNombre = 'Sin nombre'
-      if (Array.isArray(clientesData) && clientesData[0]?.nombre) {
-        clienteNombre = clientesData[0].nombre
+
+      if (Array.isArray(clientesData) && clientesData[0]) {
+        // Priorizar persona_contacto si existe
+        clienteNombre = clientesData[0].persona_contacto || clientesData[0].nombre
       } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
-        clienteNombre = (clientesData as { nombre: string }).nombre
+        // @ts-ignore
+        clienteNombre = clientesData.persona_contacto || clientesData.nombre
       }
+
       if (!clienteStats[factura.cliente_id]) {
         clienteStats[factura.cliente_id] = {
           cliente_id: factura.cliente_id,
