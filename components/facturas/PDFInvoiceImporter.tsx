@@ -25,6 +25,7 @@ interface Cliente {
     direccion?: string | null
     ciudad?: string | null
     codigo_postal?: string | null
+    persona_contacto?: string | null
 }
 
 interface ParsedLine {
@@ -572,7 +573,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-xs text-muted-foreground truncate max-w-[200px]">{f.clienteRaw}</span>
                                                     <select
-                                                        className="text-xs border rounded px-2 py-1 bg-background max-w-[200px]"
+                                                        className="text-xs border rounded px-2 py-1 bg-background max-w-[250px]"
                                                         value={f.clienteId || ""}
                                                         onChange={(e) => {
                                                             const clienteSeleccionado = clientes.find(c => c.id === e.target.value)
@@ -581,7 +582,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                                                     ? { 
                                                                         ...fac, 
                                                                         clienteId: clienteSeleccionado?.id, 
-                                                                        clienteNombreMatch: clienteSeleccionado?.nombre,
+                                                                        clienteNombreMatch: clienteSeleccionado?.persona_contacto || clienteSeleccionado?.nombre,
                                                                         valida: !!clienteSeleccionado && fac.lineas.length > 0,
                                                                         error: !clienteSeleccionado ? "Cliente no encontrado" : undefined
                                                                     } 
@@ -592,7 +593,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                                         <option value="">-- Seleccionar cliente --</option>
                                                         {clientes.map(c => (
                                                             <option key={c.id} value={c.id}>
-                                                                {c.nombre}
+                                                                {c.persona_contacto ? `${c.persona_contacto} (${c.nombre})` : c.nombre}
                                                             </option>
                                                         ))}
                                                     </select>
