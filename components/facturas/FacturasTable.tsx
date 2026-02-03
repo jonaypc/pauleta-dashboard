@@ -1,5 +1,5 @@
 "use client"
-
+import { useState } from "react"
 import Link from "next/link"
 import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CobroForm } from "@/components/cobros/CobroForm"
 import type { Factura, EstadoFactura } from "@/types"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface FacturasTableProps {
     facturas: (Factura & { cliente?: { nombre: string } })[]
@@ -59,6 +63,66 @@ export function FacturasTable({
     onCobrar,
     onAnular,
 }: FacturasTableProps) {
+    const router = useRouter()
+    const supabase = createClient()
+    const [facturaParaCobrar, setFacturaParaCobrar] = useState<Factura | null>(null)
+    const [isActionLoading, setIsActionLoading] = useState(false)
+
+    const handleEmitir = async (factura: Factura) => {
+        setIsActionLoading(true)
+        try {
+            const { error } = await supabase
+                .from("facturas")
+                .update({ estado: "emitida" })
+                .eq("id", factura.id)
+
+            if (error) throw error
+
+            toast({
+                title: "Factura emitida",
+                description: `La factura ${factura.numero} ahora está emitida.`,
+                variant: "success",
+            })
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            })
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
+
+    const handleAnular = async (factura: Factura) => {
+        if (!confirm(`¿Estás seguro de que quieres anular la factura ${factura.numero}?`)) return
+
+        setIsActionLoading(true)
+        try {
+            const { error } = await supabase
+                .from("facturas")
+                .update({ estado: "anulada" })
+                .eq("id", factura.id)
+
+            if (error) throw error
+
+            toast({
+                title: "Factura anulada",
+                description: `La factura ${factura.numero} ha sido anulada.`,
+                variant: "success",
+            })
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            })
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="w-full text-sm">
@@ -156,7 +220,8 @@ export function FacturasTable({
                                             <DropdownMenuSeparator />
                                             {factura.estado === "borrador" && (
                                                 <DropdownMenuItem
-                                                    onClick={() => onEmitir?.(factura)}
+                                                    onClick={() => handleEmitir(factura)}
+                                                    disabled={isActionLoading}
                                                     className="cursor-pointer text-blue-600"
                                                 >
                                                     <Send className="mr-2 h-4 w-4" />
@@ -165,16 +230,17 @@ export function FacturasTable({
                                             )}
                                             {factura.estado === "emitida" && (
                                                 <DropdownMenuItem
-                                                    onClick={() => onCobrar?.(factura)}
+                                                    onClick={() => setFacturaParaCobrar(factura)}
                                                     className="cursor-pointer text-green-600"
                                                 >
                                                     <CheckCircle className="mr-2 h-4 w-4" />
-                                                    Marcar cobrada
+                                                    Registrar cobro
                                                 </DropdownMenuItem>
                                             )}
                                             {factura.estado !== "anulada" && factura.estado !== "cobrada" && (
                                                 <DropdownMenuItem
-                                                    onClick={() => onAnular?.(factura)}
+                                                    onClick={() => handleAnular(factura)}
+                                                    disabled={isActionLoading}
                                                     className="cursor-pointer text-red-600"
                                                 >
                                                     <XCircle className="mr-2 h-4 w-4" />
@@ -189,6 +255,21 @@ export function FacturasTable({
                     )}
                 </tbody>
             </table>
+
+            {/* Modal de Cobro */}
+            {facturaParaCobrar && (
+                <CobroForm
+                    open={!!facturaParaCobrar}
+                    onOpenChange={(open) => !open && setFacturaParaCobrar(null)}
+                    facturaId={facturaParaCobrar.id}
+                    facturaNumero={facturaParaCobrar.numero}
+                    pendiente={facturaParaCobrar.total}
+                    onSuccess={() => {
+                        setFacturaParaCobrar(null)
+                        router.refresh()
+                    }}
+                />
+            )}
         </div>
     )
 }
