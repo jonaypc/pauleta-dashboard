@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
-import { PDFInvoiceImporter } from "@/components/facturas/PDFInvoiceImporter"
+import dynamic from "next/dynamic"
+
+// Cargar dinámicamente para evitar errores de SSR con pdfjs-dist
+const PDFInvoiceImporter = dynamic(
+    () => import("@/components/facturas/PDFInvoiceImporter").then(mod => mod.PDFInvoiceImporter),
+    { ssr: false }
+)
 
 export const metadata = {
     title: "Importar Facturas PDF | Pauleta",
