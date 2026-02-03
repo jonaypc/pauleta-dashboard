@@ -96,7 +96,7 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
                 // 3. Cliente
                 // El texto entre "FACTURAR A" y "ENVIAR A" suele ser el cliente
-                const clienteMatch = block.match(/FACTURAR A\s+(.*?)\s+(?:ENVIAR A|FACTURA N\.º)/s)
+                const clienteMatch = block.match(/FACTURAR A\s+([\s\S]*?)\s+(?:ENVIAR A|FACTURA N\.º)/)
                 const clienteRaw = clienteMatch ? clienteMatch[1].trim() : "Desconocido"
 
                 // Buscar match de cliente por nombre o CIF
@@ -117,9 +117,10 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                 // 5. Líneas de Productos
                 // Buscamos líneas que empiecen por un código de barras (8-14 dígitos)
                 const lineas: ParsedLine[] = []
-                const lineSpecs = block.matchAll(/(\d{8,14})\s+(.*?)\s+(\d+)\s+([\d,.]+)\s+([\d,.]+)/g)
+                const lineRegex = /(\d{8,14})\s+([\s\S]*?)\s+(\d+)\s+([\d,.]+)\s+([\d,.]+)/g
+                let match;
 
-                for (const match of lineSpecs) {
+                while ((match = lineRegex.exec(block)) !== null) {
                     const [_, codigo, descripcion, cant, precio, importe] = match
                     const productMatch = productos.find(p => p.codigo_barras === codigo || normalize(p.nombre) === normalize(descripcion))
 
