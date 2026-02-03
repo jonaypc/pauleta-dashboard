@@ -141,7 +141,7 @@ export function ProductoForm({
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2 sm:col-span-2">
+                    <div className="space-y-2">
                         <Label htmlFor="nombre" required>
                             Nombre del producto
                         </Label>
@@ -153,6 +153,22 @@ export function ProductoForm({
                             placeholder="Ej: Plátano de Canarias"
                             required
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="codigo_barras">
+                            Código de Barras
+                        </Label>
+                        <div className="relative">
+                            <Tag className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="codigo_barras"
+                                name="codigo_barras"
+                                value={formData.codigo_barras}
+                                onChange={handleChange}
+                                placeholder="Escanear o escribir..."
+                                className="pl-9"
+                            />
+                        </div>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="descripcion">Descripción</Label>
