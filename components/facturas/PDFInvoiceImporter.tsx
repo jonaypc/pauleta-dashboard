@@ -156,10 +156,11 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     const lastMatch = allMatches[allMatches.length - 1]
                     const clienteText = lastMatch[1]
                     
-                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
-                    const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
+                    // Buscar CIF/NIF en el texto (formato: B02973170 - letra + 8 dígitos)
+                    // El CIF español es letra + 8 dígitos, NO tiene letra al final
+                    const cifMatch = clienteText.match(/([A-Z]\d{8})/i)
                     if (cifMatch) {
-                        clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
+                        clienteCIF = cifMatch[1].toUpperCase()
                         // El nombre está antes del CIF
                         const cifIndex = clienteText.indexOf(cifMatch[0])
                         let nombrePart = clienteText.substring(0, cifIndex)
