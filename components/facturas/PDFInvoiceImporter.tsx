@@ -138,16 +138,21 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 if (clienteBlockMatch) {
                     const clienteText = clienteBlockMatch[1]
                     
-                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X)
-                    const cifMatch = clienteText.match(/([A-Z]\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
+                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
+                    // El CIF puede estar precedido por letras sin espacio (ej: S.LB76299122)
+                    const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
                     if (cifMatch) {
-                        clienteCIF = cifMatch[1].toUpperCase()
+                        clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
                         // El nombre está antes del CIF
-                        const nombrePart = clienteText.substring(0, clienteText.indexOf(cifMatch[0]))
-                        clienteRaw = nombrePart.trim()
+                        const cifIndex = clienteText.indexOf(cifMatch[0])
+                        let nombrePart = clienteText.substring(0, cifIndex)
+                        
+                        // Limpiar el nombre: quitar caracteres especiales al final
+                        nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
+                        clienteRaw = nombrePart
                     } else {
                         // Si no hay CIF, usar todo el texto hasta España o código postal
-                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s]+)/i)
+                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
                         if (nombreMatch) {
                             clienteRaw = nombreMatch[1].trim()
                         }
@@ -156,17 +161,42 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
                 
-                // Buscar cliente en la base de datos
-                const foundCliente = clientes.find(c => {
-                    // Primero buscar por CIF
+                // Buscar cliente en la base de datos - MEJORADO
+                let foundCliente = clientes.find(c => {
+                    // Primero buscar por CIF (normalizado)
                     if (clienteCIF && c.cif) {
-                        const cifNorm1 = c.cif.replace(/[-\s]/g, '').toUpperCase()
-                        const cifNorm2 = clienteCIF.replace(/[-\s]/g, '').toUpperCase()
+                        const cifNorm1 = c.cif.replace(/[-\s\.]/g, '').toUpperCase()
+                        const cifNorm2 = clienteCIF.replace(/[-\s\.]/g, '').toUpperCase()
                         if (cifNorm1 === cifNorm2) return true
                     }
-                    // Luego buscar por nombre
-                    return isSimilar(clienteRaw, c.nombre)
+                    return false
                 })
+                
+                // Si no encontró por CIF, buscar por nombre
+                if (!foundCliente && clienteRaw !== "Desconocido") {
+                    foundCliente = clientes.find(c => {
+                        // Comparación exacta (ignorando mayúsculas y espacios extras)
+                        const n1 = normalize(clienteRaw)
+                        const n2 = normalize(c.nombre)
+                        if (n1 === n2) return true
+                        
+                        // Uno contiene al otro
+                        if (n1.includes(n2) || n2.includes(n1)) return true
+                        
+                        // Comparación por palabras clave (al menos 2 palabras en común)
+                        const words1 = n1.split(" ").filter(w => w.length > 2)
+                        const words2 = n2.split(" ").filter(w => w.length > 2)
+                        const commonWords = words1.filter(w => words2.includes(w))
+                        if (commonWords.length >= 2) return true
+                        
+                        // Para empresas: buscar si la palabra principal coincide
+                        const mainWord1 = words1.find(w => w.length > 4 && !['store', 'stores', 'canarias', 'canaria', 'tienda'].includes(w))
+                        const mainWord2 = words2.find(w => w.length > 4 && !['store', 'stores', 'canarias', 'canaria', 'tienda'].includes(w))
+                        if (mainWord1 && mainWord2 && (mainWord1.includes(mainWord2) || mainWord2.includes(mainWord1))) return true
+                        
+                        return false
+                    })
+                }
                 
                 console.log(`Factura ${numero}: Cliente encontrado = ${foundCliente ? foundCliente.nombre : 'NINGUNO'}`)
                 
