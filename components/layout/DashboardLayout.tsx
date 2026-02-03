@@ -13,16 +13,32 @@ interface DashboardLayoutProps {
   }
 }
 
-// Debugging simplified layout
 export function DashboardLayout({ children, user }: DashboardLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="border border-red-500 p-4 mb-4">
-        <h2 className="text-red-500 font-bold">Debug Layout Active</h2>
-        <p>If you see this, Sidebar/Header were the issue.</p>
-        <p>User: {user?.email}</p>
+    <div className="min-h-screen bg-background">
+      {/* Sidebar para desktop */}
+      <Sidebar className="hidden lg:block" />
+      
+      {/* Sidebar móvil con overlay */}
+      {sidebarOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <Sidebar className="lg:hidden" />
+        </>
+      )}
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        <Header user={user} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="p-4 lg:p-6">
+          {children}
+        </main>
       </div>
-      {children}
     </div>
   )
 }
