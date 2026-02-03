@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2 } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -160,6 +160,33 @@ export function FacturasTable({
             setIsActionLoading(false)
         }
     }
+
+    const handleCambiarEstado = async (factura: Factura, nuevoEstado: EstadoFactura) => {
+        setIsActionLoading(true)
+        try {
+            const { error } = await supabase
+                .from("facturas")
+                .update({ estado: nuevoEstado })
+                .eq("id", factura.id)
+
+            if (error) throw error
+
+            toast({
+                title: "Estado actualizado",
+                description: `La factura ${factura.numero} ahora está ${nuevoEstado}.`,
+                variant: "success",
+            })
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            })
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <table className="w-full text-sm">
@@ -266,12 +293,40 @@ export function FacturasTable({
                                                 </DropdownMenuItem>
                                             )}
                                             {factura.estado === "emitida" && (
+                                                <>
+                                                    <DropdownMenuItem
+                                                        onClick={() => setFacturaParaCobrar(factura)}
+                                                        className="cursor-pointer text-green-600"
+                                                    >
+                                                        <CreditCard className="mr-2 h-4 w-4" />
+                                                        Registrar cobro
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm(`¿Marcar factura ${factura.numero} como COBRADA manualmente?`)) {
+                                                                handleCambiarEstado(factura, "cobrada")
+                                                            }
+                                                        }}
+                                                        disabled={isActionLoading}
+                                                        className="cursor-pointer text-green-600"
+                                                    >
+                                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                                        Marcar como cobrada
+                                                    </DropdownMenuItem>
+                                                </>
+                                            )}
+                                            {factura.estado === "cobrada" && (
                                                 <DropdownMenuItem
-                                                    onClick={() => setFacturaParaCobrar(factura)}
-                                                    className="cursor-pointer text-green-600"
+                                                    onClick={() => {
+                                                        if (confirm(`¿Marcar factura ${factura.numero} como EMITIDA (Pendiente)?`)) {
+                                                            handleCambiarEstado(factura, "emitida")
+                                                        }
+                                                    }}
+                                                    disabled={isActionLoading}
+                                                    className="cursor-pointer text-orange-600"
                                                 >
-                                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                                    Registrar cobro
+                                                    <ArrowLeftRight className="mr-2 h-4 w-4" />
+                                                    Marcar como pendiente
                                                 </DropdownMenuItem>
                                             )}
                                             {factura.estado !== "anulada" && factura.estado !== "cobrada" && (
