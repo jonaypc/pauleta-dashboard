@@ -74,7 +74,7 @@ export default async function FacturaDetailPage({
     // Cargar todos los clientes para el botón de cambiar cliente
     const { data: todosClientes } = await supabase
         .from("clientes")
-        .select("id, nombre, cif, direccion")
+        .select("id, nombre, cif, direccion, persona_contacto")
         .eq("activo", true)
         .order("nombre")
 

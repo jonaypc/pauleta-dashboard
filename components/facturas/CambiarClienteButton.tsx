@@ -20,6 +20,7 @@ interface Cliente {
     nombre: string
     cif?: string | null
     direccion?: string | null
+    persona_contacto?: string | null
 }
 
 interface CambiarClienteButtonProps {
@@ -44,7 +45,8 @@ export function CambiarClienteButton({
 
     const filteredClientes = clientes.filter(c => 
         c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.cif && c.cif.toLowerCase().includes(searchTerm.toLowerCase()))
+        (c.cif && c.cif.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (c.persona_contacto && c.persona_contacto.toLowerCase().includes(searchTerm.toLowerCase()))
     )
 
     const handleCambiar = async () => {
@@ -119,7 +121,14 @@ export function CambiarClienteButton({
                                 }`}
                                 onClick={() => setSelectedClienteId(cliente.id)}
                             >
-                                <div className="font-medium text-sm">{cliente.nombre}</div>
+                                {cliente.persona_contacto ? (
+                                    <>
+                                        <div className="font-medium text-sm">{cliente.persona_contacto}</div>
+                                        <div className="text-xs text-muted-foreground">{cliente.nombre}</div>
+                                    </>
+                                ) : (
+                                    <div className="font-medium text-sm">{cliente.nombre}</div>
+                                )}
                                 {cliente.cif && (
                                     <div className="text-xs text-muted-foreground">CIF: {cliente.cif}</div>
                                 )}
