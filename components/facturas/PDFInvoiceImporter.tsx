@@ -22,6 +22,9 @@ interface Cliente {
     id: string
     nombre: string
     cif: string | null
+    direccion?: string | null
+    ciudad?: string | null
+    codigo_postal?: string | null
 }
 
 interface ParsedLine {
@@ -134,6 +137,9 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 // 3. CLIENTE - Buscar el ÚLTIMO bloque FACTURAR A...ENVIAR A antes del número de factura
                 let clienteRaw = "Desconocido"
                 let clienteCIF = ""
+                let clienteDireccion = ""
+                let clienteCP = ""
+                let clienteCiudad = ""
                 
                 // Función para extraer cliente del ÚLTIMO bloque FACTURAR A en un texto
                 const extractLastCliente = (textToSearch: string) => {
@@ -160,6 +166,22 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         // Limpiar el nombre
                         nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
                         if (nombrePart) clienteRaw = nombrePart
+                        
+                        // Extraer dirección (después del CIF)
+                        const afterCIF = clienteText.substring(cifIndex + cifMatch[0].length)
+                        // Buscar código postal (5 dígitos)
+                        const cpMatch = afterCIF.match(/(\d{5})/)
+                        if (cpMatch) {
+                            clienteCP = cpMatch[1]
+                            // La dirección está antes del CP
+                            const cpIndex = afterCIF.indexOf(cpMatch[0])
+                            clienteDireccion = afterCIF.substring(0, cpIndex).trim()
+                        }
+                        // Buscar ciudad (después del CP, antes de España)
+                        const ciudadMatch = afterCIF.match(/\d{5}\s*([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)(?:España|$)/i)
+                        if (ciudadMatch) {
+                            clienteCiudad = ciudadMatch[1].trim()
+                        }
                     } else {
                         // Si no hay CIF, usar todo el texto hasta España o código postal
                         const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
@@ -172,43 +194,73 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 
                 // SIEMPRE buscar en el bloque anterior, porque el FACTURAR A de esta factura
                 // está ANTES de "FACTURA N.º", es decir, en el bloque anterior.
-                // El FACTURAR A que está en el bloque actual es de la SIGUIENTE factura.
                 extractLastCliente(prevBlock)
                 
-                console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
+                console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}", Dir = "${clienteDireccion}", CP = "${clienteCP}"`)
                 
-                // Buscar cliente en la base de datos - MEJORADO
-                let foundCliente = clientes.find(c => {
-                    // Primero buscar por CIF (normalizado)
+                // Buscar cliente en la base de datos - CON DIFERENCIACIÓN POR DIRECCIÓN
+                // Primero buscar todos los clientes con el mismo CIF
+                const clientesConMismoCIF = clientes.filter(c => {
                     if (clienteCIF && c.cif) {
                         const cifNorm1 = c.cif.replace(/[-\s\.]/g, '').toUpperCase()
                         const cifNorm2 = clienteCIF.replace(/[-\s\.]/g, '').toUpperCase()
-                        if (cifNorm1 === cifNorm2) return true
+                        return cifNorm1 === cifNorm2
                     }
                     return false
                 })
                 
+                let foundCliente: Cliente | undefined
+                
+                if (clientesConMismoCIF.length === 1) {
+                    // Solo hay un cliente con ese CIF, usarlo
+                    foundCliente = clientesConMismoCIF[0]
+                } else if (clientesConMismoCIF.length > 1) {
+                    // Múltiples clientes con mismo CIF (sucursales), diferenciar por dirección/CP/ciudad
+                    console.log(`Factura ${numero}: Múltiples clientes con CIF ${clienteCIF}, diferenciando por dirección...`)
+                    
+                    foundCliente = clientesConMismoCIF.find(c => {
+                        // Comparar código postal
+                        if (clienteCP && c.codigo_postal) {
+                            if (c.codigo_postal === clienteCP) return true
+                        }
+                        // Comparar ciudad
+                        if (clienteCiudad && c.ciudad) {
+                            const c1 = normalize(clienteCiudad)
+                            const c2 = normalize(c.ciudad)
+                            if (c1.includes(c2) || c2.includes(c1)) return true
+                        }
+                        // Comparar dirección
+                        if (clienteDireccion && c.direccion) {
+                            const d1 = normalize(clienteDireccion)
+                            const d2 = normalize(c.direccion)
+                            // Buscar palabras clave de la dirección
+                            const words1 = d1.split(" ").filter(w => w.length > 3)
+                            const words2 = d2.split(" ").filter(w => w.length > 3)
+                            const common = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
+                            if (common.length >= 1) return true
+                        }
+                        return false
+                    })
+                    
+                    // Si no encuentra por dirección, usar el primero (como fallback)
+                    if (!foundCliente) {
+                        console.log(`Factura ${numero}: No se pudo diferenciar por dirección, usando primer cliente`)
+                        foundCliente = clientesConMismoCIF[0]
+                    }
+                }
+                
                 // Si no encontró por CIF, buscar por nombre
                 if (!foundCliente && clienteRaw !== "Desconocido") {
                     foundCliente = clientes.find(c => {
-                        // Comparación exacta (ignorando mayúsculas y espacios extras)
                         const n1 = normalize(clienteRaw)
                         const n2 = normalize(c.nombre)
                         if (n1 === n2) return true
-                        
-                        // Uno contiene al otro
                         if (n1.includes(n2) || n2.includes(n1)) return true
                         
-                        // Comparación por palabras clave (al menos 2 palabras en común)
                         const words1 = n1.split(" ").filter(w => w.length > 2)
                         const words2 = n2.split(" ").filter(w => w.length > 2)
                         const commonWords = words1.filter(w => words2.includes(w))
                         if (commonWords.length >= 2) return true
-                        
-                        // Para empresas: buscar si la palabra principal coincide
-                        const mainWord1 = words1.find(w => w.length > 4 && !['store', 'stores', 'canarias', 'canaria', 'tienda'].includes(w))
-                        const mainWord2 = words2.find(w => w.length > 4 && !['store', 'stores', 'canarias', 'canaria', 'tienda'].includes(w))
-                        if (mainWord1 && mainWord2 && (mainWord1.includes(mainWord2) || mainWord2.includes(mainWord1))) return true
                         
                         return false
                     })
