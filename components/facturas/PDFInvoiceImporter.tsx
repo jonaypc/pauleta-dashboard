@@ -218,6 +218,8 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 } else if (clientesConMismoCIF.length > 1) {
                     // Múltiples clientes con mismo CIF (sucursales), diferenciar por dirección/CP/ciudad
                     console.log(`Factura ${numero}: Múltiples clientes con CIF ${clienteCIF}, diferenciando por dirección...`)
+                    console.log(`Factura ${numero}: PDF tiene CP="${clienteCP}", Dir="${clienteDireccion}"`)
+                    console.log(`Factura ${numero}: Clientes disponibles:`, clientesConMismoCIF.map(c => ({ nombre: c.nombre, cp: c.codigo_postal, dir: c.direccion })))
                     
                     foundCliente = clientesConMismoCIF.find(c => {
                         // Comparar código postal
