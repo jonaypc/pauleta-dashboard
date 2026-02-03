@@ -225,8 +225,8 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
         try {
             for (const f of validas) {
-                // 1. Insertar Factura
-                const { data: newFactura, error: fError } = await supabase.from('facturas').insert({
+                // 1. Upsert de Factura (Actualizar si ya existe por número)
+                const { data: upsertedFactura, error: fError } = await supabase.from('facturas').upsert({
                     numero: f.numero,
                     cliente_id: f.clienteId,
                     fecha: f.fecha,
@@ -234,17 +234,20 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                     igic: f.impuesto,
                     total: f.total,
                     estado: f.cobrada ? 'cobrada' : 'emitida'
-                }).select('id').single()
+                }, { onConflict: 'numero' }).select('id').single()
 
                 if (fError) {
                     console.error(`Error factura ${f.numero}:`, fError)
                     continue
                 }
 
-                // 2. Insertar Líneas
+                // 2. Limpiar líneas existentes (por si estamos re-importando para arreglar)
+                await supabase.from('lineas_factura').delete().eq('factura_id', upsertedFactura.id)
+
+                // 3. Insertar las nuevas líneas detectadas
                 const { error: lError } = await supabase.from('lineas_factura').insert(
                     f.lineas.map(l => ({
-                        factura_id: newFactura.id,
+                        factura_id: upsertedFactura.id,
                         producto_id: l.productoId,
                         descripcion: l.descripcion,
                         cantidad: l.cantidad,
