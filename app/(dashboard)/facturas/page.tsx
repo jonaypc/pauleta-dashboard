@@ -54,12 +54,19 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                         Gestiona las facturas de Pauleta Canaria
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/facturas/nueva">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nueva factura
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button asChild variant="outline">
+                        <Link href="/facturas/importar">
+                            Importar Facturas
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/facturas/nueva">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nueva Factura
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             {/* Filtros */}
