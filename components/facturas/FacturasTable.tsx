@@ -164,6 +164,16 @@ export function FacturasTable({
     const handleCambiarEstado = async (factura: Factura, nuevoEstado: EstadoFactura) => {
         setIsActionLoading(true)
         try {
+            // Si pasamos de COBRADA a EMITIDA (pendiente), borrar los cobros asociados
+            if (factura.estado === "cobrada" && nuevoEstado === "emitida") {
+                const { error: errorCobros } = await supabase
+                    .from("cobros")
+                    .delete()
+                    .eq("factura_id", factura.id)
+
+                if (errorCobros) throw errorCobros
+            }
+
             const { error } = await supabase
                 .from("facturas")
                 .update({ estado: nuevoEstado })
@@ -178,9 +188,10 @@ export function FacturasTable({
             })
             router.refresh()
         } catch (error: any) {
+            console.error("Error updating status:", error)
             toast({
                 title: "Error",
-                description: error.message,
+                description: error.message || "No se pudo actualizar el estado",
                 variant: "destructive",
             })
         } finally {
@@ -318,7 +329,7 @@ export function FacturasTable({
                                             {factura.estado === "cobrada" && (
                                                 <DropdownMenuItem
                                                     onClick={() => {
-                                                        if (confirm(`¿Marcar factura ${factura.numero} como EMITIDA (Pendiente)?`)) {
+                                                        if (confirm(`¿Marcar factura ${factura.numero} como EMITIDA (Pendiente)?\nIMPORTANTE: Se eliminarán todos los cobros asociados a esta factura.`)) {
                                                             handleCambiarEstado(factura, "emitida")
                                                         }
                                                     }}
