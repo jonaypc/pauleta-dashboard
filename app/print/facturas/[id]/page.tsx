@@ -24,10 +24,18 @@ function formatFecha(fecha: string): string {
   })
 }
 
+function formatFechaCorta(fecha: string): string {
+  return new Date(fecha).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
 export async function generateMetadata() {
   return {
     title: {
-      absolute: " " // Espacio para intentar engañar a Safari
+      absolute: " "
     }
   }
 }
@@ -40,7 +48,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*)
+      lineas:lineas_factura(*, producto:productos(codigo_barras, nombre))
     `)
     .eq("id", params.id)
     .single()
@@ -54,13 +62,10 @@ export default async function FacturaPrintPage({ params }: PageProps) {
     .select("*")
     .single()
 
-  const color = empresa?.color_primario || "#2563EB"
+  const color = empresa?.color_primario || "#1e40af"
   const mostrarLogo = empresa?.mostrar_logo ?? true
-  const textoPie = empresa?.texto_pie || `Gracias por confiar en ${empresa?.nombre || "Pauleta Canaria"}.`
-  const logoWidth = empresa?.logo_width || 60
-  const tituloFontSize = empresa?.titulo_font_size || 28
-  const bankFontSize = empresa?.bank_font_size || 14
-  const footerFixed = empresa?.footer_bottom_fixed ?? true
+  const logoWidth = empresa?.logo_width || 80
+  const saldoPendiente = factura.estado !== 'cobrada' ? factura.total : 0
 
   return (
     <div className="print-container">
@@ -72,218 +77,504 @@ export default async function FacturaPrintPage({ params }: PageProps) {
         }
 
         @media print {
-            @page {
-                margin: 0 !important;
-            }
-            html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-                height: 100% !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .print-button-container {
-                display: none !important;
-            }
+          @page { margin: 0 !important; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-button-container { display: none !important; }
+          .invoice { box-shadow: none !important; }
         }
 
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: #f0f0f0;
         }
         
         .invoice {
           width: 210mm;
           min-height: 297mm;
-          padding: 2.5cm;
+          padding: 15mm 20mm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
           position: relative;
           background: white;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
+        /* === HEADER === */
         .header {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 1.5cm;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #e2e8f0;
+          align-items: flex-start;
+          margin-bottom: 8mm;
         }
         
-        .logo-section h1 {
-          font-size: 24px;
+        .company-info {
+          flex: 1;
+        }
+        
+        .company-logo {
+          margin-bottom: 8px;
+        }
+        
+        .company-name {
+          font-size: 22px;
           font-weight: 700;
           color: ${color};
           margin-bottom: 4px;
         }
         
-        .logo-section p { color: #64748b; font-size: 11px; margin-bottom: 2px; }
-        .invoice-number { text-align: right; }
-        .invoice-number h2 { font-size: ${tituloFontSize}px; font-weight: 700; }
+        .company-details {
+          color: #64748b;
+          font-size: 10px;
+          line-height: 1.5;
+        }
         
-        .parties {
+        .company-details a {
+          color: ${color};
+          text-decoration: none;
+        }
+        
+        .invoice-title-box {
+          text-align: right;
+          padding: 12px 20px;
+          background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
+          border-radius: 8px;
+          color: white;
+        }
+        
+        .invoice-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          opacity: 0.9;
+        }
+        
+        .invoice-number {
+          font-size: 28px;
+          font-weight: 800;
+          margin: 4px 0;
+        }
+        
+        .invoice-date {
+          font-size: 11px;
+          opacity: 0.9;
+        }
+        
+        /* === PARTIES === */
+        .parties-section {
           display: flex;
-          justify-content: space-between;
-          margin-bottom: 1.5cm;
+          gap: 15mm;
+          margin-bottom: 10mm;
+          padding: 15px 0;
+          border-top: 2px solid #e2e8f0;
+          border-bottom: 2px solid #e2e8f0;
         }
         
-        .party { width: 48%; }
-        .party-label { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 5px; }
-        .party-name { font-size: 14px; font-weight: 700; }
-        .party-details { color: #64748b; font-size: 11px; }
-        
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 1cm;
+        .party-box {
+          flex: 1;
         }
         
-        th {
-          padding: 10px;
-          text-align: left;
+        .party-label {
           font-size: 9px;
           text-transform: uppercase;
+          color: ${color};
+          font-weight: 700;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        
+        .party-label::before {
+          content: '';
+          width: 3px;
+          height: 12px;
+          background: ${color};
+          border-radius: 2px;
+        }
+        
+        .party-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 2px;
+        }
+        
+        .party-cif {
+          font-size: 11px;
           color: #64748b;
-          border-bottom: 2px solid #e2e8f0;
+          font-family: monospace;
+          margin-bottom: 4px;
+        }
+        
+        .party-address {
+          font-size: 10px;
+          color: #64748b;
+          line-height: 1.5;
+        }
+        
+        /* === TABLE === */
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 8mm;
+        }
+        
+        .items-table thead {
           background: #f8fafc;
         }
         
-        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
-        .right { text-align: right; }
-        .center { text-align: center; }
+        .items-table th {
+          padding: 10px 8px;
+          text-align: left;
+          font-size: 8px;
+          text-transform: uppercase;
+          color: #64748b;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          border-bottom: 2px solid ${color}40;
+        }
         
-        .totals { display: flex; justify-content: flex-end; margin-top: 10px; }
-        .totals-table { width: 220px; }
-        .totals-table .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
-        .totals-table .row.total { border-bottom: none; border-top: 2px solid #e2e8f0; margin-top: 5px; padding-top: 8px; }
-        .totals-table .value { font-weight: 700; }
-        .totals-table .row.total .value { font-size: 16px; color: ${color}; }
+        .items-table th.center { text-align: center; }
+        .items-table th.right { text-align: right; }
         
-        .footer {
-          ${footerFixed ? `
-            position: absolute;
-            bottom: 2cm;
-            left: 2.5cm;
-            right: 2.5cm;
-          ` : `
-            margin-top: auto;
-            padding-top: 1cm;
-          `}
-          text-align: center;
+        .items-table tbody tr {
+          border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .items-table tbody tr:hover {
+          background: #fafbfc;
+        }
+        
+        .items-table td {
+          padding: 10px 8px;
+          font-size: 10px;
+          color: #334155;
+        }
+        
+        .items-table td.center { text-align: center; }
+        .items-table td.right { text-align: right; font-family: monospace; }
+        
+        .item-code {
+          font-size: 8px;
+          color: #94a3b8;
+          font-family: monospace;
+        }
+        
+        .item-description {
+          font-weight: 500;
+        }
+        
+        /* === TOTALS === */
+        .totals-section {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: auto;
+          padding-top: 5mm;
+        }
+        
+        .totals-box {
+          width: 70mm;
+          background: #f8fafc;
+          border-radius: 8px;
+          padding: 12px 15px;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .totals-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 6px 0;
+          font-size: 11px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .totals-row:last-child {
+          border-bottom: none;
+        }
+        
+        .totals-row.total {
+          border-top: 2px solid ${color};
+          border-bottom: none;
+          margin-top: 8px;
           padding-top: 10px;
+        }
+        
+        .totals-row .label {
+          color: #64748b;
+        }
+        
+        .totals-row .value {
+          font-weight: 600;
+          font-family: monospace;
+        }
+        
+        .totals-row.total .label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #1e293b;
+        }
+        
+        .totals-row.total .value {
+          font-size: 16px;
+          font-weight: 800;
+          color: ${color};
+        }
+        
+        /* === PAYMENT STATUS === */
+        .payment-status {
+          margin-top: 8mm;
+          display: flex;
+          justify-content: flex-end;
+        }
+        
+        .status-badge {
+          padding: 8px 20px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .status-badge.pending {
+          background: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fcd34d;
+        }
+        
+        .status-badge.paid {
+          background: #d1fae5;
+          color: #065f46;
+          border: 1px solid #6ee7b7;
+        }
+        
+        .saldo-pendiente {
+          margin-top: 8mm;
+          text-align: right;
+        }
+        
+        .saldo-label {
+          font-size: 10px;
+          color: #64748b;
+          text-transform: uppercase;
+        }
+        
+        .saldo-value {
+          font-size: 20px;
+          font-weight: 800;
+          font-family: monospace;
+          color: ${saldoPendiente > 0 ? '#dc2626' : '#059669'};
+        }
+        
+        /* === FOOTER === */
+        .footer {
+          margin-top: auto;
+          padding-top: 10mm;
           border-top: 1px solid #e2e8f0;
         }
         
-        .bank-info { font-size: ${bankFontSize}px; font-weight: 700; margin-bottom: 5px; font-family: monospace; }
-        .footer-msg { color: #64748b; font-size: 10px; }
+        .bank-info {
+          text-align: center;
+          margin-bottom: 8px;
+        }
+        
+        .bank-label {
+          font-size: 8px;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .bank-number {
+          font-size: 14px;
+          font-weight: 700;
+          font-family: monospace;
+          color: #1e293b;
+          letter-spacing: 2px;
+        }
+        
+        .thank-you {
+          text-align: center;
+          font-size: 11px;
+          color: ${color};
+          font-weight: 500;
+          margin: 10px 0;
+        }
+        
+        .legal-text {
+          font-size: 7px;
+          color: #94a3b8;
+          text-align: center;
+          line-height: 1.4;
+          margin-top: 10px;
+          padding-top: 8px;
+          border-top: 1px dashed #e2e8f0;
+        }
+        
+        .print-button-container {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          z-index: 100;
+        }
       `}} />
 
       <div className="invoice">
+        {/* HEADER */}
         <div className="header">
-          <div className="logo-section">
-            {mostrarLogo && (
-              <NextImage
-                src={empresa?.logo_url || "/logo-pauleta.png"}
-                alt="Logo"
-                width={150} // Width ficticio para que NexImage no se queje
-                height={logoWidth}
-                style={{ height: `${logoWidth}px`, width: "auto", marginBottom: '10px' }}
-                unoptimized
-              />
+          <div className="company-info">
+            {mostrarLogo && empresa?.logo_url && (
+              <div className="company-logo">
+                <NextImage
+                  src={empresa.logo_url}
+                  alt="Logo"
+                  width={200}
+                  height={logoWidth}
+                  style={{ height: `${logoWidth}px`, width: "auto" }}
+                  unoptimized
+                />
+              </div>
             )}
-            <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
-            <p>CIF: {empresa?.cif || "B70853163"}</p>
-            {empresa?.direccion && <p>{empresa.direccion}</p>}
-            {(empresa?.codigo_postal || empresa?.ciudad) && (
-              <p>{empresa.codigo_postal} {empresa.ciudad} {empresa.provincia ? `(${empresa.provincia})` : ''}</p>
-            )}
-            {empresa?.telefono && <p>Tel: {empresa.telefono}</p>}
-            {empresa?.email && <p>Email: {empresa.email}</p>}
-          </div>
-          <div className="invoice-number">
-            <h2>{factura.numero}</h2>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>{formatFecha(factura.fecha)}</p>
-          </div>
-        </div>
-
-        <div className="parties">
-          <div className="party">
-            <div className="party-label">Facturar a:</div>
-            <div className="party-name">{factura.cliente?.nombre}</div>
-            <div className="party-details">
-              <p>{factura.cliente?.cif}</p>
-              <p>{factura.cliente?.direccion}</p>
-              <p>{factura.cliente?.codigo_postal} {factura.cliente?.ciudad}</p>
+            <div className="company-name">{empresa?.nombre || "Pauleta Canaria SL"}</div>
+            <div className="company-details">
+              {empresa?.cif && <div>CIF: {empresa.cif}</div>}
+              {empresa?.direccion && <div>{empresa.direccion}</div>}
+              {(empresa?.ciudad || empresa?.codigo_postal) && (
+                <div>{empresa.ciudad}{empresa?.provincia ? `, ${empresa.provincia}` : ''} {empresa.codigo_postal}</div>
+              )}
+              {empresa?.telefono && <div>Tel: {empresa.telefono}</div>}
+              {empresa?.email && <div><a href={`mailto:${empresa.email}`}>{empresa.email}</a></div>}
             </div>
           </div>
+          
+          <div className="invoice-title-box">
+            <div className="invoice-label">Factura</div>
+            <div className="invoice-number">N.º {factura.numero}</div>
+            <div className="invoice-date">{formatFecha(factura.fecha)}</div>
+          </div>
         </div>
 
-        <table>
+        {/* PARTIES */}
+        <div className="parties-section">
+          <div className="party-box">
+            <div className="party-label">Facturar a</div>
+            <div className="party-name">{factura.cliente?.nombre}</div>
+            {factura.cliente?.cif && <div className="party-cif">{factura.cliente.cif}</div>}
+            <div className="party-address">
+              {factura.cliente?.direccion && <div>{factura.cliente.direccion}</div>}
+              {(factura.cliente?.ciudad || factura.cliente?.codigo_postal) && (
+                <div>
+                  {factura.cliente.codigo_postal} {factura.cliente.ciudad}
+                  {factura.cliente?.provincia && ` (${factura.cliente.provincia})`}
+                </div>
+              )}
+              {factura.cliente?.pais && <div>{factura.cliente.pais}</div>}
+            </div>
+          </div>
+          
+          {factura.cliente?.direccion_envio && (
+            <div className="party-box">
+              <div className="party-label">Enviar a</div>
+              <div className="party-name">{factura.cliente?.nombre}</div>
+              <div className="party-address">
+                <div>{factura.cliente.direccion_envio}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ITEMS TABLE */}
+        <table className="items-table">
           <thead>
             <tr>
-              <th style={{ width: '50%' }}>Descripción</th>
-              <th className="center">Cant.</th>
-              <th className="right">Precio</th>
-              <th className="center">IVA</th>
-              <th className="right">Total</th>
+              <th style={{ width: '15%' }}>Código</th>
+              <th style={{ width: '40%' }}>Descripción</th>
+              <th className="center" style={{ width: '10%' }}>Cant.</th>
+              <th className="right" style={{ width: '15%' }}>Precio</th>
+              <th className="right" style={{ width: '20%' }}>Importe</th>
             </tr>
           </thead>
           <tbody>
             {factura.lineas?.map((linea: any) => (
               <tr key={linea.id}>
-                <td>{linea.descripcion}</td>
+                <td>
+                  <span className="item-code">
+                    {linea.producto?.codigo_barras || '-'}
+                  </span>
+                </td>
+                <td>
+                  <span className="item-description">{linea.descripcion}</span>
+                </td>
                 <td className="center">{linea.cantidad}</td>
                 <td className="right">{formatPrecio(linea.precio_unitario)}</td>
-                <td className="center">{linea.igic}%</td>
                 <td className="right">{formatPrecio(linea.subtotal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div className="totals">
-          <div className="totals-table">
-            <div className="row">
-              <span>Base Imponible</span>
+        {/* TOTALS */}
+        <div className="totals-section">
+          <div className="totals-box">
+            <div className="totals-row">
+              <span className="label">Subtotal</span>
               <span className="value">{formatPrecio(factura.base_imponible)}</span>
             </div>
-
-            {/* Desglose de IGIC por tipos */}
+            
+            {/* Desglose IGIC */}
             {(() => {
               const desglose = (factura.lineas || []).reduce((acc: any, linea: any) => {
                 const tasa = linea.igic || 0;
-                if (!acc[tasa]) {
-                  acc[tasa] = { base: 0, cuota: 0 };
-                }
+                if (!acc[tasa]) acc[tasa] = { base: 0, cuota: 0 };
                 const baseLinea = linea.cantidad * linea.precio_unitario;
-                const cuotaLinea = baseLinea * (tasa / 100);
                 acc[tasa].base += baseLinea;
-                acc[tasa].cuota += cuotaLinea;
+                acc[tasa].cuota += baseLinea * (tasa / 100);
                 return acc;
               }, {});
 
               return Object.entries(desglose).map(([tasa, info]: [string, any]) => (
-                <div className="row" key={tasa}>
-                  <span>IGIC ({tasa}%)</span>
+                <div className="totals-row" key={tasa}>
+                  <span className="label">IGIC ({tasa}%)</span>
                   <span className="value">{formatPrecio(info.cuota)}</span>
                 </div>
               ));
             })()}
-
-            <div className="row total">
-              <span>Total</span>
+            
+            <div className="totals-row total">
+              <span className="label">Total</span>
               <span className="value">{formatPrecio(factura.total)}</span>
             </div>
           </div>
         </div>
 
+        {/* FOOTER */}
         <div className="footer">
           {empresa?.cuenta_bancaria && (
-            <div className="bank-info">{empresa.cuenta_bancaria}</div>
+            <div className="bank-info">
+              <div className="bank-label">Cuenta bancaria</div>
+              <div className="bank-number">{empresa.cuenta_bancaria}</div>
+            </div>
           )}
-          <div className="footer-msg">{textoPie}</div>
+          
+          <div className="thank-you">
+            Gracias por su compra. Para cualquier consulta sobre esta factura, no dude en contactarnos.
+          </div>
+          
+          <div className="legal-text">
+            De conformidad con lo establecido en el Reglamento (UE) 2016/679, de Protección de Datos (RGPD) y en la Ley Orgánica 3/2018, 
+            de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), le informamos que sus datos personales 
+            forman parte de un fichero responsabilidad de {empresa?.nombre || 'Pauleta Canaria SL'}, con la finalidad de gestionar la relación comercial.
+          </div>
         </div>
       </div>
 
