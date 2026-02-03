@@ -11,7 +11,8 @@ import { toast } from "@/hooks/use-toast"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 // PDF.js worker setup
-import * as pdfjsLib from "pdfjs-dist"
+// PDF.js worker setup moved inside component (dynamic import)
+// import * as pdfjsLib from "pdfjs-dist"
 
 // Interface definitions
 interface Producto {
@@ -66,8 +67,13 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
     const [isImporting, setIsImporting] = useState(false)
 
     useEffect(() => {
-        // Configurar worker de PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
+        // Configurar worker de PDF.js dinámicamente
+        const loadPdfWorker = async () => {
+            const pdfjsLib = await import("pdfjs-dist")
+            // @ts-ignore
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
+        }
+        loadPdfWorker()
     }, [])
 
     const normalize = (str: string) => str?.toString().trim().toLowerCase() || ""
@@ -185,6 +191,10 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
         try {
             const arrayBuffer = await file.arrayBuffer()
+
+            // Cargar librería dinámicamente
+            const pdfjsLib = await import("pdfjs-dist")
+
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
             const pdfData = await loadingTask.promise
 
