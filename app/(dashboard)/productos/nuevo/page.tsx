@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server"
 import { ProductoForm } from "@/components/productos/ProductoForm"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -7,7 +8,14 @@ export const metadata = {
     title: "Nuevo producto",
 }
 
-export default function NuevoProductoPage() {
+export default async function NuevoProductoPage() {
+    const supabase = await createClient()
+    const { data: productos } = await supabase
+        .from("productos")
+        .select("*")
+        .eq("activo", true)
+        .order("nombre")
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -27,7 +35,7 @@ export default function NuevoProductoPage() {
 
             {/* Formulario */}
             <div className="max-w-2xl">
-                <ProductoForm />
+                <ProductoForm allProductos={productos || []} />
             </div>
         </div>
     )

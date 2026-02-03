@@ -20,6 +20,7 @@ import type { Producto, ProductoFormData, UnidadMedida } from "@/types"
 
 interface ProductoFormProps {
     producto?: Producto
+    allProductos?: Producto[]
     onCancel?: () => void
 }
 
@@ -35,7 +36,11 @@ const IGIC_OPTIONS = [
     { value: 7, label: "7% - General" },
 ]
 
-export function ProductoForm({ producto, onCancel }: ProductoFormProps) {
+export function ProductoForm({
+    producto,
+    allProductos,
+    onCancel,
+}: ProductoFormProps) {
     const router = useRouter()
     const supabase = createClient()
     const isEditing = !!producto
@@ -48,6 +53,10 @@ export function ProductoForm({ producto, onCancel }: ProductoFormProps) {
         unidad: producto?.unidad || "unidad",
         igic: producto?.igic ?? 7,
         categoria: producto?.categoria || "",
+        stock: producto?.stock || 0,
+        stock_minimo: producto?.stock_minimo || 0,
+        multiplicador_stock: producto?.multiplicador_stock || 1,
+        vinculado_a_id: producto?.vinculado_a_id || "",
     })
 
     const handleChange = (
@@ -78,6 +87,7 @@ export function ProductoForm({ producto, onCancel }: ProductoFormProps) {
                 ...formData,
                 descripcion: formData.descripcion || null,
                 categoria: formData.categoria || null,
+                vinculado_a_id: formData.vinculado_a_id || null,
             }
 
             if (isEditing) {
@@ -159,7 +169,77 @@ export function ProductoForm({ producto, onCancel }: ProductoFormProps) {
                 </CardContent>
             </Card>
 
-            {/* Precio y unidades */}
+            {/* Inventario */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Package className="h-5 w-5" />
+                        Inventario
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="stock">Stock Actual (unidades)</Label>
+                        <Input
+                            id="stock"
+                            name="stock"
+                            type="number"
+                            value={formData.stock}
+                            onChange={handleChange}
+                            placeholder="0"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="stock_minimo">Stock Mínimo</Label>
+                        <Input
+                            id="stock_minimo"
+                            name="stock_minimo"
+                            type="number"
+                            value={formData.stock_minimo}
+                            onChange={handleChange}
+                            placeholder="0"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="multiplicador_stock">Multiplicador Stock</Label>
+                        <Input
+                            id="multiplicador_stock"
+                            name="multiplicador_stock"
+                            type="number"
+                            value={formData.multiplicador_stock}
+                            onChange={handleChange}
+                            placeholder="1"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                            Ej: 20 si esta entrada es una Caja que descuenta 20 polos.
+                        </p>
+                    </div>
+                    <div className="space-y-2 sm:col-span-3 border-t pt-4 mt-2">
+                        <Label htmlFor="vinculado_a_id">Vincular a producto base (Opcional)</Label>
+                        <Select
+                            value={formData.vinculado_a_id || "none"}
+                            onValueChange={(value) => handleSelectChange("vinculado_a_id", value === "none" ? "" : value)}
+                        >
+                            <SelectTrigger id="vinculado_a_id">
+                                <SelectValue placeholder="No vincular (este es un producto base)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Ninguno (Producto independiente)</SelectItem>
+                                {allProductos?.filter(p => p.id !== producto?.id).map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                        {p.nombre}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Si vinculas este producto (ej: Caja) a otro (ej: Polo), las ventas descontarán del stock del producto vinculado.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Precio y configuración */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
@@ -240,7 +320,6 @@ export function ProductoForm({ producto, onCancel }: ProductoFormProps) {
                 </CardContent>
             </Card>
 
-            {/* Botones */}
             <div className="flex justify-end gap-3">
                 <Button
                     type="button"
