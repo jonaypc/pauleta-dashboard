@@ -83,6 +83,7 @@ export interface Producto {
   multiplicador_stock: number
   vinculado_a_id: string | null
   activo: boolean
+  codigo_barras?: string | null
   created_at: string
 }
 
