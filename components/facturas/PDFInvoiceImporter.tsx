@@ -330,7 +330,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 // Formato con espacios: 8437027630002 Pauleta de Fresa 60 1.25 75.00
                 const lineas: ParsedLine[] = []
                 
-                // Regex mejorado para el formato con espacios
+                // Regex mejorado para el formato con espacios (productos con código de barras)
                 const lineRegex = /(843702763\d{4})\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)\s+(\d+)\s+(\d+\.\d{2})\s+(\d+\.\d{2})/g
                 let match
                 
@@ -360,6 +360,35 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     })
                 }
                 
+                // Si no se encontraron líneas de productos, buscar conceptos genéricos como "Venta eventos"
+                if (lineas.length === 0) {
+                    // Buscar líneas con formato: Concepto Cantidad Precio Importe (sin código de barras)
+                    const genericLineRegex = /(Venta\s+eventos?|Servicio|Catering|Evento)[^\d]*(\d+)\s+(\d+[\.,]?\d*)\s+([\d,\.]+)/gi
+                    let genericMatch
+                    
+                    while ((genericMatch = genericLineRegex.exec(block)) !== null) {
+                        const descripcion = genericMatch[1].trim()
+                        const cantidad = parseInt(genericMatch[2])
+                        const precio = parseFloat(genericMatch[3].replace(',', '.'))
+                        const importe = parseFloat(genericMatch[4].replace(/,/g, ''))
+                        
+                        lineas.push({
+                            codigo: "EVENTO",
+                            descripcion: descripcion || "Venta eventos",
+                            cantidad,
+                            precio,
+                            importe,
+                            productoId: undefined,
+                            igic: 3
+                        })
+                    }
+                    
+                    // Si aún no hay líneas pero hay un total, crear una línea genérica
+                    if (lineas.length === 0) {
+                        console.log(`Factura ${numero}: Sin líneas de producto, verificando si es factura de eventos...`)
+                    }
+                }
+                
                 console.log(`Factura ${numero}: ${lineas.length} líneas encontradas`)
                 
                 // 5. TOTALES - Manejar formato con comas de miles (ej: 1,234.56)
@@ -385,6 +414,12 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 const saldoPendiente = parseFloat(saldoPendienteMatch?.[1] || "999")
                 const isPagada = saldoPendiente < 0.01
                 
+                // Una factura es válida si:
+                // - Tiene cliente Y líneas de productos, O
+                // - Tiene cliente Y total > 0 (facturas de eventos sin líneas)
+                const esFacturaEvento = lineas.length === 0 && total > 0
+                const esValida = !!foundCliente && (lineas.length > 0 || total > 0)
+                
                 results.push({
                     id: Math.random().toString(36),
                     numero,
@@ -397,8 +432,8 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     impuesto,
                     total,
                     cobrada: isPagada,
-                    valida: !!foundCliente && lineas.length > 0,
-                    error: !foundCliente ? "Cliente no encontrado" : (lineas.length === 0 ? "No se detectaron líneas" : undefined)
+                    valida: esValida,
+                    error: !foundCliente ? "Cliente no encontrado" : (esFacturaEvento ? "Factura de eventos (sin productos)" : undefined)
                 })
                 
             } catch (err) {
@@ -592,7 +627,8 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                                                         ...fac, 
                                                                         clienteId: clienteSeleccionado?.id, 
                                                                         clienteNombreMatch: clienteSeleccionado?.persona_contacto || clienteSeleccionado?.nombre,
-                                                                        valida: !!clienteSeleccionado && fac.lineas.length > 0,
+                                                                        // Válida si tiene cliente Y (líneas > 0 O total > 0)
+                                                                        valida: !!clienteSeleccionado && (fac.lineas.length > 0 || fac.total > 0),
                                                                         error: !clienteSeleccionado ? "Cliente no encontrado" : undefined
                                                                     } 
                                                                     : fac
