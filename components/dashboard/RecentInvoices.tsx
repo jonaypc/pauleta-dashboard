@@ -13,7 +13,7 @@ interface FacturaResumen {
   fecha: string
   total: number
   estado: string
-  cliente: { nombre: string } | null
+  cliente: { nombre: string; persona_contacto?: string } | null
 }
 
 interface RecentInvoicesProps {
@@ -70,9 +70,16 @@ export function RecentInvoices({ facturas }: RecentInvoicesProps) {
                 </div>
                 <div>
                   <p className="text-sm font-medium">{factura.numero}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {factura.cliente?.nombre || "Sin cliente"}
-                  </p>
+                  <div className="flex flex-col">
+                    <p className="text-xs font-medium">
+                      {factura.cliente?.persona_contacto || factura.cliente?.nombre || "Sin cliente"}
+                    </p>
+                    {factura.cliente?.persona_contacto && factura.cliente.nombre && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {factura.cliente.nombre}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
