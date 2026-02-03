@@ -1,20 +1,34 @@
-import { PDFImporterDebugger } from "@/components/facturas/PDFImporterDebugger"
+import { createClient } from "@/lib/supabase/server"
+import { PDFInvoiceImporter } from "@/components/facturas/PDFInvoiceImporter"
 
 export const metadata = {
-    title: "Importar Facturas PDF",
+    title: "Importar Facturas PDF | Pauleta",
 }
 
-export default function ImportarPDFPage() {
+export default async function ImportarPDFPage() {
+    const supabase = await createClient()
+
+    // Cargar clientes y productos para el matching
+    const { data: clientes } = await supabase.from("clientes").select("id, nombre, cif")
+    const { data: productos } = await supabase.from("productos").select("id, nombre, codigo_barras, igic")
+
     return (
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Importar Facturas PDF</h1>
                 <p className="text-muted-foreground">
-                    Herramienta de diagnóstico para procesar facturas de QuickBooks.
+                    Sistema automatizado para importar facturas desde QuickBooks.
                 </p>
             </div>
 
-            <PDFImporterDebugger />
+            <PDFInvoiceImporter
+                clientes={clientes || []}
+                productos={productos?.map((p: any) => ({
+                    ...p,
+                    // Asegurar que igic sea numérico
+                    igic: Number(p.igic || 7)
+                })) || []}
+            />
         </div>
     )
 }
