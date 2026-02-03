@@ -50,6 +50,7 @@ export function FacturaForm({
     const isEditing = !!factura
 
     const [isLoading, setIsLoading] = useState(false)
+    const [numero, setNumero] = useState(factura?.numero || "")
     const [clienteId, setClienteId] = useState(factura?.cliente_id || "")
     const [fecha, setFecha] = useState(
         factura?.fecha || new Date().toISOString().split("T")[0]
@@ -113,6 +114,7 @@ export function FacturaForm({
                 const { error: facturaError } = await supabase
                     .from("facturas")
                     .update({
+                        numero: numero, // Permitir actualizar número
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
@@ -151,18 +153,22 @@ export function FacturaForm({
                     variant: "success",
                 })
             } else {
-                // Generar número de factura
-                const { data: numeroData, error: numeroError } = await supabase.rpc(
-                    "generar_numero_factura"
-                )
+                let finalNumero = numero;
 
-                if (numeroError) throw numeroError
+                // Si no se especificó número, generarlo automáticamente
+                if (!finalNumero) {
+                    const { data: numeroData, error: numeroError } = await supabase.rpc(
+                        "generar_numero_factura"
+                    )
+                    if (numeroError) throw numeroError
+                    finalNumero = numeroData;
+                }
 
                 // Crear nueva factura
                 const { data: nuevaFactura, error: facturaError } = await supabase
                     .from("facturas")
                     .insert({
-                        numero: numeroData,
+                        numero: finalNumero,
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
@@ -196,7 +202,7 @@ export function FacturaForm({
 
                 toast({
                     title: "Factura creada",
-                    description: `Factura ${numeroData} creada correctamente`,
+                    description: `Factura ${finalNumero} creada correctamente`,
                     variant: "success",
                 })
             }
@@ -265,6 +271,21 @@ export function FacturaForm({
                             value={fechaVencimiento}
                             onChange={(e) => setFechaVencimiento(e.target.value)}
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="numero">
+                            Número de Factura
+                        </Label>
+                        <Input
+                            id="numero"
+                            placeholder="Automático"
+                            value={numero}
+                            onChange={(e) => setNumero(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Dejar vacío para autogerenar (ej: F501)
+                        </p>
                     </div>
                 </CardContent>
             </Card>
