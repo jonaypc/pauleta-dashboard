@@ -81,8 +81,8 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
     const parseQuickBooksText = (text: string): ParsedInvoice[] => {
         // En lugar de dividir por páginas, unimos todo y buscamos el patrón de inicio de factura
-        // El patrón suele ser "FACTURA N.º"
-        const invoiceStarts = Array.from(text.matchAll(/FACTURA N\.º/g)).map(m => m.index)
+        // Intentamos ser flexibles con el encabezado: "FACTURA N.º", "N.º DE FACTURA", "FACTURA", etc.
+        const invoiceStarts = Array.from(text.matchAll(/FACTURA\s+(?:N\.º|N°|NUM|NO\.|#)?/gi)).map(m => m.index)
         const blocks: string[] = []
 
         for (let i = 0; i < invoiceStarts.length; i++) {
@@ -95,8 +95,8 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
         blocks.forEach((block, idx) => {
             try {
-                // 1. Número de Factura
-                const numMatch = block.match(/FACTURA N\.º\s+(\d+)/)
+                // 1. Número de Factura (Flexibilizado)
+                const numMatch = block.match(/(?:FACTURA|N\.º)\s+(?:N\.º|N°|NUM|NO\.|#)?\s*(\d+)/i)
                 if (!numMatch) return // Si no hay número, no es una factura válida
                 const numero = numMatch[1]
 
@@ -131,9 +131,20 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                 const isPagada = saldoPendiente === 0 || /PAGADA|COBRADA|SALDO 0/i.test(block)
 
                 // 5. Líneas de Productos
-                // Buscamos líneas que empiecen por un código numérico (mínimo 4 dígitos para soportar códigos internos cortos)
+                // Buscamos líneas. A veces la descripción tiene números, así que intentamos anclar con el patrón Codigo ... Cant Precio Total
+                // Regex explicado:
+                // (\d{3,15})       -> Código (3 a 15 dígitos)
+                // \s+              -> Espacio
+                // ([\s\S]*?)       -> Descripción (cualquier cosa, non-greedy)
+                // \s+              -> Espacio obligatorio antes de la cantidad
+                // (\d+(?:[.,]\d+)?) -> Cantidad (soporta decimales si los hubiera)
+                // \s+              -> Espacio
+                // ([\d,.]+)        -> Precio
+                // \s+              -> Espacio
+                // ([\d,.]+)        -> Total
                 const lineas: ParsedLine[] = []
-                const lineRegex = /(\d{4,14})\s+([\s\S]*?)\s+(\d+)\s+([\d,.]+)\s+([\d,.]+)/g
+                // Versión más tolerante de la regex
+                const lineRegex = /(\d{3,15})\s+([\s\S]+?)\s+(\d+(?:[.,]\d+)?)\s+([\d,.]+)\s+([\d,.]+)/g
                 let match;
 
                 while ((match = lineRegex.exec(block)) !== null) {
@@ -279,7 +290,10 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Cargar Archivo de Facturas</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                        Cargar Archivo de Facturas
+                        <Badge variant="secondary" className="text-xs">v2.1</Badge>
+                    </CardTitle>
                     <CardDescription>Sube el PDF de QuickBooks con todas las facturas juntas.</CardDescription>
                 </CardHeader>
                 <CardContent>
