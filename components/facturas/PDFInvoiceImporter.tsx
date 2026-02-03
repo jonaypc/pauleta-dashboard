@@ -140,11 +140,12 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 let clienteDireccion = ""
                 let clienteCP = ""
                 let clienteCiudad = ""
+                let enviarADireccion = "" // Dirección de ENVIAR A (puede ser diferente a la de facturación)
                 
-                // Función para extraer cliente del ÚLTIMO bloque FACTURAR A en un texto
+                // Función para extraer cliente del ÚLTIMO bloque FACTURAR A...ENVIAR A en un texto
                 const extractLastCliente = (textToSearch: string) => {
-                    // Buscar TODAS las ocurrencias de FACTURAR A...ENVIAR A y usar la ÚLTIMA
-                    const regex = /FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/gi
+                    // Buscar TODAS las ocurrencias de FACTURAR A...ENVIAR A...FACTURA y extraer ambos bloques
+                    const regex = /FACTURAR\s*A([\s\S]*?)ENVIAR\s*A([\s\S]*?)(?=FACTURA|$)/gi
                     const allMatches: RegExpExecArray[] = []
                     let m
                     while ((m = regex.exec(textToSearch)) !== null) {
@@ -154,22 +155,26 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     
                     // Usar el último match (el más cercano al número de factura)
                     const lastMatch = allMatches[allMatches.length - 1]
-                    const clienteText = lastMatch[1]
+                    const facturarAText = lastMatch[1]
+                    const enviarAText = lastMatch[2] || ""
                     
-                    // Buscar CIF/NIF en el texto (formato: B02973170 - letra + 8 dígitos)
-                    // El CIF español es letra + 8 dígitos, NO tiene letra al final
-                    const cifMatch = clienteText.match(/([A-Z]\d{8})/i)
+                    // Extraer dirección de ENVIAR A (puede tener nombre de tienda específica)
+                    enviarADireccion = enviarAText.trim()
+                    console.log(`Bloque ENVIAR A encontrado: "${enviarADireccion.substring(0, 100)}..."`)
+                    
+                    // Buscar CIF/NIF en el texto de FACTURAR A (formato: B02973170 - letra + 8 dígitos)
+                    const cifMatch = facturarAText.match(/([A-Z]\d{8})/i)
                     if (cifMatch) {
                         clienteCIF = cifMatch[1].toUpperCase()
                         // El nombre está antes del CIF
-                        const cifIndex = clienteText.indexOf(cifMatch[0])
-                        let nombrePart = clienteText.substring(0, cifIndex)
+                        const cifIndex = facturarAText.indexOf(cifMatch[0])
+                        let nombrePart = facturarAText.substring(0, cifIndex)
                         // Limpiar el nombre
                         nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
                         if (nombrePart) clienteRaw = nombrePart
                         
                         // Extraer dirección (después del CIF)
-                        const afterCIF = clienteText.substring(cifIndex + cifMatch[0].length)
+                        const afterCIF = facturarAText.substring(cifIndex + cifMatch[0].length)
                         // Buscar código postal (5 dígitos)
                         const cpMatch = afterCIF.match(/(\d{5})/)
                         if (cpMatch) {
@@ -185,7 +190,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         }
                     } else {
                         // Si no hay CIF, usar todo el texto hasta España o código postal
-                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
+                        const nombreMatch = facturarAText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
                         if (nombreMatch) {
                             clienteRaw = nombreMatch[1].trim()
                         }
@@ -198,6 +203,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 extractLastCliente(prevBlock)
                 
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}", Dir = "${clienteDireccion}", CP = "${clienteCP}"`)
+                console.log(`Factura ${numero}: ENVIAR A = "${enviarADireccion.substring(0, 80)}..."`)
                 
                 // Buscar cliente en la base de datos - CON DIFERENCIACIÓN POR DIRECCIÓN
                 // Primero buscar todos los clientes con el mismo CIF
@@ -221,12 +227,21 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     console.log(`Factura ${numero}: PDF tiene CP="${clienteCP}", Dir="${clienteDireccion}"`)
                     console.log(`Factura ${numero}: Clientes disponibles:`, clientesConMismoCIF.map(c => ({ nombre: c.nombre, cp: c.codigo_postal, dir: c.direccion })))
                     
-                    // Extraer palabras clave de la dirección para buscar en el nombre/dirección del cliente
+                    // Palabras a ignorar en las búsquedas
+                    const ignoredWords = ['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria', 'barranco', 'verga', 'stores', 'tienda', 'allday', 'spar', 'espana', 'spain']
+                    
+                    // Extraer palabras clave de la dirección de facturación
                     const dirKeywords = normalize(clienteDireccion)
                         .split(" ")
-                        .filter(w => w.length > 3 && !['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria', 'barranco', 'verga'].includes(w))
+                        .filter(w => w.length > 3 && !ignoredWords.includes(w))
                     
-                    console.log(`Factura ${numero}: Keywords extraídas de dirección: [${dirKeywords.join(', ')}]`)
+                    // Extraer palabras clave de la dirección de ENVIAR A (más importante para sucursales)
+                    const enviarKeywords = normalize(enviarADireccion)
+                        .split(" ")
+                        .filter(w => w.length > 3 && !ignoredWords.includes(w))
+                    
+                    console.log(`Factura ${numero}: Keywords de FACTURAR A: [${dirKeywords.join(', ')}]`)
+                    console.log(`Factura ${numero}: Keywords de ENVIAR A: [${enviarKeywords.join(', ')}]`)
                     
                     // Calcular puntuación para cada cliente
                     let bestMatch: { cliente: Cliente; score: number } | null = null
@@ -234,6 +249,8 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     for (const c of clientesConMismoCIF) {
                         let score = 0
                         const reasons: string[] = []
+                        const nombreNorm = normalize(c.nombre)
+                        const dirClienteNorm = c.direccion ? normalize(c.direccion) : ""
                         
                         // 1. Comparar código postal (+10 puntos)
                         if (clienteCP && c.codigo_postal && c.codigo_postal === clienteCP) {
@@ -241,23 +258,32 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                             reasons.push(`CP=${clienteCP}`)
                         }
                         
-                        // 2. Buscar palabras clave en la dirección registrada (+5 por cada match)
-                        if (c.direccion) {
-                            const dirNorm = normalize(c.direccion)
-                            for (const keyword of dirKeywords) {
-                                if (dirNorm.includes(keyword)) {
-                                    score += 5
-                                    reasons.push(`dir contiene "${keyword}"`)
-                                }
+                        // 2. Buscar palabras clave de ENVIAR A en el nombre del cliente (+15 por match - más importante!)
+                        for (const keyword of enviarKeywords) {
+                            if (nombreNorm.includes(keyword)) {
+                                score += 15
+                                reasons.push(`ENVIAR→nombre: "${keyword}"`)
+                            }
+                            // También buscar en la dirección del cliente
+                            if (dirClienteNorm.includes(keyword)) {
+                                score += 10
+                                reasons.push(`ENVIAR→dir: "${keyword}"`)
                             }
                         }
                         
-                        // 3. Buscar palabras clave en el nombre del cliente (+3 por cada match)
-                        const nombreNorm = normalize(c.nombre)
+                        // 3. Buscar palabras clave de FACTURAR A en la dirección registrada (+5 por match)
+                        for (const keyword of dirKeywords) {
+                            if (dirClienteNorm.includes(keyword)) {
+                                score += 5
+                                reasons.push(`FACTURAR→dir: "${keyword}"`)
+                            }
+                        }
+                        
+                        // 4. Buscar palabras clave de FACTURAR A en el nombre del cliente (+3 por match)
                         for (const keyword of dirKeywords) {
                             if (nombreNorm.includes(keyword)) {
                                 score += 3
-                                reasons.push(`nombre contiene "${keyword}"`)
+                                reasons.push(`FACTURAR→nombre: "${keyword}"`)
                             }
                         }
                         
