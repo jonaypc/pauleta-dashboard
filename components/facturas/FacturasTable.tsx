@@ -11,6 +11,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Checkbox } from "@/components/ui/checkbox"
 import { CobroForm } from "@/components/cobros/CobroForm"
 import type { Factura, EstadoFactura } from "@/types"
 import { createClient } from "@/lib/supabase/client"
@@ -67,6 +68,31 @@ export function FacturasTable({
     const supabase = createClient()
     const [facturaParaCobrar, setFacturaParaCobrar] = useState<Factura | null>(null)
     const [isActionLoading, setIsActionLoading] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    // Totales
+    const totalVisible = facturas.reduce((sum, f) => sum + (f.total || 0), 0)
+    const totalSelected = facturas
+        .filter(f => selectedIds.has(f.id))
+        .reduce((sum, f) => sum + (f.total || 0), 0)
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(new Set(facturas.map(f => f.id)))
+        } else {
+            setSelectedIds(new Set())
+        }
+    }
+
+    const handleSelectOne = (id: string, checked: boolean) => {
+        const newSelected = new Set(selectedIds)
+        if (checked) {
+            newSelected.add(id)
+        } else {
+            newSelected.delete(id)
+        }
+        setSelectedIds(newSelected)
+    }
 
     const handleEmitir = async (factura: Factura) => {
         setIsActionLoading(true)
@@ -203,6 +229,13 @@ export function FacturasTable({
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-border bg-muted/50">
+                        <th className="w-[40px] px-4 py-3">
+                            <Checkbox
+                                checked={facturas.length > 0 && selectedIds.size === facturas.length}
+                                onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                aria-label="Seleccionar todo"
+                            />
+                        </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                             Número
                         </th>
@@ -227,7 +260,7 @@ export function FacturasTable({
                     {facturas.length === 0 ? (
                         <tr>
                             <td
-                                colSpan={6}
+                                colSpan={7}
                                 className="px-4 py-8 text-center text-muted-foreground"
                             >
                                 No hay facturas registradas
@@ -237,8 +270,15 @@ export function FacturasTable({
                         facturas.map((factura) => (
                             <tr
                                 key={factura.id}
-                                className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors"
+                                className={`border-b border-border last:border-b-0 transition-colors ${selectedIds.has(factura.id) ? "bg-muted/50" : "hover:bg-muted/30"}`}
                             >
+                                <td className="px-4 py-3">
+                                    <Checkbox
+                                        checked={selectedIds.has(factura.id)}
+                                        onCheckedChange={(checked) => handleSelectOne(factura.id, !!checked)}
+                                        aria-label={`Seleccionar factura ${factura.numero}`}
+                                    />
+                                </td>
                                 <td className="px-4 py-3">
                                     <Link
                                         href={`/facturas/${factura.id}`}
@@ -383,22 +423,47 @@ export function FacturasTable({
                         ))
                     )}
                 </tbody>
-            </table>
+            </tbody>
+        </table>
 
-            {/* Modal de Cobro */}
-            {facturaParaCobrar && (
-                <CobroForm
-                    open={!!facturaParaCobrar}
-                    onOpenChange={(open) => !open && setFacturaParaCobrar(null)}
-                    facturaId={facturaParaCobrar.id}
-                    facturaNumero={facturaParaCobrar.numero}
-                    pendiente={facturaParaCobrar.total}
-                    onSuccess={() => {
-                        setFacturaParaCobrar(null)
-                        router.refresh()
-                    }}
-                />
-            )}
+            {/* Sticky Footer con Totales */ }
+    <div className="sticky bottom-0 border-t bg-background p-4 shadow-lg">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+                {facturas.length} facturas mostradas
+                {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
+            </div>
+            <div className="flex items-center gap-6">
+                <div className="text-right">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Total Listado</p>
+                    <p className="text-lg font-bold">{formatPrecio(totalVisible)}</p>
+                </div>
+                {selectedIds.size > 0 && (
+                    <div className="text-right border-l pl-6">
+                        <p className="text-xs text-primary uppercase font-bold">Total Seleccionado</p>
+                        <p className="text-lg font-bold text-primary">{formatPrecio(totalSelected)}</p>
+                    </div>
+                )}
+            </div>
         </div>
+    </div>
+
+    {/* Modal de Cobro */ }
+    {
+        facturaParaCobrar && (
+            <CobroForm
+                open={!!facturaParaCobrar}
+                onOpenChange={(open) => !open && setFacturaParaCobrar(null)}
+                facturaId={facturaParaCobrar.id}
+                facturaNumero={facturaParaCobrar.numero}
+                pendiente={facturaParaCobrar.total}
+                onSuccess={() => {
+                    setFacturaParaCobrar(null)
+                    router.refresh()
+                }}
+            />
+        )
+    }
+        </div >
     )
 }
