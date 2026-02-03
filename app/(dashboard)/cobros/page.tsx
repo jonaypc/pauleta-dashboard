@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { CreditCard, TrendingUp } from "lucide-react"
+import { RegistrarCobroButton } from "@/components/cobros/RegistrarCobroButton"
 
 export const metadata = {
     title: "Cobros",
@@ -64,6 +65,7 @@ export default async function CobrosPage() {
                         Historial de cobros de Pauleta Canaria
                     </p>
                 </div>
+                <RegistrarCobroButton />
             </div>
 
             {/* Stats Cards */}

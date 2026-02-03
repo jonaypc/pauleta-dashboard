@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { formatCurrency } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,13 +42,7 @@ const METODOS_PAGO: { value: MetodoPago; label: string }[] = [
     { value: "tarjeta", label: "Tarjeta" },
 ]
 
-// Formatea precio
-function formatPrecio(precio: number): string {
-    return new Intl.NumberFormat("es-ES", {
-        style: "currency",
-        currency: "EUR",
-    }).format(precio)
-}
+
 
 export function CobroForm({
     facturaId,
@@ -106,7 +101,7 @@ export function CobroForm({
 
             toast({
                 title: "Cobro registrado",
-                description: `Se ha registrado un cobro de ${formatPrecio(formData.importe)}`,
+                description: `Se ha registrado un cobro de ${formatCurrency(formData.importe)}`,
                 variant: "success",
             })
 
@@ -134,7 +129,7 @@ export function CobroForm({
                         Registrar cobro
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Factura {facturaNumero} - Pendiente: {formatPrecio(pendiente)}
+                        Factura {facturaNumero} - Pendiente: {formatCurrency(pendiente)}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
