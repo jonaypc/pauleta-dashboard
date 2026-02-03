@@ -57,7 +57,12 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                 <div className="flex gap-2">
                     <Button asChild variant="outline">
                         <Link href="/facturas/importar">
-                            Importar Facturas
+                            Importar Excel
+                        </Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                        <Link href="/facturas/importar-pdf">
+                            Importar PDF
                         </Link>
                     </Button>
                     <Button asChild>

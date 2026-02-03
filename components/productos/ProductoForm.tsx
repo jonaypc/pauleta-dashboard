@@ -57,6 +57,7 @@ export function ProductoForm({
         stock_minimo: producto?.stock_minimo || 0,
         multiplicador_stock: producto?.multiplicador_stock || 1,
         vinculado_a_id: producto?.vinculado_a_id || "",
+        codigo_barras: producto?.codigo_barras || "",
     })
 
     const handleChange = (
@@ -88,6 +89,7 @@ export function ProductoForm({
                 descripcion: formData.descripcion || null,
                 categoria: formData.categoria || null,
                 vinculado_a_id: formData.vinculado_a_id || null,
+                codigo_barras: formData.codigo_barras || null,
             }
 
             if (isEditing) {

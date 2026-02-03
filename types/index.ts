@@ -181,6 +181,7 @@ export interface ProductoFormData {
   stock_minimo?: number
   multiplicador_stock?: number
   vinculado_a_id?: string | null
+  codigo_barras?: string
 }
 
 export interface FacturaFormData {
