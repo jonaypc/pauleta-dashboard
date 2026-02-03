@@ -221,48 +221,57 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     console.log(`Factura ${numero}: PDF tiene CP="${clienteCP}", Dir="${clienteDireccion}"`)
                     console.log(`Factura ${numero}: Clientes disponibles:`, clientesConMismoCIF.map(c => ({ nombre: c.nombre, cp: c.codigo_postal, dir: c.direccion })))
                     
-                    // Extraer palabras clave de la dirección para buscar en el nombre del cliente
+                    // Extraer palabras clave de la dirección para buscar en el nombre/dirección del cliente
                     const dirKeywords = normalize(clienteDireccion)
                         .split(" ")
-                        .filter(w => w.length > 3 && !['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria'].includes(w))
+                        .filter(w => w.length > 3 && !['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria', 'barranco', 'verga'].includes(w))
                     
-                    foundCliente = clientesConMismoCIF.find(c => {
-                        // 1. Comparar código postal (más preciso)
-                        if (clienteCP && c.codigo_postal) {
-                            if (c.codigo_postal === clienteCP) {
-                                console.log(`Factura ${numero}: Match por CP ${clienteCP} con ${c.nombre}`)
-                                return true
+                    console.log(`Factura ${numero}: Keywords extraídas de dirección: [${dirKeywords.join(', ')}]`)
+                    
+                    // Calcular puntuación para cada cliente
+                    let bestMatch: { cliente: Cliente; score: number } | null = null
+                    
+                    for (const c of clientesConMismoCIF) {
+                        let score = 0
+                        const reasons: string[] = []
+                        
+                        // 1. Comparar código postal (+10 puntos)
+                        if (clienteCP && c.codigo_postal && c.codigo_postal === clienteCP) {
+                            score += 10
+                            reasons.push(`CP=${clienteCP}`)
+                        }
+                        
+                        // 2. Buscar palabras clave en la dirección registrada (+5 por cada match)
+                        if (c.direccion) {
+                            const dirNorm = normalize(c.direccion)
+                            for (const keyword of dirKeywords) {
+                                if (dirNorm.includes(keyword)) {
+                                    score += 5
+                                    reasons.push(`dir contiene "${keyword}"`)
+                                }
                             }
                         }
                         
-                        // 2. Buscar palabras clave de la dirección en el NOMBRE del cliente
-                        // Ej: Dir="C.C. Anfi del mar" → buscar "anfi" en nombre "SPAR Anfi del Mar"
+                        // 3. Buscar palabras clave en el nombre del cliente (+3 por cada match)
                         const nombreNorm = normalize(c.nombre)
                         for (const keyword of dirKeywords) {
                             if (nombreNorm.includes(keyword)) {
-                                console.log(`Factura ${numero}: Match por keyword "${keyword}" en nombre "${c.nombre}"`)
-                                return true
+                                score += 3
+                                reasons.push(`nombre contiene "${keyword}"`)
                             }
                         }
                         
-                        // 3. Comparar ciudad
-                        if (clienteCiudad && c.ciudad) {
-                            const c1 = normalize(clienteCiudad)
-                            const c2 = normalize(c.ciudad)
-                            if (c1.includes(c2) || c2.includes(c1)) return true
-                        }
+                        console.log(`Factura ${numero}: Cliente "${c.nombre}" (dir: ${c.direccion}) → Score: ${score} [${reasons.join(', ')}]`)
                         
-                        // 4. Comparar dirección registrada
-                        if (clienteDireccion && c.direccion) {
-                            const d1 = normalize(clienteDireccion)
-                            const d2 = normalize(c.direccion)
-                            const words1 = d1.split(" ").filter(w => w.length > 3)
-                            const words2 = d2.split(" ").filter(w => w.length > 3)
-                            const common = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
-                            if (common.length >= 1) return true
+                        if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+                            bestMatch = { cliente: c, score }
                         }
-                        return false
-                    })
+                    }
+                    
+                    if (bestMatch) {
+                        foundCliente = bestMatch.cliente
+                        console.log(`Factura ${numero}: MEJOR MATCH → "${foundCliente.nombre}" con score ${bestMatch.score}`)
+                    }
                     
                     // Si no encuentra por dirección, usar el primero (como fallback)
                     if (!foundCliente) {
