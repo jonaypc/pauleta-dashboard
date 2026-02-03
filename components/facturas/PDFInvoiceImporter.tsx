@@ -221,22 +221,41 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     console.log(`Factura ${numero}: PDF tiene CP="${clienteCP}", Dir="${clienteDireccion}"`)
                     console.log(`Factura ${numero}: Clientes disponibles:`, clientesConMismoCIF.map(c => ({ nombre: c.nombre, cp: c.codigo_postal, dir: c.direccion })))
                     
+                    // Extraer palabras clave de la dirección para buscar en el nombre del cliente
+                    const dirKeywords = normalize(clienteDireccion)
+                        .split(" ")
+                        .filter(w => w.length > 3 && !['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria'].includes(w))
+                    
                     foundCliente = clientesConMismoCIF.find(c => {
-                        // Comparar código postal
+                        // 1. Comparar código postal (más preciso)
                         if (clienteCP && c.codigo_postal) {
-                            if (c.codigo_postal === clienteCP) return true
+                            if (c.codigo_postal === clienteCP) {
+                                console.log(`Factura ${numero}: Match por CP ${clienteCP} con ${c.nombre}`)
+                                return true
+                            }
                         }
-                        // Comparar ciudad
+                        
+                        // 2. Buscar palabras clave de la dirección en el NOMBRE del cliente
+                        // Ej: Dir="C.C. Anfi del mar" → buscar "anfi" en nombre "SPAR Anfi del Mar"
+                        const nombreNorm = normalize(c.nombre)
+                        for (const keyword of dirKeywords) {
+                            if (nombreNorm.includes(keyword)) {
+                                console.log(`Factura ${numero}: Match por keyword "${keyword}" en nombre "${c.nombre}"`)
+                                return true
+                            }
+                        }
+                        
+                        // 3. Comparar ciudad
                         if (clienteCiudad && c.ciudad) {
                             const c1 = normalize(clienteCiudad)
                             const c2 = normalize(c.ciudad)
                             if (c1.includes(c2) || c2.includes(c1)) return true
                         }
-                        // Comparar dirección
+                        
+                        // 4. Comparar dirección registrada
                         if (clienteDireccion && c.direccion) {
                             const d1 = normalize(clienteDireccion)
                             const d2 = normalize(c.direccion)
-                            // Buscar palabras clave de la dirección
                             const words1 = d1.split(" ").filter(w => w.length > 3)
                             const words2 = d2.split(" ").filter(w => w.length > 3)
                             const common = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
