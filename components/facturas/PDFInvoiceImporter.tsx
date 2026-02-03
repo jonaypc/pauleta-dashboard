@@ -1,4 +1,4 @@
-"use clienat"
+"use client"
 
 import { useState, useEffect, useRef } from "react"
 import { FileText, CheckCircle, AlertTriangle, Loader2, Save, User } from "lucide-react"
