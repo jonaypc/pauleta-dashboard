@@ -192,6 +192,9 @@ export default async function FacturaPrintPage({ params }: PageProps) {
             <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
             <p>CIF: {empresa?.cif || "B70853163"}</p>
             {empresa?.direccion && <p>{empresa.direccion}</p>}
+            {(empresa?.codigo_postal || empresa?.ciudad) && (
+              <p>{empresa.codigo_postal} {empresa.ciudad} {empresa.provincia ? `(${empresa.provincia})` : ''}</p>
+            )}
             {empresa?.telefono && <p>Tel: {empresa.telefono}</p>}
             {empresa?.email && <p>Email: {empresa.email}</p>}
           </div>

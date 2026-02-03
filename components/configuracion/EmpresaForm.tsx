@@ -29,6 +29,9 @@ const empresaSchema = z.object({
     nombre: z.string().min(1, "El nombre es obligatorio"),
     cif: z.string().optional(),
     direccion: z.string().optional(),
+    codigo_postal: z.string().optional(),
+    ciudad: z.string().optional(),
+    provincia: z.string().optional(),
     telefono: z.string().optional(),
     email: z.string().email("Email inválido").optional().or(z.literal("")),
     cuenta_bancaria: z.string().optional(),
@@ -60,6 +63,9 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
             nombre: initialData?.nombre || "",
             cif: initialData?.cif || "",
             direccion: initialData?.direccion || "",
+            codigo_postal: initialData?.codigo_postal || "",
+            ciudad: initialData?.ciudad || "",
+            provincia: initialData?.provincia || "",
             telefono: initialData?.telefono || "",
             email: initialData?.email || "",
             cuenta_bancaria: initialData?.cuenta_bancaria || "",
@@ -194,14 +200,58 @@ export function EmpresaForm({ initialData }: EmpresaFormProps) {
                             name="direccion"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Dirección Fiscal Completa</FormLabel>
+                                    <FormLabel>Dirección Fiscal (Calle y número)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Calle, Número, Ciudad, Provincia" {...field} />
+                                        <Input placeholder="Calle Ejemplo, 1" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <FormField
+                                control={form.control}
+                                name="codigo_postal"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Código Postal</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="35000" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="ciudad"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Ciudad</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Las Palmas de GC" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="provincia"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Provincia</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Las Palmas" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <FormField
                             control={form.control}
