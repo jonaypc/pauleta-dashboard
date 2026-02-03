@@ -244,8 +244,9 @@ export function FacturaForm({
                             <SelectContent>
                                 {clientes.map((cliente) => (
                                     <SelectItem key={cliente.id} value={cliente.id}>
-                                        {cliente.nombre}
-                                        {cliente.cif && ` (${cliente.cif})`}
+                                        {cliente.persona_contacto
+                                            ? `${cliente.persona_contacto} (${cliente.nombre})`
+                                            : cliente.nombre}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

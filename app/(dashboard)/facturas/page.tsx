@@ -22,7 +22,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
 
     let query = supabase
         .from("facturas")
-        .select("*, cliente:clientes(nombre)")
+        .select("*, cliente:clientes(nombre, persona_contacto)")
         .order("fecha", { ascending: false })
         .order("numero", { ascending: false })
 

@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
 interface FacturasTableProps {
-    facturas: (Factura & { cliente?: { nombre: string } })[]
+    facturas: (Factura & { cliente?: { nombre: string; persona_contacto?: string } })[]
     onEmitir?: (factura: Factura) => void
     onCobrar?: (factura: Factura) => void
     onAnular?: (factura: Factura) => void
@@ -251,7 +251,16 @@ export function FacturasTable({
                                     {formatFecha(factura.fecha)}
                                 </td>
                                 <td className="px-4 py-3">
-                                    {factura.cliente?.nombre || "Sin cliente"}
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">
+                                            {factura.cliente?.persona_contacto || factura.cliente?.nombre || "Sin cliente"}
+                                        </span>
+                                        {factura.cliente?.persona_contacto && factura.cliente.nombre && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {factura.cliente.nombre}
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-4 py-3 text-right font-medium tabular-nums">
                                     {formatPrecio(factura.total)}

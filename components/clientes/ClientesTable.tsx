@@ -84,10 +84,12 @@ export function ClientesTable({ clientes }: ClientesTableProps) {
               <tr key={cliente.id}>
                 <td>
                   <div>
-                    <p className="font-medium">{cliente.nombre}</p>
-                    {cliente.persona_contacto && (
+                    <p className="font-medium">
+                      {cliente.persona_contacto || cliente.nombre}
+                    </p>
+                    {cliente.persona_contacto && cliente.nombre && (
                       <p className="text-xs text-muted-foreground">
-                        {cliente.persona_contacto}
+                        {cliente.nombre}
                       </p>
                     )}
                   </div>
