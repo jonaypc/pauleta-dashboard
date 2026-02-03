@@ -131,42 +131,58 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     fecha = `${fechaMatch[3]}-${fechaMatch[2]}-${fechaMatch[1]}`
                 }
                 
-                // 3. CLIENTE - Puede estar en el bloque actual O en el bloque anterior
+                // 3. CLIENTE - Buscar el ÚLTIMO bloque FACTURAR A...ENVIAR A antes del número de factura
                 let clienteRaw = "Desconocido"
                 let clienteCIF = ""
                 
-                // Función para extraer cliente de un texto
-                const extractCliente = (textToSearch: string) => {
-                    const clienteBlockMatch = textToSearch.match(/FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/i)
-                    if (clienteBlockMatch) {
-                        const clienteText = clienteBlockMatch[1]
-                        
-                        // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
-                        const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
-                        if (cifMatch) {
-                            clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
-                            // El nombre está antes del CIF
-                            const cifIndex = clienteText.indexOf(cifMatch[0])
-                            let nombrePart = clienteText.substring(0, cifIndex)
-                            // Limpiar el nombre
-                            nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
-                            if (nombrePart) clienteRaw = nombrePart
-                        } else {
-                            // Si no hay CIF, usar todo el texto hasta España o código postal
-                            const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
-                            if (nombreMatch) {
-                                clienteRaw = nombreMatch[1].trim()
-                            }
-                        }
-                        return true
+                // Función para extraer cliente del ÚLTIMO bloque FACTURAR A en un texto
+                const extractLastCliente = (textToSearch: string) => {
+                    // Buscar TODAS las ocurrencias de FACTURAR A...ENVIAR A y usar la ÚLTIMA
+                    const regex = /FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/gi
+                    const allMatches: RegExpExecArray[] = []
+                    let m
+                    while ((m = regex.exec(textToSearch)) !== null) {
+                        allMatches.push(m)
                     }
-                    return false
+                    if (allMatches.length === 0) return false
+                    
+                    // Usar el último match (el más cercano al número de factura)
+                    const lastMatch = allMatches[allMatches.length - 1]
+                    const clienteText = lastMatch[1]
+                    
+                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
+                    const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
+                    if (cifMatch) {
+                        clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
+                        // El nombre está antes del CIF
+                        const cifIndex = clienteText.indexOf(cifMatch[0])
+                        let nombrePart = clienteText.substring(0, cifIndex)
+                        // Limpiar el nombre
+                        nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
+                        if (nombrePart) clienteRaw = nombrePart
+                    } else {
+                        // Si no hay CIF, usar todo el texto hasta España o código postal
+                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
+                        if (nombreMatch) {
+                            clienteRaw = nombreMatch[1].trim()
+                        }
+                    }
+                    return true
                 }
                 
-                // Primero buscar en el bloque actual
-                if (!extractCliente(block)) {
-                    // Si no está en el bloque actual, buscar en el bloque anterior
-                    extractCliente(prevBlock)
+                // Combinar el final del bloque anterior (solo la última parte después del último SUBTOTAL)
+                // con el bloque actual para buscar el cliente correcto
+                
+                // Primero intentar buscar en el bloque anterior SOLO si no hay FACTURAR A en el actual
+                const hasClienteInCurrentBlock = /FACTURAR\s*A[\s\S]*?ENVIAR\s*A/i.test(block)
+                
+                if (hasClienteInCurrentBlock) {
+                    // Si hay cliente en el bloque actual, usarlo
+                    extractLastCliente(block)
+                } else {
+                    // Si no hay cliente en el bloque actual, buscar el ÚLTIMO del bloque anterior
+                    // Pero solo si el bloque anterior no contiene otra factura completa
+                    extractLastCliente(prevBlock)
                 }
                 
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
