@@ -106,17 +106,21 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
         const results: ParsedInvoice[] = []
         
         // Dividir por cada factura usando "FACTURA N.º" como separador
-        const facturaBlocks = text.split(/FACTURA\s*N\.º\s*/i).slice(1)
+        const splitParts = text.split(/FACTURA\s*N\.º\s*/i)
         
-        console.log(`Encontradas ${facturaBlocks.length} facturas`)
+        console.log(`Partes encontradas: ${splitParts.length}`)
         
-        facturaBlocks.forEach((block, idx) => {
+        // Procesar cada parte (la primera parte es la cabecera, el resto son facturas)
+        for (let i = 1; i < splitParts.length; i++) {
+            const block = splitParts[i]
+            const prevBlock = splitParts[i - 1] // Parte anterior (puede contener FACTURAR A)
+            
             try {
                 // 1. NÚMERO DE FACTURA - primeros dígitos del bloque
                 const numMatch = block.match(/^\s*(\d+)/)
                 if (!numMatch) {
-                    console.log(`Factura ${idx}: No se encontró número`)
-                    return
+                    console.log(`Factura ${i}: No se encontró número`)
+                    continue
                 }
                 const numero = numMatch[1]
                 
@@ -127,36 +131,42 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     fecha = `${fechaMatch[3]}-${fechaMatch[2]}-${fechaMatch[1]}`
                 }
                 
-                // 3. CLIENTE - El texto viene todo junto sin saltos de línea
-                // Formato: FACTURAR AExcodimo Canarias SLUB02973170Barranco...ENVIAR A
-                // Buscar nombre después de "FACTURAR A" hasta encontrar un CIF (letra+números)
+                // 3. CLIENTE - Puede estar en el bloque actual O en el bloque anterior
                 let clienteRaw = "Desconocido"
                 let clienteCIF = ""
                 
-                // Buscar el bloque de cliente
-                const clienteBlockMatch = block.match(/FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/i)
-                if (clienteBlockMatch) {
-                    const clienteText = clienteBlockMatch[1]
-                    
-                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
-                    // El CIF puede estar precedido por letras sin espacio (ej: S.LB76299122)
-                    const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
-                    if (cifMatch) {
-                        clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
-                        // El nombre está antes del CIF
-                        const cifIndex = clienteText.indexOf(cifMatch[0])
-                        let nombrePart = clienteText.substring(0, cifIndex)
+                // Función para extraer cliente de un texto
+                const extractCliente = (textToSearch: string) => {
+                    const clienteBlockMatch = textToSearch.match(/FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/i)
+                    if (clienteBlockMatch) {
+                        const clienteText = clienteBlockMatch[1]
                         
-                        // Limpiar el nombre: quitar caracteres especiales al final
-                        nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
-                        clienteRaw = nombrePart
-                    } else {
-                        // Si no hay CIF, usar todo el texto hasta España o código postal
-                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
-                        if (nombreMatch) {
-                            clienteRaw = nombreMatch[1].trim()
+                        // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X o F-35009950)
+                        const cifMatch = clienteText.match(/([A-Z][-]?\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
+                        if (cifMatch) {
+                            clienteCIF = cifMatch[1].toUpperCase().replace(/-/g, '')
+                            // El nombre está antes del CIF
+                            const cifIndex = clienteText.indexOf(cifMatch[0])
+                            let nombrePart = clienteText.substring(0, cifIndex)
+                            // Limpiar el nombre
+                            nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
+                            if (nombrePart) clienteRaw = nombrePart
+                        } else {
+                            // Si no hay CIF, usar todo el texto hasta España o código postal
+                            const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s\.]+)/i)
+                            if (nombreMatch) {
+                                clienteRaw = nombreMatch[1].trim()
+                            }
                         }
+                        return true
                     }
+                    return false
+                }
+                
+                // Primero buscar en el bloque actual
+                if (!extractCliente(block)) {
+                    // Si no está en el bloque actual, buscar en el bloque anterior
+                    extractCliente(prevBlock)
                 }
                 
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
@@ -267,10 +277,10 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 })
                 
             } catch (err) {
-                console.error(`Error parsing factura ${idx}:`, err)
+                console.error(`Error parsing factura ${i}:`, err)
             }
-        })
-        
+        }
+
         console.log("Resultado del parsing:", results)
         return results
     }
