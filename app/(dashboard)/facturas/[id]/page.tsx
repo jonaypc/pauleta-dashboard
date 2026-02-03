@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import type { EstadoFactura } from "@/types"
+import { CambiarClienteButton } from "@/components/facturas/CambiarClienteButton"
 
 interface PageProps {
     params: { id: string }
@@ -69,6 +70,13 @@ export default async function FacturaDetailPage({
     if (error || !factura) {
         notFound()
     }
+
+    // Cargar todos los clientes para el botón de cambiar cliente
+    const { data: todosClientes } = await supabase
+        .from("clientes")
+        .select("id, nombre, cif, direccion")
+        .eq("activo", true)
+        .order("nombre")
 
     // Si está editando, cargar clientes y productos
     if (isEditing) {
@@ -184,11 +192,17 @@ export default async function FacturaDetailPage({
                 <div className="space-y-6 lg:col-span-2">
                     {/* Cliente */}
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="flex items-center gap-2 text-lg">
                                 <User className="h-5 w-5" />
                                 Cliente
                             </CardTitle>
+                            <CambiarClienteButton
+                                facturaId={params.id}
+                                facturaNumero={factura.numero}
+                                clienteActualId={factura.cliente?.id}
+                                clientes={todosClientes || []}
+                            />
                         </CardHeader>
                         <CardContent>
                             {factura.cliente ? (
