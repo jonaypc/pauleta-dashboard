@@ -1,6 +1,6 @@
 "use server"
 
-import pdf from "pdf-parse"
+const pdf = require("pdf-parse");
 
 export async function parsePdfAction(formData: FormData) {
     const file = formData.get("file") as File
