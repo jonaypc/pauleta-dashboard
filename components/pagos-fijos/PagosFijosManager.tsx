@@ -55,7 +55,10 @@ export function PagosFijosManager({ pagosFijos, historialPagos }: PagosFijosMana
                             Aquí puedes ver los pagos fijos que vencen próximamente y marcarlos como pagados cuando realices la transferencia.
                         </p>
                     </div>
-                    <ControlPagosTable data={historialPagos} />
+                    <ControlPagosTable
+                        pagosDefiniciones={pagosFijos}
+                        historialPagos={historialPagos}
+                    />
                 </TabsContent>
 
                 <TabsContent value="configuracion">
