@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
+import NextImage from "next/image"
 
 export const dynamic = 'force-dynamic'
 
