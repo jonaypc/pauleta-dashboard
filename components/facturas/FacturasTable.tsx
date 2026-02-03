@@ -191,77 +191,64 @@ export function FacturasTable({
                                     </Badge>
                                 </td>
                                 <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        {factura.estado === "emitida" && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
                                             <Button
-                                                variant="outline"
+                                                variant="ghost"
                                                 size="sm"
-                                                className="h-8 text-[10px] text-green-700 border-green-200 hover:bg-green-50"
-                                                onClick={() => setFacturaParaCobrar(factura)}
+                                                className="h-8 w-8 p-0 hover:bg-muted"
                                             >
-                                                <CheckCircle className="mr-1 h-3 w-3" />
-                                                Cobrar
+                                                <span className="sr-only">Abrir menú</span>
+                                                <MoreHorizontal className="h-4 w-4" />
                                             </Button>
-                                        )}
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 hover:bg-muted"
-                                                >
-                                                    <span className="sr-only">Abrir menú</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-44">
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-44">
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/facturas/${factura.id}`}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    Ver detalle
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            {factura.estado === "borrador" && (
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/facturas/${factura.id}`}>
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        Ver detalle
+                                                    <Link href={`/facturas/${factura.id}?editar=true`}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Editar
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                {factura.estado === "borrador" && (
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/facturas/${factura.id}?editar=true`}>
-                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                            Editar
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuSeparator />
-                                                {factura.estado === "borrador" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleEmitir(factura)}
-                                                        disabled={isActionLoading}
-                                                        className="cursor-pointer text-blue-600"
-                                                    >
-                                                        <Send className="mr-2 h-4 w-4" />
-                                                        Emitir factura
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {factura.estado === "emitida" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => setFacturaParaCobrar(factura)}
-                                                        className="cursor-pointer text-green-600"
-                                                    >
-                                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                                        Registrar cobro
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {factura.estado !== "anulada" && factura.estado !== "cobrada" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleAnular(factura)}
-                                                        disabled={isActionLoading}
-                                                        className="cursor-pointer text-red-600"
-                                                    >
-                                                        <XCircle className="mr-2 h-4 w-4" />
-                                                        Anular
-                                                    </DropdownMenuItem>
-                                                )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
+                                            )}
+                                            <DropdownMenuSeparator />
+                                            {factura.estado === "borrador" && (
+                                                <DropdownMenuItem
+                                                    onClick={() => handleEmitir(factura)}
+                                                    disabled={isActionLoading}
+                                                    className="cursor-pointer text-blue-600"
+                                                >
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Emitir factura
+                                                </DropdownMenuItem>
+                                            )}
+                                            {factura.estado === "emitida" && (
+                                                <DropdownMenuItem
+                                                    onClick={() => setFacturaParaCobrar(factura)}
+                                                    className="cursor-pointer text-green-600"
+                                                >
+                                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                                    Registrar cobro
+                                                </DropdownMenuItem>
+                                            )}
+                                            {factura.estado !== "anulada" && factura.estado !== "cobrada" && (
+                                                <DropdownMenuItem
+                                                    onClick={() => handleAnular(factura)}
+                                                    disabled={isActionLoading}
+                                                    className="cursor-pointer text-red-600"
+                                                >
+                                                    <XCircle className="mr-2 h-4 w-4" />
+                                                    Anular
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </td>
                             </tr>
                         ))
