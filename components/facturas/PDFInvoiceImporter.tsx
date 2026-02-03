@@ -1,4 +1,4 @@
-"use client"
+"use clienat"
 
 import { useState, useEffect, useRef } from "react"
 import { FileText, CheckCircle, AlertTriangle, Loader2, Save, User } from "lucide-react"
@@ -571,12 +571,35 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                             <TableCell>
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-xs text-muted-foreground truncate max-w-[200px]">{f.clienteRaw}</span>
-                                                    {f.clienteId ? (
+                                                    <select
+                                                        className="text-xs border rounded px-2 py-1 bg-background max-w-[200px]"
+                                                        value={f.clienteId || ""}
+                                                        onChange={(e) => {
+                                                            const clienteSeleccionado = clientes.find(c => c.id === e.target.value)
+                                                            setFacturas(prev => prev.map(fac => 
+                                                                fac.id === f.id 
+                                                                    ? { 
+                                                                        ...fac, 
+                                                                        clienteId: clienteSeleccionado?.id, 
+                                                                        clienteNombreMatch: clienteSeleccionado?.nombre,
+                                                                        valida: !!clienteSeleccionado && fac.lineas.length > 0,
+                                                                        error: !clienteSeleccionado ? "Cliente no encontrado" : undefined
+                                                                    } 
+                                                                    : fac
+                                                            ))
+                                                        }}
+                                                    >
+                                                        <option value="">-- Seleccionar cliente --</option>
+                                                        {clientes.map(c => (
+                                                            <option key={c.id} value={c.id}>
+                                                                {c.nombre}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {f.clienteId && (
                                                         <Badge variant="outline" className="bg-green-50 text-green-700 w-fit">
                                                             <User className="mr-1 h-3 w-3" /> {f.clienteNombreMatch}
                                                         </Badge>
-                                                    ) : (
-                                                        <span className="text-red-500 text-xs font-bold">⚠ {f.error}</span>
                                                     )}
                                                 </div>
                                             </TableCell>
