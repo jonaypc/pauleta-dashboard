@@ -154,7 +154,8 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData()
+  // const data = await getDashboardData()
+  const data = {} as any
 
   return (
     <div className="space-y-6">
