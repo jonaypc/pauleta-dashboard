@@ -13,13 +13,15 @@ export const metadata = {
 }
 
 interface PageProps {
-    searchParams: { q?: string; estado?: EstadoFactura }
+    searchParams: { q?: string; estado?: EstadoFactura; from?: string; to?: string }
 }
 
 export default async function FacturasPage({ searchParams }: PageProps) {
     const supabase = await createClient()
     const busqueda = searchParams.q || ""
     const estadoFiltro = searchParams.estado
+    const dateFrom = searchParams.from
+    const dateTo = searchParams.to
 
     let query = supabase
         .from("facturas")
@@ -33,6 +35,14 @@ export default async function FacturasPage({ searchParams }: PageProps) {
 
     if (busqueda) {
         query = query.or(`numero.ilike.%${busqueda}%`)
+    }
+
+    if (dateFrom) {
+        query = query.gte("fecha", dateFrom)
+    }
+
+    if (dateTo) {
+        query = query.lte("fecha", dateTo)
     }
 
     const { data: facturas, error } = await query
@@ -87,6 +97,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                         className="pl-9"
                     />
                 </form>
+                <FacturasFilter />
                 <div className="flex flex-wrap gap-2">
                     {estados.map((estado) => (
                         <Link
