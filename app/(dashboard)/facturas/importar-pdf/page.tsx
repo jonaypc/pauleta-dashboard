@@ -3,7 +3,7 @@ import dynamic from "next/dynamic"
 
 // Cargar dinámicamente para evitar errores de SSR con pdfjs-dist
 const PDFInvoiceImporter = dynamic(
-    () => import("@/components/facturas/PDFInvoiceImporter").then(mod => mod.PDFInvoiceImporter),
+    () => import("@/components/facturas/PDFInvoiceImporter"),
     { ssr: false }
 )
 

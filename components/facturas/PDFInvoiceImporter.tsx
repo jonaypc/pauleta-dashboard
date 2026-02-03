@@ -1,16 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Upload, FileText, CheckCircle, AlertTriangle, Loader2, Save, Barcode, User, Package, Check } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { FileText, CheckCircle, AlertTriangle, Loader2, Save, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-
-// PDF.js worker setup
 import * as pdfjsLib from "pdfjs-dist"
 
 // Interface definitions
@@ -58,7 +55,7 @@ interface PDFInvoiceImporterProps {
     productos: Producto[]
 }
 
-export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
+function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     const supabase = createClient()
     const [isProcessing, setIsProcessing] = useState(false)
     const [facturas, setFacturas] = useState<ParsedInvoice[]>([])
@@ -66,92 +63,163 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
     const [isImporting, setIsImporting] = useState(false)
 
     useEffect(() => {
-        // Configurar worker de PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
+        // Usar el worker desde el directorio public para evitar problemas de CSP
+        if (typeof window !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+        }
     }, [])
 
-    const normalize = (str: string) => str?.toString().trim().toLowerCase() || ""
-
-    const parseQuickBooksText = (text: string): ParsedInvoice[] => {
-        // En lugar de dividir por páginas, unimos todo y buscamos el patrón de inicio de factura
-        // Intentamos ser flexibles con el encabezado: "FACTURA N.º", "N.º DE FACTURA", "FACTURA", etc.
-        const invoiceStarts = Array.from(text.matchAll(/FACTURA\s+(?:N\.º|N°|NUM|NO\.|#)?/gi)).map(m => m.index)
-        const blocks: string[] = []
-
-        for (let i = 0; i < invoiceStarts.length; i++) {
-            const start = invoiceStarts[i]
-            const end = invoiceStarts[i + 1] || text.length
-            blocks.push(text.substring(start!, end))
+    useEffect(() => {
+        if (facturas.length > 0) {
+            setStats({
+                total: facturas.length,
+                validas: facturas.filter(f => f.valida).length,
+                errores: facturas.filter(f => !f.valida).length
+            })
         }
+    }, [facturas])
 
+    const normalize = (str: string) => {
+        if (!str) return ""
+        return str.toString()
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9\s]/g, "")
+            .replace(/\s+/g, " ")
+    }
+
+    const isSimilar = (str1: string, str2: string): boolean => {
+        const n1 = normalize(str1)
+        const n2 = normalize(str2)
+        if (n1 === n2) return true
+        if (n1.includes(n2) || n2.includes(n1)) return true
+        const words1 = n1.split(" ").filter(w => w.length > 2)
+        const words2 = n2.split(" ").filter(w => w.length > 2)
+        const commonWords = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
+        return commonWords.length >= 2
+    }
+
+    // Parser específico para el formato de Pauleta Canaria
+    const parsePauletaInvoices = (text: string): ParsedInvoice[] => {
         const results: ParsedInvoice[] = []
-
-        blocks.forEach((block, idx) => {
+        
+        // Dividir por cada factura usando "FACTURA N.º" como separador
+        const facturaBlocks = text.split(/FACTURA\s*N\.º\s*/i).slice(1)
+        
+        console.log(`Encontradas ${facturaBlocks.length} facturas`)
+        
+        facturaBlocks.forEach((block, idx) => {
             try {
-                // 1. Número de Factura (Flexibilizado)
-                const numMatch = block.match(/(?:FACTURA|N\.º)\s+(?:N\.º|N°|NUM|NO\.|#)?\s*(\d+)/i)
-                if (!numMatch) return // Si no hay número, no es una factura válida
+                // 1. NÚMERO DE FACTURA - primeros dígitos del bloque
+                const numMatch = block.match(/^\s*(\d+)/)
+                if (!numMatch) {
+                    console.log(`Factura ${idx}: No se encontró número`)
+                    return
+                }
                 const numero = numMatch[1]
-
-                // 2. Fecha
-                const fechaMatch = block.match(/FECHA\s+(\d{2}\/\d{2}\/\d{4})/)
-                const fechaRaw = fechaMatch ? fechaMatch[1] : ""
-                const [d, m, y] = fechaRaw.split("/")
-                const fecha = y && m && d ? `${y}-${m}-${d}` : new Date().toISOString().split("T")[0]
-
-                // 3. Cliente
-                // Buscamos el bloque entre "FACTURAR A" y algo que cierre (en multi-página puede ser complejo)
-                const clienteMatch = block.match(/FACTURAR A\s+([\s\S]*?)\s+(?:ENVIAR A|FECHA|FACTURA)/)
-                const clienteRaw = clienteMatch ? clienteMatch[1].trim() : "Desconocido"
-
-                const foundCliente = clientes.find(c =>
-                    normalize(clienteRaw).includes(normalize(c.nombre)) ||
-                    (c.cif && normalize(clienteRaw).includes(normalize(c.cif)))
-                )
-
-                // 4. Totales (Buscamos los últimos que aparezcan en el bloque para evitar errores de arrastre)
-                const subtotalMatch = Array.from(block.matchAll(/SUBTOTAL\s+([\d,.]+)/g)).pop()
-                const impuestoMatch = Array.from(block.matchAll(/IMPUESTO\s+([\d,.]+)/g)).pop()
-                const totalMatch = Array.from(block.matchAll(/TOTAL\s+([\d,.]+)/g)).pop()
-
-                const subtotal = parseFloat(subtotalMatch?.[1].replace(",", "") || "0")
-                const impuesto = parseFloat(impuestoMatch?.[1].replace(",", "") || "0")
-                const total = parseFloat(totalMatch?.[1].replace(",", "") || "0")
-
-                // 4.5. Estado de pago (Buscamos si el saldo pendiente es 0 o si dice PAGADA)
-                const saldoPendienteMatch = block.match(/SALDO PENDIENTE\s+([\d,.]+)/i)
-                const saldoPendiente = parseFloat(saldoPendienteMatch?.[1].replace(",", "") || "999")
-                const isPagada = saldoPendiente === 0 || /PAGADA|COBRADA|SALDO 0/i.test(block)
-
-                // 5. Líneas de Productos
+                
+                // 2. FECHA - formato FECHA 29/01/2026
+                const fechaMatch = block.match(/FECHA\s*(\d{2})\/(\d{2})\/(\d{4})/)
+                let fecha = new Date().toISOString().split("T")[0]
+                if (fechaMatch) {
+                    fecha = `${fechaMatch[3]}-${fechaMatch[2]}-${fechaMatch[1]}`
+                }
+                
+                // 3. CLIENTE - El texto viene todo junto sin saltos de línea
+                // Formato: FACTURAR AExcodimo Canarias SLUB02973170Barranco...ENVIAR A
+                // Buscar nombre después de "FACTURAR A" hasta encontrar un CIF (letra+números)
+                let clienteRaw = "Desconocido"
+                let clienteCIF = ""
+                
+                // Buscar el bloque de cliente
+                const clienteBlockMatch = block.match(/FACTURAR\s*A([\s\S]*?)ENVIAR\s*A/i)
+                if (clienteBlockMatch) {
+                    const clienteText = clienteBlockMatch[1]
+                    
+                    // Buscar CIF/NIF en el texto (formato: B02973170 o 78483209X)
+                    const cifMatch = clienteText.match(/([A-Z]\d{7,8}[A-Z]?|\d{8}[A-Z])/i)
+                    if (cifMatch) {
+                        clienteCIF = cifMatch[1].toUpperCase()
+                        // El nombre está antes del CIF
+                        const nombrePart = clienteText.substring(0, clienteText.indexOf(cifMatch[0]))
+                        clienteRaw = nombrePart.trim()
+                    } else {
+                        // Si no hay CIF, usar todo el texto hasta España o código postal
+                        const nombreMatch = clienteText.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ\s]+)/i)
+                        if (nombreMatch) {
+                            clienteRaw = nombreMatch[1].trim()
+                        }
+                    }
+                }
+                
+                console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}"`)
+                
+                // Buscar cliente en la base de datos
+                const foundCliente = clientes.find(c => {
+                    // Primero buscar por CIF
+                    if (clienteCIF && c.cif) {
+                        const cifNorm1 = c.cif.replace(/[-\s]/g, '').toUpperCase()
+                        const cifNorm2 = clienteCIF.replace(/[-\s]/g, '').toUpperCase()
+                        if (cifNorm1 === cifNorm2) return true
+                    }
+                    // Luego buscar por nombre
+                    return isSimilar(clienteRaw, c.nombre)
+                })
+                
+                console.log(`Factura ${numero}: Cliente encontrado = ${foundCliente ? foundCliente.nombre : 'NINGUNO'}`)
+                
+                // 4. LÍNEAS DE PRODUCTOS
+                // Formato con espacios: 8437027630002 Pauleta de Fresa 60 1.25 75.00
                 const lineas: ParsedLine[] = []
-                // Versión más tolerante de la regex
-                const lineRegex = /(\d{3,15})\s+([\s\S]+?)\s+(\d+(?:[.,]\d+)?)\s+([\d,.]+)\s+([\d,.]+)/g
-                let match;
-
-                // Usamos loop para exec
+                
+                // Regex mejorado para el formato con espacios
+                const lineRegex = /(843702763\d{4})\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)\s+(\d+)\s+(\d+\.\d{2})\s+(\d+\.\d{2})/g
+                let match
+                
                 while ((match = lineRegex.exec(block)) !== null) {
-                    const [_, codigo, descripcion, cantStr, precioStr, importeStr] = match
-                    const cant = parseFloat(cantStr.replace(",", "."))
-                    const precio = parseFloat(precioStr.replace(",", ""))
-                    const importe = parseFloat(importeStr.replace(",", ""))
-
-                    // Pequeña validación de integridad
-                    // if (Math.abs(cant * precio - importe) > 1.0) continue
-
-                    const productMatch = productos.find(p => p.codigo_barras === codigo || normalize(p.nombre) === normalize(descripcion))
-
+                    const codigo = match[1]
+                    let descripcion = match[2].trim()
+                    const cantidad = parseInt(match[3])
+                    const precio = parseFloat(match[4])
+                    const importe = parseFloat(match[5])
+                    
+                    // Buscar producto por código de barras
+                    const productMatch = productos.find(p => p.codigo_barras === codigo)
+                    
+                    // Usar nombre del producto de la DB si existe
+                    if (productMatch) {
+                        descripcion = productMatch.nombre
+                    }
+                    
                     lineas.push({
                         codigo,
-                        descripcion: descripcion.trim(),
-                        cantidad: cant,
-                        precio: precio,
-                        importe: importe,
+                        descripcion,
+                        cantidad,
+                        precio,
+                        importe,
                         productoId: productMatch?.id,
-                        igic: productMatch?.igic ?? 7.00 // Usar IGIC del producto o 7% por defecto
+                        igic: productMatch?.igic ?? 3 // IGIC general Canarias
                     })
                 }
-
+                
+                console.log(`Factura ${numero}: ${lineas.length} líneas encontradas`)
+                
+                // 5. TOTALES
+                const subtotalMatch = block.match(/SUBTOTAL\s*([\d.]+)/i)
+                const impuestoMatch = block.match(/IMPUESTO\s*([\d.]+)/i)
+                const totalMatch = block.match(/TOTAL\s*([\d.]+)/i)
+                
+                const subtotal = parseFloat(subtotalMatch?.[1] || "0")
+                const impuesto = parseFloat(impuestoMatch?.[1] || "0")
+                const total = parseFloat(totalMatch?.[1] || "0")
+                
+                // 6. ESTADO DE PAGO - buscar "SALDO PENDIENTE EUR 0.00" o similar
+                const saldoPendienteMatch = block.match(/SALDO\s*PENDIENTE\s*EUR\s*([\d.]+)/i)
+                const saldoPendiente = parseFloat(saldoPendienteMatch?.[1] || "999")
+                const isPagada = saldoPendiente < 0.01
+                
                 results.push({
                     id: Math.random().toString(36),
                     numero,
@@ -167,45 +235,62 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                     valida: !!foundCliente && lineas.length > 0,
                     error: !foundCliente ? "Cliente no encontrado" : (lineas.length === 0 ? "No se detectaron líneas" : undefined)
                 })
+                
             } catch (err) {
-                console.error("Error parsing block:", err)
+                console.error(`Error parsing factura ${idx}:`, err)
             }
         })
-
-        console.log("Resultado del parsing consolidado:", results)
+        
+        console.log("Resultado del parsing:", results)
         return results
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("=== handleFileUpload iniciado ===")
         const file = e.target.files?.[0]
-        if (!file) return
+        if (!file) {
+            console.log("No se seleccionó archivo")
+            return
+        }
 
+        console.log("Archivo seleccionado:", file.name, file.size, "bytes")
         setIsProcessing(true)
         setFacturas([])
 
         try {
+            console.log("Leyendo archivo...")
             const arrayBuffer = await file.arrayBuffer()
+            console.log("ArrayBuffer obtenido, tamaño:", arrayBuffer.byteLength)
+            
+            console.log("Iniciando carga de PDF con pdfjs...")
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+            console.log("Loading task creado")
+            
             const pdfData = await loadingTask.promise
+            console.log("PDF cargado, páginas:", pdfData.numPages)
 
             let fullText = ""
             for (let i = 1; i <= pdfData.numPages; i++) {
+                console.log(`Procesando página ${i}/${pdfData.numPages}`)
                 const page = await pdfData.getPage(i)
                 const content = await page.getTextContent()
                 const strings = content.items.map((item: any) => item.str)
-                fullText += strings.join(" ") + `\n--- PÁGINA ${i} ---\n`
+                fullText += strings.join("") + "\n"
             }
+            
+            console.log("=== Texto extraído del PDF ===")
+            console.log(fullText.substring(0, 3000))
+            console.log("=== Fin texto ===")
 
-            const parsed = parseQuickBooksText(fullText)
+            const parsed = parsePauletaInvoices(fullText)
+            console.log("Facturas parseadas:", parsed.length)
             setFacturas(parsed)
-            setStats({
-                total: parsed.length,
-                validas: parsed.filter(f => f.valida).length,
-                errores: parsed.filter(f => !f.valida).length
-            })
+            
+            toast({ title: "PDF procesado", description: `Se encontraron ${parsed.length} facturas` })
+            
         } catch (err: any) {
-            console.error(err)
-            toast({ title: "Error", description: "Fallo al leer el PDF", variant: "destructive" })
+            console.error("=== ERROR PROCESANDO PDF ===", err)
+            toast({ title: "Error", description: err.message || "Fallo al leer el PDF", variant: "destructive" })
         } finally {
             setIsProcessing(false)
         }
@@ -220,7 +305,6 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
 
         try {
             for (const f of validas) {
-                // 1. Upsert de Factura (Actualizar si ya existe por número)
                 const { data: upsertedFactura, error: fError } = await supabase.from('facturas').upsert({
                     numero: f.numero,
                     cliente_id: f.clienteId,
@@ -236,10 +320,8 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                     continue
                 }
 
-                // 2. Limpiar líneas existentes (por si estamos re-importando para arreglar)
                 await supabase.from('lineas_factura').delete().eq('factura_id', upsertedFactura.id)
 
-                // 3. Insertar las nuevas líneas detectadas
                 const { error: lError } = await supabase.from('lineas_factura').insert(
                     f.lineas.map(l => ({
                         factura_id: upsertedFactura.id,
@@ -247,8 +329,8 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                         descripcion: l.descripcion,
                         cantidad: l.cantidad,
                         precio_unitario: l.precio,
-                        subtotal: l.importe, // Importe suele ser Base
-                        igic: l.igic // IGIC específico del producto
+                        subtotal: l.importe,
+                        igic: l.igic
                     }))
                 )
 
@@ -272,9 +354,9 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         Cargar Archivo de Facturas
-                        <Badge variant="secondary" className="text-xs">v2.1</Badge>
+                        <Badge variant="secondary" className="text-xs">v3.0</Badge>
                     </CardTitle>
-                    <CardDescription>Sube el PDF de QuickBooks. El sistema detectará automáticamente productos y estado de cobro.</CardDescription>
+                    <CardDescription>Sube el PDF de facturas de Pauleta Canaria. El sistema detectará automáticamente clientes, productos y estado de cobro.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-4">
@@ -320,7 +402,7 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                                 <TableRow>
                                     <TableHead>Factura</TableHead>
                                     <TableHead>Fecha</TableHead>
-                                    <TableHead>Cliente Detectado</TableHead>
+                                    <TableHead>Cliente</TableHead>
                                     <TableHead className="text-right">Total</TableHead>
                                     <TableHead>Estado</TableHead>
                                 </TableRow>
@@ -332,14 +414,14 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                                             <TableCell className="font-mono">{f.numero}</TableCell>
                                             <TableCell>{f.fecha}</TableCell>
                                             <TableCell>
-                                                <div className="flex flex-col">
+                                                <div className="flex flex-col gap-1">
                                                     <span className="text-xs text-muted-foreground truncate max-w-[200px]">{f.clienteRaw}</span>
                                                     {f.clienteId ? (
                                                         <Badge variant="outline" className="bg-green-50 text-green-700 w-fit">
                                                             <User className="mr-1 h-3 w-3" /> {f.clienteNombreMatch}
                                                         </Badge>
                                                     ) : (
-                                                        <span className="text-red-500 text-xs font-bold">Cliente no encontrado</span>
+                                                        <span className="text-red-500 text-xs font-bold">⚠ {f.error}</span>
                                                     )}
                                                 </div>
                                             </TableCell>
@@ -350,21 +432,12 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                                                         <Badge className="bg-green-600">✓ {f.lineas.length} líneas</Badge>
                                                     ) : (
                                                         <Badge variant="destructive" className="flex items-center gap-1">
-                                                            <AlertTriangle className="h-3 w-3" /> {f.error}
+                                                            <AlertTriangle className="h-3 w-3" /> Error
                                                         </Badge>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className={`h-5 text-[10px] px-2 ${f.cobrada ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                                                        onClick={() => {
-                                                            setFacturas(prev => prev.map(fact =>
-                                                                fact.id === f.id ? { ...fact, cobrada: !fact.cobrada } : fact
-                                                            ))
-                                                        }}
-                                                    >
+                                                    <Badge variant={f.cobrada ? "default" : "secondary"} className={f.cobrada ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
                                                         {f.cobrada ? 'COBRADA' : 'PENDIENTE'}
-                                                    </Button>
+                                                    </Badge>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -372,22 +445,22 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                                             <TableRow className="bg-slate-50/30 border-b-4 border-white">
                                                 <TableCell colSpan={5} className="py-2 px-8">
                                                     <div className="text-[10px] grid grid-cols-6 gap-2 text-muted-foreground uppercase font-bold border-b pb-1 mb-1">
-                                                        <span>Ref</span>
+                                                        <span>EAN</span>
                                                         <span className="col-span-2">Producto</span>
                                                         <span className="text-center">Cant.</span>
                                                         <span className="text-right">Precio</span>
-                                                        <span className="text-right">IGIC</span>
+                                                        <span className="text-right">Importe</span>
                                                     </div>
                                                     {f.lineas.map((l, lidx) => (
                                                         <div key={lidx} className="grid grid-cols-6 gap-2 py-0.5 border-b border-dotted last:border-0 hover:text-foreground text-xs">
-                                                            <span className="font-mono">{l.codigo}</span>
+                                                            <span className="font-mono text-[10px]">{l.codigo}</span>
                                                             <span className="col-span-2 truncate flex items-center gap-1">
                                                                 {l.productoId ? <CheckCircle className="h-3 w-3 text-green-500" /> : <AlertTriangle className="h-3 w-3 text-amber-500" />}
                                                                 {l.descripcion}
                                                             </span>
                                                             <span className="text-center">{l.cantidad}</span>
                                                             <span className="text-right">{l.precio.toFixed(2)}€</span>
-                                                            <span className="text-right font-mono">{l.igic}%</span>
+                                                            <span className="text-right font-medium">{l.importe.toFixed(2)}€</span>
                                                         </div>
                                                     ))}
                                                 </TableCell>
@@ -403,3 +476,5 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
         </div>
     )
 }
+
+export default PDFInvoiceImporter
