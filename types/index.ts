@@ -23,6 +23,9 @@ export interface Empresa {
   nombre: string
   cif: string | null
   direccion: string | null
+  codigo_postal: string | null
+  ciudad: string | null
+  provincia: string | null
   telefono: string | null
   email: string | null
   cuenta_bancaria: string | null
