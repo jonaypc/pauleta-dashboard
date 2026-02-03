@@ -362,14 +362,23 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 
                 console.log(`Factura ${numero}: ${lineas.length} líneas encontradas`)
                 
-                // 5. TOTALES
-                const subtotalMatch = block.match(/SUBTOTAL\s*([\d.]+)/i)
-                const impuestoMatch = block.match(/IMPUESTO\s*([\d.]+)/i)
-                const totalMatch = block.match(/TOTAL\s*([\d.]+)/i)
+                // 5. TOTALES - Manejar formato con comas de miles (ej: 1,234.56)
+                const parseMoneda = (valor: string | undefined): number => {
+                    if (!valor) return 0
+                    // Eliminar comas de miles y convertir
+                    const limpio = valor.replace(/,/g, '')
+                    return parseFloat(limpio) || 0
+                }
                 
-                const subtotal = parseFloat(subtotalMatch?.[1] || "0")
-                const impuesto = parseFloat(impuestoMatch?.[1] || "0")
-                const total = parseFloat(totalMatch?.[1] || "0")
+                const subtotalMatch = block.match(/SUBTOTAL\s*([\d,\.]+)/i)
+                const impuestoMatch = block.match(/IMPUESTO\s*([\d,\.]+)/i)
+                const totalMatch = block.match(/TOTAL\s*([\d,\.]+)/i)
+                
+                const subtotal = parseMoneda(subtotalMatch?.[1])
+                const impuesto = parseMoneda(impuestoMatch?.[1])
+                const total = parseMoneda(totalMatch?.[1])
+                
+                console.log(`Factura ${numero}: Totales parseados - Subtotal: ${subtotal}, Impuesto: ${impuesto}, Total: ${total}`)
                 
                 // 6. ESTADO DE PAGO - buscar "SALDO PENDIENTE EUR 0.00" o similar
                 const saldoPendienteMatch = block.match(/SALDO\s*PENDIENTE\s*EUR\s*([\d.]+)/i)
