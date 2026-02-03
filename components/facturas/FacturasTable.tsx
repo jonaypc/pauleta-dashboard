@@ -423,47 +423,44 @@ export function FacturasTable({
                         ))
                     )}
                 </tbody>
-            </tbody>
-        </table>
+            </table>
 
-            {/* Sticky Footer con Totales */ }
-    <div className="sticky bottom-0 border-t bg-background p-4 shadow-lg">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-muted-foreground">
-                {facturas.length} facturas mostradas
-                {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
-            </div>
-            <div className="flex items-center gap-6">
-                <div className="text-right">
-                    <p className="text-xs text-muted-foreground uppercase font-bold">Total Listado</p>
-                    <p className="text-lg font-bold">{formatPrecio(totalVisible)}</p>
-                </div>
-                {selectedIds.size > 0 && (
-                    <div className="text-right border-l pl-6">
-                        <p className="text-xs text-primary uppercase font-bold">Total Seleccionado</p>
-                        <p className="text-lg font-bold text-primary">{formatPrecio(totalSelected)}</p>
+            {/* Sticky Footer con Totales */}
+            <div className="sticky bottom-0 border-t bg-background p-4 shadow-lg">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-muted-foreground">
+                        {facturas.length} facturas mostradas
+                        {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
                     </div>
-                )}
+                    <div className="flex items-center gap-6">
+                        <div className="text-right">
+                            <p className="text-xs text-muted-foreground uppercase font-bold">Total Listado</p>
+                            <p className="text-lg font-bold">{formatPrecio(totalVisible)}</p>
+                        </div>
+                        {selectedIds.size > 0 && (
+                            <div className="text-right border-l pl-6">
+                                <p className="text-xs text-primary uppercase font-bold">Total Seleccionado</p>
+                                <p className="text-lg font-bold text-primary">{formatPrecio(totalSelected)}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    {/* Modal de Cobro */ }
-    {
-        facturaParaCobrar && (
-            <CobroForm
-                open={!!facturaParaCobrar}
-                onOpenChange={(open) => !open && setFacturaParaCobrar(null)}
-                facturaId={facturaParaCobrar.id}
-                facturaNumero={facturaParaCobrar.numero}
-                pendiente={facturaParaCobrar.total}
-                onSuccess={() => {
-                    setFacturaParaCobrar(null)
-                    router.refresh()
-                }}
-            />
-        )
-    }
-        </div >
+            {/* Modal de Cobro */}
+            {facturaParaCobrar && (
+                <CobroForm
+                    open={!!facturaParaCobrar}
+                    onOpenChange={(open) => !open && setFacturaParaCobrar(null)}
+                    facturaId={facturaParaCobrar.id}
+                    facturaNumero={facturaParaCobrar.numero}
+                    pendiente={facturaParaCobrar.total}
+                    onSuccess={() => {
+                        setFacturaParaCobrar(null)
+                        router.refresh()
+                    }}
+                />
+            )}
+        </div>
     )
 }
