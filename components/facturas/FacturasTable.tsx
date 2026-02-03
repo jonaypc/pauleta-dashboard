@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -117,6 +117,43 @@ export function FacturasTable({
             toast({
                 title: "Error",
                 description: error.message,
+                variant: "destructive",
+            })
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
+
+    const handleDelete = async (factura: Factura) => {
+        setIsActionLoading(true)
+        try {
+            // Eliminar líneas primero (aunque ON DELETE CASCADE debería manejarlo, es más seguro)
+            const { error: errorLineas } = await supabase
+                .from("lineas_factura")
+                .delete()
+                .eq("factura_id", factura.id)
+
+            if (errorLineas) throw errorLineas
+
+            // Eliminar factura
+            const { error } = await supabase
+                .from("facturas")
+                .delete()
+                .eq("id", factura.id)
+
+            if (error) throw error
+
+            toast({
+                title: "Factura eliminada",
+                description: `La factura ${factura.numero} ha sido eliminada correctamente.`,
+                variant: "success",
+            })
+            router.refresh()
+        } catch (error: any) {
+            console.error("Error deleting invoice:", error)
+            toast({
+                title: "Error",
+                description: error.message || "No se pudo eliminar la factura",
                 variant: "destructive",
             })
         } finally {
@@ -246,6 +283,23 @@ export function FacturasTable({
                                                     <XCircle className="mr-2 h-4 w-4" />
                                                     Anular
                                                 </DropdownMenuItem>
+                                            )}
+                                            {factura.estado === "borrador" && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm(`¿Estás seguro de que quieres eliminar la factura ${factura.numero}? Esta acción no se puede deshacer.`)) {
+                                                                handleDelete(factura)
+                                                            }
+                                                        }}
+                                                        disabled={isActionLoading}
+                                                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Eliminar
+                                                    </DropdownMenuItem>
+                                                </>
                                             )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
