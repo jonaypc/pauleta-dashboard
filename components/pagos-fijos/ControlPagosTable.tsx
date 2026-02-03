@@ -125,8 +125,28 @@ export function ControlPagosTable({ pagosDefiniciones, historialPagos }: Control
         }
     }
 
+    // Calcular totales
+    const resumen = useMemo(() => {
+        return pagosDelMes.reduce(
+            (acc, item) => {
+                const importe = item.history ? item.history.importe : item.definition.importe
+
+                acc.total += importe
+
+                if (item.status === 'pagado') {
+                    acc.pagado += importe
+                } else {
+                    acc.pendiente += importe
+                }
+
+                return acc
+            },
+            { total: 0, pagado: 0, pendiente: 0 }
+        )
+    }, [pagosDelMes])
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-lg">
                     {format(targetDate, "MMMM yyyy", { locale: es }).toUpperCase()}
@@ -202,6 +222,22 @@ export function ControlPagosTable({ pagosDefiniciones, historialPagos }: Control
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Resumen Financiero del Mes */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col items-center justify-center">
+                    <p className="text-sm font-medium text-muted-foreground">Total Gastos</p>
+                    <p className="text-2xl font-bold">{formatCurrency(resumen.total)}</p>
+                </div>
+                <div className="rounded-lg border bg-green-50 text-green-900 shadow-sm p-4 flex flex-col items-center justify-center border-green-200">
+                    <p className="text-sm font-medium text-green-700 opacity-90">Total Pagado</p>
+                    <p className="text-2xl font-bold">{formatCurrency(resumen.pagado)}</p>
+                </div>
+                <div className="rounded-lg border bg-amber-50 text-amber-900 shadow-sm p-4 flex flex-col items-center justify-center border-amber-200">
+                    <p className="text-sm font-medium text-amber-700 opacity-90">Total Pendiente</p>
+                    <p className="text-2xl font-bold">{formatCurrency(resumen.pendiente)}</p>
+                </div>
             </div>
         </div>
     )
