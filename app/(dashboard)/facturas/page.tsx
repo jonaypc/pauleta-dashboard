@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Plus, Search, FileText } from "lucide-react"
+import { FacturasFilter } from "@/components/facturas/FacturasFilter"
 import type { EstadoFactura } from "@/types"
 
 export const metadata = {
