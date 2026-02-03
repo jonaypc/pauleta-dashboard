@@ -52,6 +52,9 @@ export function ProductosTable({
                             Precio
                         </th>
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                            Stock
+                        </th>
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                             Unidad
                         </th>
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">
@@ -93,6 +96,14 @@ export function ProductosTable({
                                 </td>
                                 <td className="px-4 py-3 text-right font-medium tabular-nums">
                                     {formatPrecio(producto.precio)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <span className={`font-medium ${producto.stock <= producto.stock_minimo
+                                            ? 'text-destructive font-bold'
+                                            : 'text-foreground'
+                                        }`}>
+                                        {producto.stock}
+                                    </span>
                                 </td>
                                 <td className="px-4 py-3 text-center text-muted-foreground">
                                     {formatUnidad(producto.unidad)}

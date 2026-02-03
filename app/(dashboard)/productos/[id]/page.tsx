@@ -61,6 +61,11 @@ export default async function ProductoDetailPage({
         notFound()
     }
 
+    // Si estamos editando, necesitamos todos los productos para el selector de vinculación
+    const { data: allProductos } = isEditing
+        ? await supabase.from("productos").select("*").eq("activo", true).order("nombre")
+        : { data: null }
+
     if (isEditing) {
         return (
             <div className="space-y-6">
@@ -81,7 +86,7 @@ export default async function ProductoDetailPage({
 
                 {/* Formulario */}
                 <div className="max-w-2xl">
-                    <ProductoForm producto={producto} />
+                    <ProductoForm producto={producto} allProductos={allProductos || []} />
                 </div>
             </div>
         )
@@ -147,6 +152,54 @@ export default async function ProductoDetailPage({
                                     </p>
                                     <p className="mt-1 whitespace-pre-wrap">
                                         {producto.descripcion}
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Inventario */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <Package className="h-5 w-5" />
+                                Inventario
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Stock Actual
+                                </p>
+                                <p className={`mt-1 text-2xl font-bold ${producto.stock <= producto.stock_minimo
+                                        ? 'text-destructive'
+                                        : 'text-primary'
+                                    }`}>
+                                    {producto.stock} uds.
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Stock Mínimo
+                                </p>
+                                <p className="mt-1 text-lg font-medium">{producto.stock_minimo} uds.</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Multiplicador
+                                </p>
+                                <p className="mt-1 text-lg font-medium">x{producto.multiplicador_stock}</p>
+                            </div>
+                            {producto.vinculado_a_id && (
+                                <div className="sm:col-span-3 pt-2 border-t mt-2">
+                                    <p className="text-sm font-medium text-muted-foreground">
+                                        Vinculado a ID
+                                    </p>
+                                    <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">
+                                        {producto.vinculado_a_id}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        Este producto descuenta inventario del producto base vinculado.
                                     </p>
                                 </div>
                             )}

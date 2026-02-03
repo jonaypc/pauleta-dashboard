@@ -78,6 +78,10 @@ export interface Producto {
   unidad: UnidadMedida
   igic: number
   categoria: string | null
+  stock: number
+  stock_minimo: number
+  multiplicador_stock: number
+  vinculado_a_id: string | null
   activo: boolean
   created_at: string
 }
@@ -172,6 +176,10 @@ export interface ProductoFormData {
   unidad: UnidadMedida
   igic: number
   categoria?: string
+  stock?: number
+  stock_minimo?: number
+  multiplicador_stock?: number
+  vinculado_a_id?: string | null
 }
 
 export interface FacturaFormData {
