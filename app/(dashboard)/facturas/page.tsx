@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Plus, Search, FileText } from "lucide-react"
 import { FacturasFilter } from "@/components/facturas/FacturasFilter"
+import { ClientFilter } from "@/components/facturas/ClientFilter"
 import type { EstadoFactura } from "@/types"
 
 export const metadata = {
@@ -13,7 +14,7 @@ export const metadata = {
 }
 
 interface PageProps {
-    searchParams: { q?: string; estado?: EstadoFactura; from?: string; to?: string }
+    searchParams: { q?: string; estado?: EstadoFactura; from?: string; to?: string; cliente?: string }
 }
 
 export default async function FacturasPage({ searchParams }: PageProps) {
@@ -22,7 +23,9 @@ export default async function FacturasPage({ searchParams }: PageProps) {
     const estadoFiltro = searchParams.estado
     const dateFrom = searchParams.from
     const dateTo = searchParams.to
+    const clienteFiltro = searchParams.cliente
 
+    // 1. Query de Facturas
     let query = supabase
         .from("facturas")
         .select("*, cliente:clientes(nombre, persona_contacto)")
@@ -45,7 +48,18 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         query = query.lte("fecha", dateTo)
     }
 
+    if (clienteFiltro) {
+        query = query.eq("cliente_id", clienteFiltro)
+    }
+
     const { data: facturas, error } = await query
+
+    // 2. Fetch de Clientes para el filtro (solo nombre y contacto)
+    const { data: clientes } = await supabase
+        .from("clientes")
+        .select("id, nombre, persona_contacto")
+        .eq("activo", true)
+        .order("nombre", { ascending: true })
 
     const estados: { value: EstadoFactura | ""; label: string }[] = [
         { value: "", label: "Todos" },
@@ -86,18 +100,22 @@ export default async function FacturasPage({ searchParams }: PageProps) {
             </div>
 
             {/* Filtros */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <form className="relative flex-1 sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        name="q"
-                        placeholder="Buscar por número..."
-                        defaultValue={busqueda}
-                        className="pl-9"
-                    />
-                </form>
-                <FacturasFilter />
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <form className="relative flex-1 sm:max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            name="q"
+                            placeholder="Buscar por número..."
+                            defaultValue={busqueda}
+                            className="pl-9"
+                        />
+                    </form>
+                    <FacturasFilter />
+                    <ClientFilter clientes={clientes || []} />
+                </div>
+                
                 <div className="flex flex-wrap gap-2">
                     {estados.map((estado) => (
                         <Link
