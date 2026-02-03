@@ -45,7 +45,7 @@ export function PDFImporterDebugger() {
                 <AlertCircle className="h-4 w-4 text-blue-600" />
                 <AlertTitle>Modo Diagnóstico</AlertTitle>
                 <AlertDescription>
-                    Sube **una sola factura** de ejemplo. El sistema mostrará el texto crudo que la máquina "ve" dentro del PDF.
+                    Sube **una sola factura** de ejemplo. El sistema mostrará el texto crudo que la máquina &quot;ve&quot; dentro del PDF.
                     Copia este texto y pásamelo para que pueda programar el lector automático.
                 </AlertDescription>
             </Alert>

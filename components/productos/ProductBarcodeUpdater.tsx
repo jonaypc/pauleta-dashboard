@@ -214,7 +214,7 @@ export function ProductBarcodeUpdater({ productosExistentes }: ProductBarcodeUpd
                             </Button>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            El Excel debe tener columnas "Nombre" y alguna columna tipo "Código", "Barcode" o "EAN".
+                            El Excel debe tener columnas &quot;Nombre&quot; y alguna columna tipo &quot;Código&quot;, &quot;Barcode&quot; o &quot;EAN&quot;.
                         </p>
                     </div>
                 </CardContent>

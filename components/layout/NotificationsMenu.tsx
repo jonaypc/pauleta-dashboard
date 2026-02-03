@@ -24,6 +24,27 @@ export function NotificationsMenu() {
     const [isOpen, setIsOpen] = useState(false)
 
     useEffect(() => {
+        const fetchNotificaciones = async () => {
+            const { data } = await supabase
+                .from("notificaciones")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(10)
+
+            if (data) {
+                setNotificaciones(data)
+                // Lógica simple para MVP: si hay alguna no leída (enviada=false en este contexto simplificado
+                // o simplemente si hay nuevas desde la última vez que abrimos - simulado)
+                // Aquí usaremos el campo 'enviada' como flag de "leído" visual para el MVP si queremos,
+                // o simplemente mostramos el punto si hay notificaciones recientes (< 24h).
+
+                // Para simplificar: Si hay alguna notificación creada en las últimas 24h, mostramos punto.
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+                const recent = data.some(n => new Date(n.created_at) > oneDayAgo)
+                setHasUnread(recent)
+            }
+        }
+
         fetchNotificaciones()
 
         // Suscripción a cambios en tiempo real (opcional para MVP, pero recomendado)
@@ -38,28 +59,7 @@ export function NotificationsMenu() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [])
-
-    const fetchNotificaciones = async () => {
-        const { data } = await supabase
-            .from("notificaciones")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(10)
-
-        if (data) {
-            setNotificaciones(data)
-            // Lógica simple para MVP: si hay alguna no leída (enviada=false en este contexto simplificado
-            // o simplemente si hay nuevas desde la última vez que abrimos - simulado)
-            // Aquí usaremos el campo 'enviada' como flag de "leído" visual para el MVP si queremos,
-            // o simplemente mostramos el punto si hay notificaciones recientes (< 24h).
-
-            // Para simplificar: Si hay alguna notificación creada en las últimas 24h, mostramos punto.
-            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-            const recent = data.some(n => new Date(n.created_at) > oneDayAgo)
-            setHasUnread(recent)
-        }
-    }
+    }, [supabase])
 
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open)
