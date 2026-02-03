@@ -50,6 +50,7 @@ interface ParsedInvoice {
     subtotal: number
     impuesto: number
     total: number
+    cobrada: boolean
     valida: boolean
     error?: string
 }
@@ -79,59 +80,80 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
     const normalize = (str: string) => str?.toString().trim().toLowerCase() || ""
 
     const parseQuickBooksText = (text: string): ParsedInvoice[] => {
-        // Dividir por páginas si existe el marcador o intentar detectar bloques FACTURA N.º
-        const blocks = text.split(/--- PÁGINA \d+ ---/g).filter(b => b.trim().length > 100)
+        // En lugar de dividir por páginas, unimos todo y buscamos el patrón de inicio de factura
+        // El patrón suele ser "FACTURA N.º"
+        const invoiceStarts = Array.from(text.matchAll(/FACTURA N\.º/g)).map(m => m.index)
+        const blocks: string[] = []
+
+        for (let i = 0; i < invoiceStarts.length; i++) {
+            const start = invoiceStarts[i]
+            const end = invoiceStarts[i + 1] || text.length
+            blocks.push(text.substring(start!, end))
+        }
+
         const results: ParsedInvoice[] = []
 
         blocks.forEach((block, idx) => {
             try {
                 // 1. Número de Factura
                 const numMatch = block.match(/FACTURA N\.º\s+(\d+)/)
-                const numero = numMatch ? numMatch[1] : `ERR-${idx}`
+                if (!numMatch) return // Si no hay número, no es una factura válida
+                const numero = numMatch[1]
 
                 // 2. Fecha
                 const fechaMatch = block.match(/FECHA\s+(\d{2}\/\d{2}\/\d{4})/)
                 const fechaRaw = fechaMatch ? fechaMatch[1] : ""
-                // Convertir DD/MM/YYYY a YYYY-MM-DD
                 const [d, m, y] = fechaRaw.split("/")
                 const fecha = y && m && d ? `${y}-${m}-${d}` : new Date().toISOString().split("T")[0]
 
                 // 3. Cliente
-                // El texto entre "FACTURAR A" y "ENVIAR A" suele ser el cliente
-                const clienteMatch = block.match(/FACTURAR A\s+([\s\S]*?)\s+(?:ENVIAR A|FACTURA N\.º)/)
+                // Buscamos el bloque entre "FACTURAR A" y algo que cierre (en multi-página puede ser complejo)
+                const clienteMatch = block.match(/FACTURAR A\s+([\s\S]*?)\s+(?:ENVIAR A|FECHA|FACTURA)/)
                 const clienteRaw = clienteMatch ? clienteMatch[1].trim() : "Desconocido"
 
-                // Buscar match de cliente por nombre o CIF
                 const foundCliente = clientes.find(c =>
                     normalize(clienteRaw).includes(normalize(c.nombre)) ||
                     (c.cif && normalize(clienteRaw).includes(normalize(c.cif)))
                 )
 
-                // 4. Totales
-                const subtotalMatch = block.match(/SUBTOTAL\s+([\d,.]+)/)
-                const impuestoMatch = block.match(/IMPUESTO\s+([\d,.]+)/)
-                const totalMatch = block.match(/TOTAL\s+([\d,.]+)/)
+                // 4. Totales (Buscamos los últimos que aparezcan en el bloque para evitar errores de arrastre)
+                const subtotalMatch = Array.from(block.matchAll(/SUBTOTAL\s+([\d,.]+)/g)).pop()
+                const impuestoMatch = Array.from(block.matchAll(/IMPUESTO\s+([\d,.]+)/g)).pop()
+                const totalMatch = Array.from(block.matchAll(/TOTAL\s+([\d,.]+)/g)).pop()
 
                 const subtotal = parseFloat(subtotalMatch?.[1].replace(",", "") || "0")
                 const impuesto = parseFloat(impuestoMatch?.[1].replace(",", "") || "0")
                 const total = parseFloat(totalMatch?.[1].replace(",", "") || "0")
 
+                // 4.5. Estado de pago (Buscamos si el saldo pendiente es 0 o si dice PAGADA)
+                const saldoPendienteMatch = block.match(/SALDO PENDIENTE\s+([\d,.]+)/i)
+                const saldoPendiente = parseFloat(saldoPendienteMatch?.[1].replace(",", "") || "999")
+                const isPagada = saldoPendiente === 0 || /PAGADA|COBRADA|SALDO 0/i.test(block)
+
                 // 5. Líneas de Productos
-                // Buscamos líneas que empiecen por un código de barras (8-14 dígitos)
+                // Buscamos líneas que empiecen por un código numérico (mínimo 4 dígitos para soportar códigos internos cortos)
                 const lineas: ParsedLine[] = []
-                const lineRegex = /(\d{8,14})\s+([\s\S]*?)\s+(\d+)\s+([\d,.]+)\s+([\d,.]+)/g
+                const lineRegex = /(\d{4,14})\s+([\s\S]*?)\s+(\d+)\s+([\d,.]+)\s+([\d,.]+)/g
                 let match;
 
                 while ((match = lineRegex.exec(block)) !== null) {
                     const [_, codigo, descripcion, cant, precio, importe] = match
+                    // Si el importe no cuadra con cant * precio, puede ser un falso positivo (ej: un teléfono)
+                    const parsedCant = parseFloat(cant)
+                    const parsedPrecio = parseFloat(precio.replace(",", ""))
+                    const parsedImporte = parseFloat(importe.replace(",", ""))
+
+                    // Pequeña validación de integridad
+                    if (Math.abs(parsedCant * parsedPrecio - parsedImporte) > 0.5) continue
+
                     const productMatch = productos.find(p => p.codigo_barras === codigo || normalize(p.nombre) === normalize(descripcion))
 
                     lineas.push({
                         codigo,
                         descripcion: descripcion.trim(),
-                        cantidad: parseFloat(cant),
-                        precio: parseFloat(precio.replace(",", "")),
-                        importe: parseFloat(importe.replace(",", "")),
+                        cantidad: parsedCant,
+                        precio: parsedPrecio,
+                        importe: parsedImporte,
                         productoId: productMatch?.id
                     })
                 }
@@ -147,6 +169,7 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                     subtotal,
                     impuesto,
                     total,
+                    cobrada: isPagada,
                     valida: !!foundCliente && lineas.length > 0,
                     error: !foundCliente ? "Cliente no encontrado" : (lineas.length === 0 ? "No se detectaron líneas" : undefined)
                 })
@@ -155,6 +178,7 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
             }
         })
 
+        console.log("Resultado del parsing consolidado:", results)
         return results
     }
 
@@ -209,7 +233,7 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                     base_imponible: f.subtotal,
                     igic: f.impuesto,
                     total: f.total,
-                    estado: 'cobrada' // Históricas suelen estar cobradas
+                    estado: f.cobrada ? 'cobrada' : 'emitida'
                 }).select('id').single()
 
                 if (fError) {
@@ -308,30 +332,69 @@ export function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterPr
                             </TableHeader>
                             <TableBody>
                                 {facturas.map((f) => (
-                                    <TableRow key={f.id} className={!f.valida ? "opacity-60 bg-red-50/30" : ""}>
-                                        <TableCell className="font-mono">{f.numero}</TableCell>
-                                        <TableCell>{f.fecha}</TableCell>
-                                        <TableCell className="text-xs max-w-[200px] truncate">{f.clienteRaw}</TableCell>
-                                        <TableCell>
-                                            {f.clienteId ? (
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                                    <User className="mr-1 h-3 w-3" /> {f.clienteNombreMatch}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-red-500 text-xs font-semibold">No encontrado</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">{f.total.toFixed(2)}€</TableCell>
-                                        <TableCell>
-                                            {f.valida ? (
-                                                <Badge className="bg-green-600">✓ Listo</Badge>
-                                            ) : (
-                                                <Badge variant="destructive" className="flex items-center gap-1">
-                                                    <AlertTriangle className="h-3 w-3" /> {f.error}
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
+                                    <>
+                                        <TableRow key={f.id} className={!f.valida ? "opacity-60 bg-red-50/30" : "hover:bg-slate-50/50"}>
+                                            <TableCell className="font-mono">{f.numero}</TableCell>
+                                            <TableCell>{f.fecha}</TableCell>
+                                            <TableCell className="text-xs max-w-[200px] truncate">{f.clienteRaw}</TableCell>
+                                            <TableCell>
+                                                {f.clienteId ? (
+                                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                                        <User className="mr-1 h-3 w-3" /> {f.clienteNombreMatch}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-red-500 text-xs font-semibold">No encontrado</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium">{f.total.toFixed(2)}€</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col gap-1">
+                                                    {f.valida ? (
+                                                        <Badge className="bg-green-600">✓ {f.lineas.length} líneas</Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive" className="flex items-center gap-1">
+                                                            <AlertTriangle className="h-3 w-3" /> {f.error}
+                                                        </Badge>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className={`h-6 text-[10px] px-2 ${f.cobrada ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                                                        onClick={() => {
+                                                            setFacturas(prev => prev.map(fact =>
+                                                                fact.id === f.id ? { ...fact, cobrada: !fact.cobrada } : fact
+                                                            ))
+                                                        }}
+                                                    >
+                                                        {f.cobrada ? 'COBRADA' : 'PENDIENTE'}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                        {f.lineas.length > 0 && (
+                                            <TableRow className="bg-slate-50/30">
+                                                <TableCell colSpan={6} className="py-2 px-8">
+                                                    <div className="text-[10px] grid grid-cols-5 gap-2 text-muted-foreground uppercase font-bold border-b pb-1 mb-1">
+                                                        <span>Código</span>
+                                                        <span className="col-span-2">Producto detectado</span>
+                                                        <span className="text-center">Cant.</span>
+                                                        <span className="text-right">Precio</span>
+                                                    </div>
+                                                    {f.lineas.map((l, lidx) => (
+                                                        <div key={lidx} className="grid grid-cols-5 gap-2 py-0.5 border-b border-dotted last:border-0 hover:text-foreground">
+                                                            <span className="font-mono">{l.codigo}</span>
+                                                            <span className="col-span-2 truncate flex items-center gap-1">
+                                                                {l.productoId ? <CheckCircle className="h-3 w-3 text-green-500" /> : <AlertTriangle className="h-3 w-3 text-amber-500" />}
+                                                                {l.descripcion}
+                                                            </span>
+                                                            <span className="text-center text-foreground font-medium">{l.cantidad}</span>
+                                                            <span className="text-right text-foreground">{l.precio.toFixed(2)}€</span>
+                                                        </div>
+                                                    ))}
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </>
                                 ))}
                             </TableBody>
                         </Table>
