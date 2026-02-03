@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
+import NextImage from "next/image"
 
 export const dynamic = 'force-dynamic'
 
@@ -183,10 +184,13 @@ export default async function FacturaPrintPage({ params }: PageProps) {
         <div className="header">
           <div className="logo-section">
             {mostrarLogo && (
-              <img
+              <NextImage
                 src={empresa?.logo_url || "/logo-pauleta.png"}
                 alt="Logo"
-                style={{ height: `${logoWidth}px`, marginBottom: '10px' }}
+                width={logoWidth}
+                height={Math.round(logoWidth * 0.5)} // Estimación proporcional
+                style={{ height: 'auto', marginBottom: '10px' }}
+                unoptimized // Útil para imágenes almacenadas fuera que cambian frecuentemente o para imprimir
               />
             )}
             <h1>{empresa?.nombre || "Pauleta Canaria"}</h1>
