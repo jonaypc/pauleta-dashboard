@@ -55,6 +55,16 @@ interface PagoFijoFormProps {
     children?: React.ReactNode
 }
 
+
+const defaultValues: PagoFijoFormValues = {
+    concepto: "",
+    dia_inicio: 1,
+    dia_fin: 5,
+    importe: 0,
+    variable: false,
+    activo: true,
+}
+
 export function PagoFijoForm({
     pagoToEdit,
     open: externalOpen,
@@ -70,14 +80,7 @@ export function PagoFijoForm({
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
 
-    const defaultValues: PagoFijoFormValues = {
-        concepto: "",
-        dia_inicio: 1,
-        dia_fin: 5,
-        importe: 0,
-        variable: false,
-        activo: true,
-    }
+    // defaultValues moved outside
 
     const form = useForm<PagoFijoFormValues>({
         resolver: zodResolver(pagoFijoSchema),
