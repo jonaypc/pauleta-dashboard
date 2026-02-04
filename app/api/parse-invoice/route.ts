@@ -16,9 +16,20 @@ export interface ParsedInvoiceData {
     confidence: number
 }
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-})
+// Cliente OpenAI se crea bajo demanda para evitar errores en build
+let openai: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+    if (!openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error("OPENAI_API_KEY no configurada")
+        }
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        })
+    }
+    return openai
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -131,7 +142,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
 }`
 
     try {
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "gpt-4o",
             messages: [
                 {
@@ -195,7 +206,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
 }`
 
     try {
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "gpt-4o",
             messages: [
                 {
