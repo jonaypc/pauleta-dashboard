@@ -1,4 +1,4 @@
-nes import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 
 export interface ParsedInvoiceData {
@@ -60,16 +60,43 @@ export async function POST(request: NextRequest) {
         let mimeType: string
 
         if (isPdf) {
-            // Convertir PDF a imagen para usar GPT-4 Vision
+            // Primero intentar extraer texto (más barato)
+            let extractedText = ""
+            try {
+                const { extractText } = await import("unpdf")
+                const result = await extractText(buffer)
+                extractedText = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
+            } catch (e) {
+                console.error("Error extracting text:", e)
+            }
+            
+            // Verificar si el texto extraído es útil (tiene números y letras suficientes)
+            const hasUsefulText = extractedText.length > 200 && 
+                /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(extractedText) && // tiene fecha
+                /\d+[,\.]\d{2}/.test(extractedText) // tiene importes
+            
+            if (hasUsefulText) {
+                // Usar análisis de texto (más barato: ~$0.005 por factura)
+                console.log("Using text analysis (cheaper)")
+                const parsed = await analyzeTextWithGPT(extractedText)
+                return NextResponse.json({
+                    success: true,
+                    text: extractedText,
+                    parsed,
+                    method: "text-analysis"
+                })
+            }
+            
+            // Si el texto no es útil, convertir a imagen y usar Vision
+            console.log("Text insufficient, using Vision (more accurate)")
             try {
                 const { pdf } = await import("pdf-to-img")
                 const document = await pdf(buffer, { scale: 2 })
                 
-                // Obtener la primera página como imagen
                 let firstPageImage: Buffer | null = null
                 for await (const image of document) {
                     firstPageImage = image
-                    break // Solo necesitamos la primera página
+                    break
                 }
                 
                 if (firstPageImage) {
@@ -78,32 +105,13 @@ export async function POST(request: NextRequest) {
                     
                     return NextResponse.json({
                         success: true,
-                        text: "[PDF convertido a imagen y analizado con IA]",
+                        text: "[PDF analizado con Vision]",
                         parsed,
                         method: "pdf-vision-analysis"
                     })
                 }
             } catch (e: any) {
                 console.error("Error converting PDF to image:", e)
-                
-                // Fallback: intentar extraer texto
-                try {
-                    const { extractText } = await import("unpdf")
-                    const result = await extractText(buffer)
-                    const text = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
-                    
-                    if (text && text.trim().length > 100) {
-                        const parsed = await analyzeTextWithGPT(text)
-                        return NextResponse.json({
-                            success: true,
-                            text: text,
-                            parsed,
-                            method: "text-analysis"
-                        })
-                    }
-                } catch (textError) {
-                    console.error("Error extracting text:", textError)
-                }
             }
             
             return NextResponse.json({ 
