@@ -69,13 +69,8 @@ export default async function FacturaDetailPage({
         .single()
 
     if (error) {
-        console.error("Error fetching factura:", error)
-        // Si es un error de formato de UUID, mostrar 404
-        if (error.code === 'PGRST116' || error.message?.includes('invalid input syntax')) {
-            notFound()
-        }
-        // Para otros errores, lanzar excepción para que se vea en logs
-        throw new Error(`Error al cargar factura: ${error.message}`)
+        console.error("Error fetching factura:", error.code, error.message)
+        notFound()
     }
 
     if (!factura) {
