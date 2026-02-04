@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+
+export const dynamic = 'force-dynamic'
 import { FacturaForm } from "@/components/facturas/FacturaForm"
 import { SendEmailButton } from "@/components/facturas/SendEmailButton"
 import { Button } from "@/components/ui/button"
