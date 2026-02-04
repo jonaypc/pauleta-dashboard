@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@supabase/ssr"
+
+export const dynamic = 'force-dynamic'
+
+// Cliente sin cookies para cron/API routes
+function createCronClient() {
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            cookies: {
+                get: () => undefined,
+                set: () => {},
+                remove: () => {},
+            }
+        }
+    )
+}
 
 // Esta ruta será llamada por Vercel Cron
 // Configurar en vercel.json: "crons": [{ "path": "/api/cron/check-pagos", "schedule": "0 8 * * *" }]
@@ -12,7 +29,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const supabase = await createClient()
+        const supabase = createCronClient()
         const hoy = new Date().getDate()
         const thisMonth = new Date().getMonth() // 0-11
         const thisYear = new Date().getFullYear()
