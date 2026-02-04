@@ -99,13 +99,13 @@ export default async function RelacionFacturasPrintPage({
                 body { 
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     background: #f0f0f0;
-                    font-size: 11px;
+                    font-size: 12px;
                 }
                 
                 .document {
                     width: 210mm;
                     min-height: 297mm;
-                    padding: 15mm;
+                    padding: 15mm 20mm;
                     margin: 0 auto;
                     background: white;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -113,41 +113,42 @@ export default async function RelacionFacturasPrintPage({
 
                 .header-title {
                     text-align: center;
-                    font-size: 16px;
+                    font-size: 18px;
                     font-weight: 700;
                     color: ${color};
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                    padding-bottom: 12px;
                     border-bottom: 2px solid ${color};
                 }
 
                 .company-info {
                     margin-bottom: 20px;
-                    padding: 10px;
+                    padding: 12px 15px;
                     background: #f8fafc;
                     border-radius: 8px;
                 }
 
                 .company-name {
-                    font-size: 14px;
+                    font-size: 16px;
                     font-weight: 700;
                     color: #1e293b;
                 }
 
                 .company-details {
-                    font-size: 10px;
+                    font-size: 11px;
                     color: #64748b;
-                    margin-top: 4px;
+                    margin-top: 6px;
+                    line-height: 1.6;
                 }
 
                 .periodo-info {
                     display: flex;
                     justify-content: space-between;
                     margin-bottom: 15px;
-                    padding: 10px;
+                    padding: 12px 15px;
                     background: #f1f5f9;
                     border-radius: 6px;
-                    font-size: 10px;
+                    font-size: 12px;
                 }
 
                 .periodo-info strong {
@@ -163,9 +164,9 @@ export default async function RelacionFacturasPrintPage({
                 th {
                     background: ${color};
                     color: white;
-                    padding: 8px 6px;
+                    padding: 10px 8px;
                     text-align: left;
-                    font-size: 9px;
+                    font-size: 10px;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
@@ -174,9 +175,9 @@ export default async function RelacionFacturasPrintPage({
                 th.center { text-align: center; }
 
                 td {
-                    padding: 8px 6px;
+                    padding: 10px 8px;
                     border-bottom: 1px solid #e2e8f0;
-                    font-size: 10px;
+                    font-size: 11px;
                 }
 
                 td.right { text-align: right; font-family: monospace; }
@@ -192,13 +193,13 @@ export default async function RelacionFacturasPrintPage({
 
                 .total-row td {
                     border-top: 2px solid ${color};
-                    font-size: 12px;
+                    font-size: 13px;
                 }
 
                 .signatures {
                     display: flex;
                     justify-content: space-between;
-                    margin-top: 40px;
+                    margin-top: 50px;
                     padding-top: 20px;
                 }
 
@@ -207,15 +208,15 @@ export default async function RelacionFacturasPrintPage({
                 }
 
                 .signature-label {
-                    font-size: 9px;
+                    font-size: 11px;
                     color: #64748b;
-                    margin-bottom: 40px;
+                    margin-bottom: 50px;
                 }
 
                 .signature-line {
                     border-top: 1px solid #1e293b;
-                    padding-top: 5px;
-                    font-size: 10px;
+                    padding-top: 8px;
+                    font-size: 11px;
                 }
 
                 .print-button-container {
