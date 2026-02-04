@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
             try {
                 const { extractText } = await import("unpdf")
                 const result = await extractText(buffer)
-                text = result.text || ""
+                // result.text es un array de strings (una por página)
+                text = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
             } catch (unpdfError: any) {
                 console.error("unpdf error:", unpdfError)
                 // Fallback: intentar con una extracción básica
