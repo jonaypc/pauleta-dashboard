@@ -107,25 +107,21 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
           position: relative;
           background: white;
           box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-          overflow: hidden; /* Ensure watermark doesn't overflow */
         }
         
-        /* === WATERMARK === */
-        .watermark {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) rotate(-45deg);
-          font-size: 150px;
-          font-weight: 900;
-          color: rgba(0, 0, 0, 0.05);
-          pointer-events: none;
-          z-index: 0;
-          white-space: nowrap;
-          border: 10px solid rgba(0, 0, 0, 0.05);
-          padding: 20px 100px;
-          border-radius: 20px;
-          text-transform: uppercase;
+        /* === COPY LABEL === */
+        .copy-label {
+          font-size: 24px;
+          font-weight: 700;
+          color: #dc2626;
+          border: 3px solid #dc2626;
+          padding: 8px 24px;
+          border-radius: 8px;
+          transform: rotate(-5deg);
+          opacity: 0.9;
+          letter-spacing: 2px;
+          align-self: center;
+          margin: 0 20mm;
         }
 
         /* === HEADER === */
@@ -170,6 +166,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
           background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
           border-radius: 8px;
           color: white;
+          min-width: 200px;
         }
         
         .invoice-label {
