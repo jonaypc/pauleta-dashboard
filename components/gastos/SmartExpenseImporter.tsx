@@ -127,13 +127,17 @@ export function SmartExpenseImporter({
     }
 
     const processMultipleFiles = async (files: File[]) => {
-        // Filtrar solo PDFs
-        const validFiles = files.filter(f => f.type.includes("pdf"))
+        // Filtrar solo PDFs e imágenes
+        const validFiles = files.filter(f => 
+            f.type.includes("pdf") || 
+            f.type.includes("image") ||
+            f.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|webp|bmp)$/)
+        )
         
         if (validFiles.length === 0) {
             toast({
                 title: "Sin archivos válidos",
-                description: "Solo se aceptan archivos PDF.",
+                description: "Solo se aceptan archivos PDF o imágenes (JPG, PNG).",
                 variant: "destructive"
             })
             return
@@ -142,7 +146,7 @@ export function SmartExpenseImporter({
         if (validFiles.length !== files.length) {
             toast({
                 title: "Algunos archivos ignorados",
-                description: `Se procesarán ${validFiles.length} de ${files.length} archivos (solo PDFs).`,
+                description: `Se procesarán ${validFiles.length} de ${files.length} archivos.`,
             })
         }
 
@@ -238,11 +242,15 @@ export function SmartExpenseImporter({
     }
 
     const processFile = async (file: File) => {
-        // Validar tipo
-        if (!file.type.includes("pdf")) {
+        // Validar tipo - aceptar PDF e imágenes
+        const isValid = file.type.includes("pdf") || 
+            file.type.includes("image") ||
+            file.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|webp|bmp)$/)
+            
+        if (!isValid) {
             toast({
                 title: "Formato no válido",
-                description: "Solo se aceptan archivos PDF.",
+                description: "Solo se aceptan archivos PDF o imágenes (JPG, PNG).",
                 variant: "destructive"
             })
             return
@@ -376,7 +384,7 @@ export function SmartExpenseImporter({
                     <Input
                         ref={fileInputRef}
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,.jpg,.jpeg,.png,image/*"
                         multiple={allowMultiple}
                         className="hidden"
                         onChange={handleChange}
@@ -392,7 +400,7 @@ export function SmartExpenseImporter({
 
                     {allowMultiple && (
                         <p className="text-xs text-muted-foreground">
-                            Formatos soportados: PDF
+                            Formatos soportados: PDF, JPG, PNG
                         </p>
                     )}
                 </CardContent>

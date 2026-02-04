@@ -22,25 +22,76 @@ export async function POST(request: NextRequest) {
 
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
+        
+        let text = ""
 
-        // Usar pdf-parse para extraer texto
-        const pdfParse = require("pdf-parse")
-        const data = await pdfParse(buffer)
+        // Determinar el tipo de archivo
+        const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
+        const isImage = file.type.includes("image") || 
+            file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
 
-        if (!data || typeof data.text !== 'string') {
+        if (isPdf) {
+            // Usar unpdf para extraer texto de PDFs
+            try {
+                const { extractText } = await import("unpdf")
+                const result = await extractText(buffer)
+                text = result.text || ""
+            } catch (unpdfError: any) {
+                console.error("unpdf error:", unpdfError)
+                // Fallback: intentar con una extracción básica
+                text = extractTextFromBuffer(buffer)
+            }
+        } else if (isImage) {
+            // Para imágenes, no hay OCR integrado por ahora
+            // Devolver datos vacíos con un mensaje indicando que es una imagen
+            return NextResponse.json({
+                success: true,
+                text: "[Imagen cargada - Los datos deben introducirse manualmente]",
+                numpages: 1,
+                isImage: true,
+                parsed: {
+                    fecha: null,
+                    importe: null,
+                    numero: null,
+                    cif_proveedor: null,
+                    nombre_proveedor: null,
+                    base_imponible: null,
+                    iva: null,
+                    raw_text: "[Imagen - sin OCR disponible]"
+                }
+            })
+        } else {
             return NextResponse.json({ 
                 success: false, 
-                error: "No se pudo extraer texto del PDF." 
+                error: "Tipo de archivo no soportado. Solo PDF o imágenes." 
             }, { status: 400 })
         }
 
+        if (!text || text.trim().length === 0) {
+            return NextResponse.json({ 
+                success: true, 
+                text: "[No se pudo extraer texto del PDF]",
+                numpages: 1,
+                parsed: {
+                    fecha: null,
+                    importe: null,
+                    numero: null,
+                    cif_proveedor: null,
+                    nombre_proveedor: null,
+                    base_imponible: null,
+                    iva: null,
+                    raw_text: "[PDF sin texto extraíble]"
+                }
+            })
+        }
+
         // Parsear los datos extraídos
-        const parsed = parseExpenseText(data.text)
+        const parsed = parseExpenseText(text)
 
         return NextResponse.json({
             success: true,
-            text: data.text,
-            numpages: data.numpages || 0,
+            text: text,
+            numpages: 1,
             parsed
         })
 
@@ -48,8 +99,32 @@ export async function POST(request: NextRequest) {
         console.error("PDF Parse Error:", error)
         return NextResponse.json({ 
             success: false, 
-            error: error.message || "Error al leer el PDF. Asegúrate de que no esté protegido o dañado." 
+            error: error.message || "Error al leer el archivo. Asegúrate de que no esté protegido o dañado." 
         }, { status: 500 })
+    }
+}
+
+// Función básica para extraer texto de un buffer PDF (fallback)
+function extractTextFromBuffer(buffer: Buffer): string {
+    try {
+        // Intentar extraer texto básico del PDF buscando streams de texto
+        const content = buffer.toString('binary')
+        const textMatches: string[] = []
+        
+        // Buscar objetos de texto en el PDF
+        const regex = /\(([^)]+)\)/g
+        let match
+        while ((match = regex.exec(content)) !== null) {
+            const text = match[1]
+            // Filtrar solo texto legible
+            if (text && text.length > 2 && /[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/.test(text)) {
+                textMatches.push(text)
+            }
+        }
+        
+        return textMatches.join(' ')
+    } catch {
+        return ""
     }
 }
 
