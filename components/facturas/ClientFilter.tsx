@@ -68,7 +68,7 @@ export function ClientFilter({ clientes }: ClientFilterProps) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-[250px] justify-between"
+                    className="w-full sm:w-[250px] justify-between"
                 >
                     <div className="flex items-center gap-2 truncate">
                         <User className="h-4 w-4 shrink-0 opacity-50" />
