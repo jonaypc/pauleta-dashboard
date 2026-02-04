@@ -28,7 +28,7 @@ export default async function CobrosPage() {
       *,
       factura:facturas(
         numero,
-        cliente:clientes(nombre)
+        cliente:clientes(nombre, persona_contacto)
       )
     `)
         .order("fecha", { ascending: false })
