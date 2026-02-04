@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
+import { CATEGORIAS_GASTOS } from "./constants"
 import { ExtractedExpenseData } from "./SmartExpenseImporter"
 
 const formSchema = z.object({
@@ -36,17 +37,6 @@ const formSchema = z.object({
 interface GastoFormProps {
     initialData?: ExtractedExpenseData | null
 }
-
-const CATEGORIAS = [
-    "Materia Prima",
-    "Alquiler",
-    "Suministros (Luz/Agua)",
-    "Impuestos",
-    "Seguridad Social",
-    "Marketing",
-    "Mantenimiento",
-    "Otros"
-]
 
 export function GastoForm({ initialData }: GastoFormProps) {
     const router = useRouter()
@@ -240,7 +230,7 @@ export function GastoForm({ initialData }: GastoFormProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {CATEGORIAS.map(cat => (
+                                        {CATEGORIAS_GASTOS.map(cat => (
                                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                         ))}
                                     </SelectContent>
