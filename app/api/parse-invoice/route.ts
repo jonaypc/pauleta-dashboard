@@ -34,10 +34,11 @@ function getOpenAI(): OpenAI {
 export async function POST(request: NextRequest) {
     try {
         // Verificar API key
+        // getOpenAI() se llamará dentro de analyze... si no se llama, verificamos aquí
         if (!process.env.OPENAI_API_KEY) {
-            return NextResponse.json({ 
-                success: false, 
-                error: "OPENAI_API_KEY no configurada. Añádela en .env.local" 
+            return NextResponse.json({
+                success: false,
+                error: "OPENAI_API_KEY no configurada. Añádela en .env.local"
             }, { status: 500 })
         }
 
@@ -50,19 +51,22 @@ export async function POST(request: NextRequest) {
 
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
-        
+
         // Determinar el tipo de archivo
         const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
-        const isImage = file.type.includes("image") || 
+        const isImage = file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
 
         let imageBase64: string
         let mimeType: string
 
         if (isPdf) {
-            // Extraer texto del PDF
+            console.log("Processing PDF file...")
+
+            // PRIMERO: Intentar extraer texto (más barato y rápido)
             let extractedText = ""
             try {
+                // Usar importación dinámica para unpdf
                 const { extractText } = await import("unpdf")
                 const result = await extractText(buffer)
                 extractedText = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
@@ -70,10 +74,11 @@ export async function POST(request: NextRequest) {
             } catch (e) {
                 console.error("Error extracting text:", e)
             }
-            
-            // Si hay algo de texto, intentar analizarlo con GPT-4 (es muy bueno)
-            if (extractedText.length > 50) {
-                console.log("Using text analysis")
+
+            // Si el texto es suficiente, analizarlo como texto
+            // (Umbral de 50 caracteres para evitar 'scanned headers' falsos)
+            if (extractedText.trim().length > 50) {
+                console.log("Using text analysis (text found)")
                 try {
                     const parsed = await analyzeTextWithGPT(extractedText)
                     return NextResponse.json({
@@ -84,62 +89,70 @@ export async function POST(request: NextRequest) {
                     })
                 } catch (e: any) {
                     console.error("GPT text analysis failed:", e)
+                    // Si falla el análisis de texto, intentamos visión como fallback
                 }
+            } else {
+                console.log("Not enough text found (likely scanned), trying Vision...")
             }
-            
-            // Si el texto falló, intentar convertir a imagen
-            console.log("Text insufficient or failed, trying Vision")
+
+            // SI FALLA TEXTO O ES ESCANEADO: Convertir PDF a imagen y usar Vision
+            // Usamos pdf-to-img para renderizar la primera página como imagen
             try {
-                // Importar dinámicamente para evitar errores si no está disponible
                 const pdfToImg = await import("pdf-to-img")
-                const document = await pdfToImg.pdf(buffer, { scale: 2 })
-                
+
+                // Renderizar PDF a imágenes (Buffer de Node)
+                // Usamos scale 2 para mejor resolución OCR
+                const document = await pdfToImg.pdf(buffer, { scale: 2.0 })
+
                 let firstPageImage: Buffer | null = null
+
+                // Iterar para encontrar la primera página (es un generador async)
                 for await (const image of document) {
                     firstPageImage = image
-                    break
+                    break // Solo necesitamos la primera página para la factura
                 }
-                
+
                 if (firstPageImage) {
                     const imageBase64 = firstPageImage.toString('base64')
+                    // pdf-to-img devuelve PNG por defecto
                     const parsed = await analyzeImageWithGPT(imageBase64, 'image/png')
-                    
+
                     return NextResponse.json({
                         success: true,
-                        text: "[PDF analizado con Vision]",
+                        text: "[PDF escaneado - Convertido a imagen]",
                         parsed,
-                        method: "pdf-vision-analysis"
+                        method: "pdf-to-image-vision"
                     })
+                } else {
+                    throw new Error("No se pudo generar imagen del PDF")
                 }
             } catch (e: any) {
-                console.error("PDF to image conversion failed:", e.message)
-            }
-            
-            // Si todo falló pero hay algo de texto, intentar analizarlo de todos modos
-            if (extractedText.length > 10) {
-                console.log("Fallback: trying text analysis anyway")
-                const parsed = await analyzeTextWithGPT(extractedText)
+                console.error("PDF to image failed:", e)
+
+                // Si también falla la conversión a imagen y teníamos algo de texto...
+                if (extractedText.length > 20) {
+                    const parsed = await analyzeTextWithGPT(extractedText)
+                    return NextResponse.json({
+                        success: true,
+                        text: extractedText,
+                        parsed,
+                        method: "text-fallback-low-quality"
+                    })
+                }
+
                 return NextResponse.json({
-                    success: true,
-                    text: extractedText,
-                    parsed,
-                    method: "text-analysis-fallback"
-                })
+                    success: false,
+                    error: "No se pudo procesar este PDF escaneado. Asegúrate de que no esté protegido. Error: " + (e.message || "Conversión fallida")
+                }, { status: 400 })
             }
-            
-            return NextResponse.json({ 
-                success: false, 
-                error: "No se pudo procesar el PDF. El archivo puede estar protegido o ser una imagen escaneada." 
-            }, { status: 400 })
-            
+
         } else if (isImage) {
-            // Convertir imagen a base64
+            // IMAGEN DIRECTA
             imageBase64 = buffer.toString('base64')
             mimeType = file.type || 'image/jpeg'
-            
-            // Analizar imagen con GPT-4 Vision
+
             const parsed = await analyzeImageWithGPT(imageBase64, mimeType)
-            
+
             return NextResponse.json({
                 success: true,
                 text: "[Imagen analizada con IA]",
@@ -147,17 +160,17 @@ export async function POST(request: NextRequest) {
                 method: "vision-analysis"
             })
         } else {
-            return NextResponse.json({ 
-                success: false, 
-                error: "Tipo de archivo no soportado. Solo PDF o imágenes." 
+            return NextResponse.json({
+                success: false,
+                error: "Tipo de archivo no soportado. Solo PDF o imágenes."
             }, { status: 400 })
         }
 
     } catch (error: any) {
         console.error("Invoice Parse Error:", error)
-        return NextResponse.json({ 
-            success: false, 
-            error: error.message || "Error al analizar la factura." 
+        return NextResponse.json({
+            success: false,
+            error: error.message || "Error interno al analizar la factura."
         }, { status: 500 })
     }
 }
@@ -203,12 +216,12 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
         })
 
         const content = response.choices[0]?.message?.content || "{}"
-        
+
         // Limpiar el JSON (quitar ```json si existe)
         const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        
+
         const parsed = JSON.parse(jsonStr)
-        
+
         return {
             fecha: parsed.fecha || null,
             importe: typeof parsed.importe === 'number' ? parsed.importe : parseFloat(parsed.importe) || null,
@@ -279,12 +292,12 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
         })
 
         const content = response.choices[0]?.message?.content || "{}"
-        
+
         // Limpiar el JSON
         const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        
+
         const parsed = JSON.parse(jsonStr)
-        
+
         return {
             fecha: parsed.fecha || null,
             importe: typeof parsed.importe === 'number' ? parsed.importe : parseFloat(parsed.importe) || null,
