@@ -17,6 +17,7 @@ export async function extractFirstImageFromPDF(buffer: Buffer): Promise<{ data: 
 
         // Load document
         const loadingTask = getDocument({
+            
             data,
             verbosity: 0,
             useSystemFonts: false,

@@ -47,8 +47,8 @@ export async function convertPdfToImage(buffer: Buffer, options: RenderOptions =
         // Convertir a buffer (PNG)
         return canvas.toBuffer('image/png')
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error rendering PDF to image:", e)
-        return null
+        throw new Error(`PDF Rendering failed: ${e.message || e}`)
     }
 }
