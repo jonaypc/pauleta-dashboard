@@ -333,14 +333,12 @@ export function FacturasTable({
                                                     Ver detalle
                                                 </Link>
                                             </DropdownMenuItem>
-                                            {factura.estado === "borrador" && (
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/facturas/${factura.id}?editar=true`}>
-                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                        Editar
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                            )}
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/facturas/${factura.id}?editar=true`}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </Link>
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             {factura.estado === "borrador" && (
                                                 <DropdownMenuItem
@@ -372,6 +370,18 @@ export function FacturasTable({
                                                     >
                                                         <CheckCircle className="mr-2 h-4 w-4" />
                                                         Marcar como cobrada
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm(`¿Convertir factura ${factura.numero} a BORRADOR?`)) {
+                                                                handleCambiarEstado(factura, "borrador")
+                                                            }
+                                                        }}
+                                                        disabled={isActionLoading}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <ArrowLeftRight className="mr-2 h-4 w-4" />
+                                                        Pasar a borrador
                                                     </DropdownMenuItem>
                                                 </>
                                             )}
