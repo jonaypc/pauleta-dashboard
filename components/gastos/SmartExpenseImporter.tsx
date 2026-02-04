@@ -132,7 +132,7 @@ export function SmartExpenseImporter({ onDataExtracted, isProcessing = false }: 
         }
     }
 
-    // LÓGICA DE PARSEO HEURÍSTICO
+    // LÓGICA DE PARSEO HEURÍSTICO MEJORADA
     const parseExpenseText = (text: string): ExtractedExpenseData => {
         const result: ExtractedExpenseData = {
             fecha: null,
@@ -144,55 +144,156 @@ export function SmartExpenseImporter({ onDataExtracted, isProcessing = false }: 
             raw_text: text
         }
 
-        // 1. FECHA
-        // Patrones: dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd
-        const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/g
-        const dates = Array.from(text.matchAll(dateRegex))
-        if (dates.length > 0) {
-            // Intentar encontrar la fecha más probable (cercana a hoy pero no futura)
-            // Por simplicidad, tomamos la primera que parezca válida
-            const [_, d, m, y] = dates[0]
-            const year = y.length === 2 ? `20${y}` : y
-            // Asegurar formato YYYY-MM-DD
-            result.fecha = `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-        }
+        // Normalizar texto para facilitar búsquedas
+        const cleanText = text.replace(/\s+/g, ' ')
 
-        // 2. TOTAL / IMPORTE
-        // Buscar importes con formato moneda y "Total" cerca
-        // Regex simplificado para buscar números con decimales
-        const moneyRegex = /(\d+[.,]\d{2})/g
-        const moneyMatches = Array.from(text.matchAll(moneyRegex))
+        // 1. FECHA (Prioridad: Buscar cerca de palabras clave)
+        // Buscamos patrones: dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, dd de Mes de yyyy
+        const datePatterns = [
+            /(?:Fecha|Emisión|Date)\s*[:\.]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i, // Fecha explícita
+            /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/ // Fecha genérica
+        ]
 
-        // Convertir matches a números
-        const amounts = moneyMatches.map(m => parseFloat(m[0].replace(',', '.'))).filter(n => !isNaN(n))
+        for (const pattern of datePatterns) {
+            const match = text.match(pattern)
+            if (match && match[1]) {
+                const dateStr = match[1].replace(/[.-]/g, '/')
+                const parts = dateStr.split('/')
+                if (parts.length === 3) {
+                    // Asumimos DD/MM/YYYY si el primero es <=31 y segundo <=12
+                    let d = parseInt(parts[0])
+                    let m = parseInt(parts[1])
+                    let y = parseInt(parts[2])
 
-        if (amounts.length > 0) {
-            // Heurística simple: El importe mayor suele ser el total
-            const maxAmount = Math.max(...amounts)
-            result.importe = maxAmount
-        }
+                    // Caso YYYY-MM-DD
+                    if (parts[0].length === 4) {
+                        y = parseInt(parts[0])
+                        m = parseInt(parts[1])
+                        d = parseInt(parts[2])
+                    }
 
-        // 3. CIF PROVEEDOR
-        // Patrón español: Letra + 8 dígitos (ej: B12345678)
-        const cifRegex = /\b([A-Z]\-?\d{8})\b/g
-        const cifMatch = text.match(cifRegex)
-        // Ignorar el CIF propio si apareciera (Pauleta: B70853163)
-        const ownCIF = "B70853163"
+                    if (y < 100) y += 2000 // Convertir 24 a 2024
 
-        if (cifMatch) {
-            // Filtrar nuestro propio CIF
-            const validCIFs = cifMatch.filter(c => c.replace('-', '') !== ownCIF)
-            if (validCIFs.length > 0) {
-                result.cif_proveedor = validCIFs[0]
+                    if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                        result.fecha = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                        break // Encontrada, paramos
+                    }
+                }
             }
         }
 
-        // 4. NÚMERO FACTURA
-        // Buscar palabras clave "Factura", "Nº", etc.
-        const invoiceNumRegex = /(?:Factura|Nº|Num)\s*[:\.]?\s*([A-Z0-9\-\/]{3,20})/i
-        const numMatch = text.match(invoiceNumRegex)
-        if (numMatch) {
-            result.numero = numMatch[1]
+        // 2. TOTAL / IMPORTE
+        // Estrategia: Buscar "Total" seguido de número, o el número más grande al final del documento
+        // Regex para capturar formatos: 1.234,56 | 1,234.56 | 1234.56
+        // Captura grupos: 1=entero con separadores, 2=decimal
+        const moneyGlobalRegex = /(\d{1,3}(?:[.,]\d{3})*)[.,](\d{2})\b/g
+        const moneyMatches = Array.from(text.matchAll(moneyGlobalRegex))
+
+        const candidateAmounts: number[] = []
+
+        moneyMatches.forEach(match => {
+            // Unificar separadores: eliminar puntos de miles, cambiar coma decimal por punto
+            // Caso España (1.234,56) -> replace('.', '') -> replace(',', '.')
+            // Caso US (1,234.56) -> replace(',', '') -> no hace falta cambiar punto
+
+            let rawNum = match[0]
+            let val = 0
+
+            if (rawNum.includes(',') && rawNum.includes('.')) {
+                // Mixto: asumimos el último es decimal
+                if (rawNum.lastIndexOf(',') > rawNum.lastIndexOf('.')) {
+                    // 1.234,56
+                    val = parseFloat(rawNum.replace(/\./g, '').replace(',', '.'))
+                } else {
+                    // 1,234.56
+                    val = parseFloat(rawNum.replace(/,/g, ''))
+                }
+            } else if (rawNum.includes(',')) {
+                // Solo comas: asumimos decimal si son 2 digitos al final (regex forced 2)
+                // 1234,56
+                val = parseFloat(rawNum.replace(',', '.'))
+            } else {
+                // Solo puntos, asumimos decimal
+                val = parseFloat(rawNum)
+            }
+
+            if (!isNaN(val)) candidateAmounts.push(val)
+        })
+
+        // Prioridad 1: Buscar etiqueta "Total" explícita
+        const totalLabelRegex = /Total\s*(?:Factura|Importe|Pagar)?\s*[:\.]?\s*(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/i
+        const totalMatch = text.match(totalLabelRegex)
+
+        if (totalMatch) {
+            // Procesar este valor específico igual que arriba
+            const rawOne = totalMatch[1]
+            let val = parseFloat(rawOne.replace(/\./g, '').replace(',', '.')) // Asunción ES default
+            if (rawOne.includes(',') && rawOne.lastIndexOf(',') < rawOne.length - 3) {
+                // Si la coma está lejos del final, quizás era miles (caso US)
+                val = parseFloat(rawOne.replace(/,/g, ''))
+            }
+            if (!isNaN(val)) {
+                result.importe = val
+            }
+        }
+
+        // Si no encontramos etiqueta explícita o falló, usamos el mayor valor encontrado (heurística común)
+        if (!result.importe && candidateAmounts.length > 0) {
+            result.importe = Math.max(...candidateAmounts)
+        }
+
+
+        // 3. CIF PROVEEDOR
+        const cifRegex = /\b([A-Z]\-?\d{8})\b/g
+        const cifMatches = text.match(cifRegex) || []
+        const ownCIF = "B70853163"
+        // Filtrar el propio
+        const validCIFs = cifMatches.filter(c => c.replace(/[\-\s]/g, '') !== ownCIF)
+
+        if (validCIFs.length > 0) {
+            result.cif_proveedor = validCIFs[0].replace(/[\-\s]/g, '') // Normalizar
+        }
+
+        // 4. DETECTAR NOMBRE PROVEEDOR (Nueva mejora)
+        // Lista de proveedores conocidos (hardcoded por ahora para mejorar UX inmediata)
+        const commonSuppliers = [
+            { key: "MAKRO", name: "Makro Autoservicio Mayorista" },
+            { key: "MERCADONA", name: "Mercadona S.A." },
+            { key: "ENDESA", name: "Endesa Energía" },
+            { key: "VODAFONE", name: "Vodafone España" },
+            { key: "MOVISTAR", name: "Telefónica de España" },
+            { key: "AMAZON", name: "Amazon EU Sarl" },
+            { key: "CENCOSU", name: "Cencosu (SPAR)" },
+            { key: "DISA", name: "Disa" },
+            { key: "ALDI", name: "Aldi Supermercados" },
+            { key: "LIDL", name: "Lidl Supermercados" },
+            { key: "CANARAGUA", name: "Canaragua" }
+        ]
+
+        const upperText = text.toUpperCase()
+        for (const supplier of commonSuppliers) {
+            if (upperText.includes(supplier.key)) {
+                result.nombre_proveedor = supplier.name
+                break
+            }
+        }
+
+        // 5. NÚMERO FACTURA
+        // Patrones: Factura: X, Nº: X, Factura A123
+        const invPatterns = [
+            /(?:Factura|Nº|Num|Invoice)\s*(?:rectificativa)?\s*[:\.]?\s*([A-Z0-9\-\/]{3,20})/i,
+            /([A-Z]{1,2}[\-\/]\d{3,6}\/\d{2,4})/ // Patrón tipo A-123/2024
+        ]
+
+        for (const p of invPatterns) {
+            const m = text.match(p)
+            if (m && m[1]) {
+                // Evitar capturar fechas o cifs por error
+                if (!m[1].includes('/') || m[1].length > 8) { // Filtros básicos
+                    result.numero = m[1]
+                    break
+                }
+            }
         }
 
         return result
