@@ -186,7 +186,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .invoice-date {
-          font-size: 11px;
+          font-size: 14px;
           opacity: 0.9;
         }
         
@@ -207,7 +207,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .party-label {
-          font-size: 9px;
+          font-size: 11px;
           text-transform: uppercase;
           color: ${color};
           font-weight: 700;
@@ -227,21 +227,21 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .party-name {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 700;
           color: #1e293b;
           margin-bottom: 2px;
         }
         
         .party-cif {
-          font-size: 11px;
+          font-size: 12px;
           color: #64748b;
           font-family: monospace;
           margin-bottom: 4px;
         }
         
         .party-address {
-          font-size: 10px;
+          font-size: 12px;
           color: #64748b;
           line-height: 1.5;
         }
@@ -258,9 +258,9 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .items-table th {
-          padding: 10px 8px;
+          padding: 12px 10px;
           text-align: left;
-          font-size: 8px;
+          font-size: 10px;
           text-transform: uppercase;
           color: #64748b;
           font-weight: 700;
@@ -280,8 +280,8 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .items-table td {
-          padding: 10px 8px;
-          font-size: 10px;
+          padding: 12px 10px;
+          font-size: 12px;
           color: #334155;
         }
         
@@ -289,9 +289,10 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         .items-table td.right { text-align: right; font-family: monospace; }
         
         .item-code {
-          font-size: 8px;
-          color: #94a3b8;
+          font-size: 11px;
+          color: #64748b;
           font-family: monospace;
+          font-weight: 600;
         }
         
         .item-description {
@@ -318,7 +319,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
           display: flex;
           justify-content: space-between;
           padding: 6px 0;
-          font-size: 11px;
+          font-size: 12px;
           border-bottom: 1px solid #e2e8f0;
         }
         
@@ -343,13 +344,13 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .totals-row.total .label {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
           color: #1e293b;
         }
         
         .totals-row.total .value {
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 800;
           color: ${color};
         }
@@ -364,7 +365,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         .status-badge {
           padding: 8px 20px;
           border-radius: 6px;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -388,13 +389,13 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .saldo-label {
-          font-size: 10px;
+          font-size: 11px;
           color: #64748b;
           text-transform: uppercase;
         }
         
         .saldo-value {
-          font-size: 20px;
+          font-size: 22px;
           font-weight: 800;
           font-family: monospace;
           color: ${saldoPendiente > 0 ? '#dc2626' : '#059669'};
@@ -413,14 +414,14 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         }
         
         .bank-label {
-          font-size: 8px;
+          font-size: 10px;
           color: #94a3b8;
           text-transform: uppercase;
           letter-spacing: 1px;
         }
         
         .bank-number {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 700;
           font-family: monospace;
           color: #1e293b;
@@ -429,14 +430,14 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         
         .thank-you {
           text-align: center;
-          font-size: 11px;
+          font-size: 12px;
           color: ${color};
           font-weight: 500;
           margin: 10px 0;
         }
         
         .legal-text {
-          font-size: 7px;
+          font-size: 9px;
           color: #94a3b8;
           text-align: center;
           line-height: 1.4;
