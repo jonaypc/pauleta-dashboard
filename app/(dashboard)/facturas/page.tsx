@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Plus, Search, FileText } from "lucide-react"
 import { FacturasFilter } from "@/components/facturas/FacturasFilter"
 import { ClientFilter } from "@/components/facturas/ClientFilter"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 import type { EstadoFactura } from "@/types"
 
 export const metadata = {
@@ -14,7 +15,7 @@ export const metadata = {
 }
 
 interface PageProps {
-    searchParams: { q?: string; estado?: EstadoFactura; from?: string; to?: string; cliente?: string }
+    searchParams: { q?: string; estado?: EstadoFactura; from?: string; to?: string; cliente?: string; page?: string; limit?: string }
 }
 
 export default async function FacturasPage({ searchParams }: PageProps) {
@@ -25,12 +26,19 @@ export default async function FacturasPage({ searchParams }: PageProps) {
     const dateTo = searchParams.to
     const clienteFiltro = searchParams.cliente
 
+    // Paginación
+    const page = Number(searchParams.page) || 1
+    const limit = Number(searchParams.limit) || 10
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
     // 1. Query de Facturas
     let query = supabase
         .from("facturas")
-        .select("*, cliente:clientes(nombre, persona_contacto)")
+        .select("*, cliente:clientes(nombre, persona_contacto)", { count: "exact" })
         .order("fecha", { ascending: false })
         .order("numero", { ascending: false })
+        .range(from, to)
 
     if (estadoFiltro) {
         query = query.eq("estado", estadoFiltro)
@@ -52,7 +60,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         query = query.eq("cliente_id", clienteFiltro)
     }
 
-    const { data: facturas, error } = await query
+    const { data: facturas, error, count } = await query
 
     // 2. Fetch de Clientes para el filtro (solo nombre y contacto)
     const { data: clientes } = await supabase
@@ -68,6 +76,9 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         { value: "cobrada", label: "Cobrada" },
         { value: "anulada", label: "Anulada" },
     ]
+
+    const totalCount = count || 0
+    const totalPages = Math.ceil(totalCount / limit)
 
     return (
         <div className="space-y-6">
@@ -115,7 +126,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                     <FacturasFilter />
                     <ClientFilter clientes={clientes || []} />
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2">
                     {estados.map((estado) => (
                         <Link
@@ -144,7 +155,16 @@ export default async function FacturasPage({ searchParams }: PageProps) {
 
             {/* Tabla o estado vacío */}
             {facturas && facturas.length > 0 ? (
-                <FacturasTable facturas={facturas} />
+                <>
+                    <FacturasTable facturas={facturas} />
+                    <PaginationControls
+                        currentPage={page}
+                        totalCount={totalCount}
+                        pageSize={limit}
+                        hasNextPage={page < totalPages}
+                        hasPrevPage={page > 1}
+                    />
+                </>
             ) : (
                 <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
                     <div className="rounded-full bg-muted p-4">
@@ -169,3 +189,4 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         </div>
     )
 }
+
