@@ -1,38 +1,9 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import type { Producto, LineaFacturaFormData } from "@/types"
+// ... imports
+import { Plus, Trash2, RefreshCw } from "lucide-react"
 
-interface LineasFacturaProps {
-    lineas: LineaFacturaFormData[]
-    productos: Producto[]
-    onChange: (lineas: LineaFacturaFormData[]) => void
-    disabled?: boolean
-}
-
-const IGIC_OPTIONS = [
-    { value: 0, label: "0%" },
-    { value: 3, label: "3%" },
-    { value: 7, label: "7%" },
-]
-
-// Formatea precio
-function formatPrecio(precio: number): string {
-    return new Intl.NumberFormat("es-ES", {
-        style: "currency",
-        currency: "EUR",
-    }).format(precio)
-}
+// ... types
 
 export function LineasFactura({
     lineas,
@@ -49,6 +20,7 @@ export function LineasFactura({
                 cantidad: 1,
                 precio_unitario: 0,
                 igic: 7,
+                es_intercambio: false
             },
         ])
     }
@@ -61,10 +33,25 @@ export function LineasFactura({
     const handleLineaChange = (
         index: number,
         field: keyof LineaFacturaFormData,
-        value: string | number
+        value: string | number | boolean
     ) => {
         const newLineas = [...lineas]
-        newLineas[index] = { ...newLineas[index], [field]: value }
+
+        // Lógica específica para intercambios
+        if (field === "es_intercambio") {
+            const isExchange = value as boolean
+            newLineas[index] = {
+                ...newLineas[index],
+                es_intercambio: isExchange,
+                // Si es intercambio, forzamos precio a 0 y asignamos el mismo producto como devuelto por defecto
+                precio_unitario: isExchange ? 0 : newLineas[index].precio_unitario,
+                producto_devuelto_id: isExchange ? newLineas[index].producto_id : undefined,
+                motivo_devolucion: isExchange ? "Caducidad/Defecto" : undefined
+            }
+        } else {
+            newLineas[index] = { ...newLineas[index], [field]: value }
+        }
+
         onChange(newLineas)
     }
 
@@ -72,12 +59,16 @@ export function LineasFactura({
         const producto = productos.find((p) => p.id === productoId)
         if (producto) {
             const newLineas = [...lineas]
+            const isExchange = newLineas[index].es_intercambio
+
             newLineas[index] = {
                 ...newLineas[index],
                 producto_id: productoId,
                 descripcion: producto.nombre,
-                precio_unitario: producto.precio,
+                // Si es intercambio, precio 0, sino precio producto
+                precio_unitario: isExchange ? 0 : producto.precio,
                 igic: producto.igic,
+                producto_devuelto_id: isExchange ? productoId : undefined
             }
             onChange(newLineas)
         }
@@ -85,11 +76,6 @@ export function LineasFactura({
 
     const calcularSubtotal = (linea: LineaFacturaFormData): number => {
         return linea.cantidad * linea.precio_unitario
-    }
-
-    const calcularTotalLinea = (linea: LineaFacturaFormData): number => {
-        const subtotal = calcularSubtotal(linea)
-        return subtotal + subtotal * (linea.igic / 100)
     }
 
     return (
@@ -117,11 +103,12 @@ export function LineasFactura({
                 <div className="space-y-3">
                     {/* Header */}
                     <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-xs font-medium text-muted-foreground">
+                        <div className="col-span-1 text-center">Tipo</div>
                         <div className="col-span-4">Producto / Descripción</div>
                         <div className="col-span-2 text-center">Cantidad</div>
                         <div className="col-span-2 text-right">Precio</div>
                         <div className="col-span-1 text-center">IGIC</div>
-                        <div className="col-span-2 text-right">Subtotal</div>
+                        <div className="col-span-1 text-right">Subt.</div>
                         <div className="col-span-1"></div>
                     </div>
 
@@ -129,8 +116,23 @@ export function LineasFactura({
                     {lineas.map((linea, index) => (
                         <div
                             key={index}
-                            className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-lg border bg-card p-3"
+                            className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-lg border p-3 ${linea.es_intercambio ? 'bg-orange-50 border-orange-200' : 'bg-card'
+                                }`}
                         >
+                            {/* Tipo (Venta/Canje) */}
+                            <div className="sm:col-span-1 flex justify-center">
+                                <Button
+                                    type="button"
+                                    variant={linea.es_intercambio ? "default" : "ghost"}
+                                    size="icon"
+                                    className={`h-8 w-8 ${linea.es_intercambio ? 'bg-orange-500 hover:bg-orange-600' : 'text-muted-foreground'}`}
+                                    onClick={() => handleLineaChange(index, "es_intercambio", !linea.es_intercambio)}
+                                    title={linea.es_intercambio ? "Es canje/devolución" : "Es venta normal"}
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+                            </div>
+
                             {/* Producto */}
                             <div className="sm:col-span-4">
                                 <Select
@@ -144,7 +146,7 @@ export function LineasFactura({
                                     <SelectContent>
                                         {productos.map((producto) => (
                                             <SelectItem key={producto.id} value={producto.id}>
-                                                {producto.nombre} - {formatPrecio(producto.precio)}
+                                                {producto.nombre}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -155,9 +157,14 @@ export function LineasFactura({
                                         handleLineaChange(index, "descripcion", e.target.value)
                                     }
                                     placeholder="Descripción"
-                                    className="mt-2"
+                                    className="mt-2 text-xs"
                                     disabled={disabled}
                                 />
+                                {linea.es_intercambio && (
+                                    <div className="mt-1 text-[10px] text-orange-600 font-medium">
+                                        * Se registrará como Merma (Coste 0)
+                                    </div>
+                                )}
                             </div>
 
                             {/* Cantidad */}
@@ -200,7 +207,7 @@ export function LineasFactura({
                                         )
                                     }
                                     className="text-right"
-                                    disabled={disabled}
+                                    disabled={disabled || linea.es_intercambio} // Bloquear precio si es canje
                                 />
                             </div>
 
@@ -216,7 +223,7 @@ export function LineasFactura({
                                     }
                                     disabled={disabled}
                                 >
-                                    <SelectTrigger className="w-full">
+                                    <SelectTrigger className="w-full px-2">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -233,16 +240,12 @@ export function LineasFactura({
                             </div>
 
                             {/* Subtotal */}
-                            <div className="sm:col-span-2 text-right">
+                            <div className="sm:col-span-1 text-right">
                                 <Label className="sm:hidden text-xs text-muted-foreground">
                                     Subtotal
                                 </Label>
-                                <div className="font-medium tabular-nums">
+                                <div className="font-medium tabular-nums text-sm">
                                     {formatPrecio(calcularSubtotal(linea))}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                    +{formatPrecio(calcularSubtotal(linea) * (linea.igic / 100))}{" "}
-                                    IGIC
                                 </div>
                             </div>
 
