@@ -60,38 +60,39 @@ export async function POST(request: NextRequest) {
         let mimeType: string
 
         if (isPdf) {
-            // Primero intentar extraer texto (más barato)
+            // Extraer texto del PDF
             let extractedText = ""
             try {
                 const { extractText } = await import("unpdf")
                 const result = await extractText(buffer)
                 extractedText = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
+                console.log("Extracted text length:", extractedText.length)
             } catch (e) {
                 console.error("Error extracting text:", e)
             }
             
-            // Verificar si el texto extraído es útil (tiene números y letras suficientes)
-            const hasUsefulText = extractedText.length > 200 && 
-                /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(extractedText) && // tiene fecha
-                /\d+[,\.]\d{2}/.test(extractedText) // tiene importes
-            
-            if (hasUsefulText) {
-                // Usar análisis de texto (más barato: ~$0.005 por factura)
-                console.log("Using text analysis (cheaper)")
-                const parsed = await analyzeTextWithGPT(extractedText)
-                return NextResponse.json({
-                    success: true,
-                    text: extractedText,
-                    parsed,
-                    method: "text-analysis"
-                })
+            // Si hay algo de texto, intentar analizarlo con GPT-4 (es muy bueno)
+            if (extractedText.length > 50) {
+                console.log("Using text analysis")
+                try {
+                    const parsed = await analyzeTextWithGPT(extractedText)
+                    return NextResponse.json({
+                        success: true,
+                        text: extractedText,
+                        parsed,
+                        method: "text-analysis"
+                    })
+                } catch (e: any) {
+                    console.error("GPT text analysis failed:", e)
+                }
             }
             
-            // Si el texto no es útil, convertir a imagen y usar Vision
-            console.log("Text insufficient, using Vision (more accurate)")
+            // Si el texto falló, intentar convertir a imagen
+            console.log("Text insufficient or failed, trying Vision")
             try {
-                const { pdf } = await import("pdf-to-img")
-                const document = await pdf(buffer, { scale: 2 })
+                // Importar dinámicamente para evitar errores si no está disponible
+                const pdfToImg = await import("pdf-to-img")
+                const document = await pdfToImg.pdf(buffer, { scale: 2 })
                 
                 let firstPageImage: Buffer | null = null
                 for await (const image of document) {
@@ -111,12 +112,24 @@ export async function POST(request: NextRequest) {
                     })
                 }
             } catch (e: any) {
-                console.error("Error converting PDF to image:", e)
+                console.error("PDF to image conversion failed:", e.message)
+            }
+            
+            // Si todo falló pero hay algo de texto, intentar analizarlo de todos modos
+            if (extractedText.length > 10) {
+                console.log("Fallback: trying text analysis anyway")
+                const parsed = await analyzeTextWithGPT(extractedText)
+                return NextResponse.json({
+                    success: true,
+                    text: extractedText,
+                    parsed,
+                    method: "text-analysis-fallback"
+                })
             }
             
             return NextResponse.json({ 
                 success: false, 
-                error: "No se pudo procesar el PDF. Por favor, sube una imagen de la factura." 
+                error: "No se pudo procesar el PDF. El archivo puede estar protegido o ser una imagen escaneada." 
             }, { status: 400 })
             
         } else if (isImage) {
