@@ -54,7 +54,12 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
     .eq("id", params.id)
     .single()
 
+  if (error) {
+    console.error("Error fetching invoice in print page:", error)
+  }
+
   if (error || !factura) {
+    if (!factura) console.error("Invoice not found (null data) for ID:", params.id)
     notFound()
   }
 
