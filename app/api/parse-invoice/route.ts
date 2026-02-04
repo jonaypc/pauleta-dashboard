@@ -96,35 +96,26 @@ export async function POST(request: NextRequest) {
             }
 
             // SI FALLA TEXTO O ES ESCANEADO: Convertir PDF a imagen y usar Vision
-            // Usamos pdf-to-img para renderizar la primera página como imagen
+            // Usamos renderer personalizado con Canvas para evitar problemas de dependencias
             try {
-                const pdfToImg = await import("pdf-to-img")
+                // Importar dinámicamente el renderer personalizado
+                const { convertPdfToImage } = await import("@/lib/pdf-renderer")
 
-                // Renderizar PDF a imágenes (Buffer de Node)
-                // Usamos scale 2 para mejor resolución OCR
-                const document = await pdfToImg.pdf(buffer, { scale: 2.0 })
+                // Renderizar primera página
+                const imageBuffer = await convertPdfToImage(buffer, { scale: 2.0 })
 
-                let firstPageImage: Buffer | null = null
-
-                // Iterar para encontrar la primera página (es un generador async)
-                for await (const image of document) {
-                    firstPageImage = image
-                    break // Solo necesitamos la primera página para la factura
-                }
-
-                if (firstPageImage) {
-                    const imageBase64 = firstPageImage.toString('base64')
-                    // pdf-to-img devuelve PNG por defecto
+                if (imageBuffer) {
+                    const imageBase64 = imageBuffer.toString('base64')
                     const parsed = await analyzeImageWithGPT(imageBase64, 'image/png')
 
                     return NextResponse.json({
                         success: true,
                         text: "[PDF escaneado - Convertido a imagen]",
                         parsed,
-                        method: "pdf-to-image-vision"
+                        method: "pdf-to-image-canvas"
                     })
                 } else {
-                    throw new Error("No se pudo generar imagen del PDF")
+                    throw new Error("No se pudo generar imagen del PDF (Canvas retornó null)")
                 }
             } catch (e: any) {
                 console.error("PDF to image failed:", e)
