@@ -7,7 +7,7 @@ import { TopCustomersTable } from "@/components/informes/TopCustomersTable"
 import { TopProductsTable, TopProduct } from "@/components/informes/TopProductsTable"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, Users, Package, CreditCard } from "lucide-react"
+import { TrendingUp, Users, Package, CreditCard, AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils"
 import { format, parseISO } from "date-fns"
@@ -20,6 +20,14 @@ export const metadata: Metadata = {
 
 async function getAnalyticsData(from: string, to: string) {
     const supabase = await createClient()
+    const now = new Date()
+    
+    // Calcular período anterior (misma duración)
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    const duracionDias = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24))
+    const periodoAnteriorTo = new Date(fromDate.getTime() - 1000 * 60 * 60 * 24).toISOString().split('T')[0]
+    const periodoAnteriorFrom = new Date(fromDate.getTime() - duracionDias * 1000 * 60 * 60 * 24).toISOString().split('T')[0]
 
     // 1. Facturas con Clientes y Líneas (para poder sacar top productos también)
     const { data: facturas } = await supabase
@@ -27,14 +35,26 @@ async function getAnalyticsData(from: string, to: string) {
         .select(`
             id, numero, fecha, total, base_imponible, igic, estado, created_at, notas,
             cliente:clientes(nombre, id),
-            lineas:lineas_factura(cantidad, subtotal, descripcion, producto_id)
+            lineas:lineas_factura(cantidad, subtotal, descripcion, producto_id, igic)
         `)
         .gte('fecha', from)
         .lte('fecha', to)
         .neq('estado', 'anulada')
         .order('fecha', { ascending: true })
 
+    // Facturas del período anterior para comparativa
+    const { data: facturasAnterior } = await supabase
+        .from('facturas')
+        .select('total')
+        .gte('fecha', periodoAnteriorFrom)
+        .lte('fecha', periodoAnteriorTo)
+        .neq('estado', 'anulada')
+
+    const totalFacturadoAnterior = facturasAnterior?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
     const totalFacturado = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
+    const variacionFacturacion = totalFacturadoAnterior > 0 
+        ? ((totalFacturado - totalFacturadoAnterior) / totalFacturadoAnterior) * 100 
+        : 0
 
     // 2. Cobros
     const { data: cobros } = await supabase
