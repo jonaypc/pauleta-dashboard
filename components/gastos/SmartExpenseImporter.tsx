@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-// Interfaz para la respuesta de la API
+// Interfaz para la respuesta de la API con IA
 interface ParsedExpenseData {
     fecha: string | null
     importe: number | null
@@ -25,17 +25,22 @@ interface ParsedExpenseData {
     nombre_proveedor: string | null
     base_imponible: number | null
     iva: number | null
+    iva_porcentaje: number | null
+    concepto: string | null
+    direccion_proveedor: string | null
     raw_text: string
+    confidence: number
 }
 
-// Función para llamar a la API de parsing
-async function parsePdfAction(formData: FormData): Promise<{
+// Función para llamar a la API de parsing con IA (GPT-4 Vision)
+async function parseInvoiceWithAI(formData: FormData): Promise<{
     success: boolean
     error?: string
     parsed?: ParsedExpenseData
+    method?: string
 }> {
     try {
-        const response = await fetch('/api/parse-pdf', {
+        const response = await fetch('/api/parse-invoice', {
             method: 'POST',
             body: formData
         })
@@ -61,6 +66,8 @@ export interface ExtractedExpenseData {
     raw_text?: string
     base_imponible?: number | null
     iva?: number | null
+    concepto?: string | null
+    confidence?: number
 }
 
 interface ProcessedFile {
@@ -177,7 +184,7 @@ export function SmartExpenseImporter({
                 const formData = new FormData()
                 formData.append("file", file)
                 
-                const result = await parsePdfAction(formData)
+                const result = await parseInvoiceWithAI(formData)
 
                 if (result.success && result.parsed) {
                     const extracted: ExtractedExpenseData = {
@@ -189,7 +196,9 @@ export function SmartExpenseImporter({
                         archivo_file: file,
                         raw_text: result.parsed.raw_text,
                         base_imponible: result.parsed.base_imponible,
-                        iva: result.parsed.iva
+                        iva: result.parsed.iva,
+                        concepto: result.parsed.concepto,
+                        confidence: result.parsed.confidence
                     }
 
                     results.push(extracted)
@@ -265,8 +274,8 @@ export function SmartExpenseImporter({
             
             setProgress(30)
             
-            // Usar server action para parsing más robusto
-            const result = await parsePdfAction(formData)
+            // Usar IA (GPT-4 Vision) para análisis preciso
+            const result = await parseInvoiceWithAI(formData)
             
             setProgress(80)
 
@@ -280,31 +289,28 @@ export function SmartExpenseImporter({
                     archivo_file: file,
                     raw_text: result.parsed.raw_text,
                     base_imponible: result.parsed.base_imponible,
-                    iva: result.parsed.iva
+                    iva: result.parsed.iva,
+                    concepto: result.parsed.concepto,
+                    confidence: result.parsed.confidence
                 }
 
                 // Log de lo que se encontró para debug
-                console.log("Datos extraídos:", {
+                console.log("Datos extraídos con IA:", {
                     fecha: extracted.fecha,
                     importe: extracted.importe,
                     numero: extracted.numero,
                     proveedor: extracted.nombre_proveedor,
-                    cif: extracted.cif_proveedor
+                    cif: extracted.cif_proveedor,
+                    concepto: extracted.concepto,
+                    confidence: extracted.confidence
                 })
 
-                // Contar campos encontrados
-                const foundFields = [
-                    extracted.fecha,
-                    extracted.importe,
-                    extracted.numero,
-                    extracted.nombre_proveedor || extracted.cif_proveedor
-                ].filter(Boolean).length
-
-                const quality = foundFields >= 3 ? "alta" : foundFields >= 2 ? "media" : "baja"
+                // Mostrar confianza de la IA
+                const confidence = result.parsed.confidence || 0
 
                 toast({
-                    title: "Factura analizada",
-                    description: `Calidad de extracción: ${quality}. ${foundFields}/4 campos detectados.`,
+                    title: "Factura analizada con IA",
+                    description: `Confianza: ${confidence}%. Proveedor: ${extracted.nombre_proveedor || 'No detectado'}`,
                 })
 
                 setProgress(100)
