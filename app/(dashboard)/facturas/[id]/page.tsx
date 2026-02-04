@@ -70,13 +70,28 @@ export default async function FacturaDetailPage({
         .eq("id", id)
         .single()
 
+    // DIAGNÓSTICO: Mostrar error en pantalla en vez de 404
     if (error) {
-        console.error("Error fetching factura:", error.code, error.message)
-        notFound()
+        return (
+            <div className="p-8 bg-red-50 border border-red-200 rounded-lg m-4">
+                <h1 className="text-2xl font-bold text-red-800 mb-4">Error al cargar factura</h1>
+                <p className="text-red-600 mb-2"><strong>ID solicitado:</strong> {id}</p>
+                <p className="text-red-600 mb-2"><strong>Código de error:</strong> {error.code}</p>
+                <p className="text-red-600 mb-2"><strong>Mensaje:</strong> {error.message}</p>
+                <p className="text-red-600 mb-2"><strong>Detalles:</strong> {error.details}</p>
+                <p className="text-red-600"><strong>Hint:</strong> {error.hint}</p>
+            </div>
+        )
     }
 
     if (!factura) {
-        notFound()
+        return (
+            <div className="p-8 bg-yellow-50 border border-yellow-200 rounded-lg m-4">
+                <h1 className="text-2xl font-bold text-yellow-800 mb-4">Factura no encontrada</h1>
+                <p className="text-yellow-600"><strong>ID solicitado:</strong> {id}</p>
+                <p className="text-yellow-600">No se encontró ninguna factura con este ID.</p>
+            </div>
+        )
     }
 
     // Cargar todos los clientes para el botón de cambiar cliente
