@@ -16,6 +16,7 @@ import {
   IceCream,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,11 @@ const navigation = [
     name: "Informes",
     href: "/informes",
     icon: BarChart3,
+  },
+  {
+    name: "Relación Facturas",
+    href: "/informes/relacion-facturas",
+    icon: ClipboardList,
   },
   {
     name: "Configuración",
