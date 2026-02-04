@@ -33,7 +33,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos(codigo_barras, nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre))
     `)
     .eq("id", params.id)
     .single()
