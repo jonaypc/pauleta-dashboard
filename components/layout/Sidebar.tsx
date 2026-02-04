@@ -47,6 +47,11 @@ const navigation = [
     icon: CreditCard,
   },
   {
+    name: "Gastos",
+    href: "/gastos",
+    icon: Receipt,
+  },
+  {
     name: "Pagos Fijos",
     href: "/pagos-fijos",
     icon: Calendar,
@@ -109,9 +114,9 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex flex-col gap-1 p-3">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || 
+          const isActive = pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href))
-          
+
           return (
             <Link
               key={item.name}
