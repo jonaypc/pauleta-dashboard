@@ -535,17 +535,38 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
           </thead>
           <tbody>
             {factura.lineas?.map((linea: any) => (
-              <tr key={linea.id}>
+              <tr key={linea.id} className={linea.es_intercambio ? "bg-orange-50/10" : ""}>
                 <td>
                   <span className="item-code">
                     {linea.producto?.codigo_barras || '-'}
                   </span>
                 </td>
                 <td>
-                  <span className="item-description">{linea.descripcion}</span>
+                  <div className="flex flex-col">
+                    <span className="item-description flex items-center gap-2">
+                      {linea.descripcion}
+                      {linea.es_intercambio && (
+                        <span className="text-[9px] border border-orange-500 text-orange-600 px-1 rounded uppercase font-bold tracking-wider">
+                          CAMBIO / MERMA
+                        </span>
+                      )}
+                    </span>
+                    {linea.es_intercambio && linea.motivo_devolucion && (
+                      <span className="text-[10px] text-gray-500 italic mt-0.5">
+                        Motivo: {linea.motivo_devolucion}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="center">{linea.cantidad}</td>
-                <td className="right">{formatPrecio(linea.precio_unitario)}</td>
+                <td className="right">
+                  {linea.es_intercambio ? (
+                    <span className="text-gray-400 line-through mr-1 text-[10px]">
+                      {linea.producto?.precio ? formatPrecio(linea.producto.precio) : ''}
+                    </span>
+                  ) : null}
+                  {formatPrecio(linea.precio_unitario)}
+                </td>
                 <td className="right">{formatPrecio(linea.subtotal)}</td>
               </tr>
             ))}

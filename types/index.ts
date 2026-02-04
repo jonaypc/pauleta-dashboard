@@ -115,6 +115,9 @@ export interface LineaFactura {
   precio_unitario: number
   igic: number
   subtotal: number
+  es_intercambio?: boolean
+  producto_devuelto_id?: string | null
+  motivo_devolucion?: string | null
   created_at: string
   // Relaciones
   producto?: Producto
@@ -198,6 +201,9 @@ export interface LineaFacturaFormData {
   cantidad: number
   precio_unitario: number
   igic: number
+  es_intercambio?: boolean
+  producto_devuelto_id?: string
+  motivo_devolucion?: string
 }
 
 export interface CobroFormData {

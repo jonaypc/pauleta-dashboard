@@ -66,6 +66,9 @@ export function FacturaForm({
             cantidad: l.cantidad,
             precio_unitario: l.precio_unitario,
             igic: l.igic,
+            es_intercambio: (l as any).es_intercambio || false, // Cast temporal si types no actualiza rápido
+            producto_devuelto_id: (l as any).producto_devuelto_id || undefined,
+            motivo_devolucion: (l as any).motivo_devolucion || undefined,
         })) || []
     )
 
@@ -139,6 +142,9 @@ export function FacturaForm({
                     precio_unitario: l.precio_unitario,
                     igic: l.igic,
                     subtotal: l.cantidad * l.precio_unitario,
+                    es_intercambio: l.es_intercambio || false,
+                    producto_devuelto_id: l.producto_devuelto_id || null,
+                    motivo_devolucion: l.motivo_devolucion || null
                 }))
 
                 const { error: lineasError } = await supabase
@@ -192,6 +198,9 @@ export function FacturaForm({
                     precio_unitario: l.precio_unitario,
                     igic: l.igic,
                     subtotal: l.cantidad * l.precio_unitario,
+                    es_intercambio: l.es_intercambio || false,
+                    producto_devuelto_id: l.producto_devuelto_id || null,
+                    motivo_devolucion: l.motivo_devolucion || null
                 }))
 
                 const { error: lineasError } = await supabase
