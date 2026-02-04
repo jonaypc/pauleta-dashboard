@@ -65,7 +65,7 @@ export default async function FacturaDetailPage({
         .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos(nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(nombre))
     `)
         .eq("id", id)
         .single()
