@@ -24,8 +24,8 @@ import type { EstadoFactura } from "@/types"
 import { CambiarClienteButton } from "@/components/facturas/CambiarClienteButton"
 
 interface PageProps {
-    params: { id: string }
-    searchParams: { editar?: string }
+    params: Promise<{ id: string }>
+    searchParams: Promise<{ editar?: string }>
 }
 
 // Formatea precio
@@ -37,11 +37,12 @@ function formatPrecio(precio: number): string {
 }
 
 export async function generateMetadata({ params }: PageProps) {
+    const { id } = await params
     const supabase = await createClient()
     const { data: factura } = await supabase
         .from("facturas")
         .select("numero")
-        .eq("id", params.id)
+        .eq("id", id)
         .single()
 
     return {
@@ -53,8 +54,10 @@ export default async function FacturaDetailPage({
     params,
     searchParams,
 }: PageProps) {
+    const { id } = await params
+    const { editar } = await searchParams
     const supabase = await createClient()
-    const isEditing = searchParams.editar === "true"
+    const isEditing = editar === "true"
 
     // Obtener factura con cliente y líneas
     const { data: factura, error } = await supabase
@@ -64,7 +67,7 @@ export default async function FacturaDetailPage({
       cliente:clientes(*),
       lineas:lineas_factura(*, producto:productos(nombre))
     `)
-        .eq("id", params.id)
+        .eq("id", id)
         .single()
 
     if (error || !factura) {
@@ -97,7 +100,7 @@ export default async function FacturaDetailPage({
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/facturas/${params.id}`}>
+                        <Link href={`/facturas/${id}`}>
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
@@ -148,23 +151,23 @@ export default async function FacturaDetailPage({
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" asChild>
-                        <Link href={`/print/facturas/${params.id}`} target="_blank">
+                        <Link href={`/print/facturas/${id}`} target="_blank">
                             <Printer className="mr-2 h-4 w-4" />
                             Original
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href={`/print/facturas/${params.id}?copia=true`} target="_blank">
+                        <Link href={`/print/facturas/${id}?copia=true`} target="_blank">
                             <Printer className="mr-2 h-4 w-4" opacity={0.5} />
                             Copia
                         </Link>
                     </Button>
                     <SendEmailButton
-                        facturaId={params.id}
+                        facturaId={id}
                         clienteEmail={factura.cliente?.email}
                     />
                     <Button variant="outline" asChild>
-                        <Link href={`/print/albaran/${params.id}`} target="_blank">
+                        <Link href={`/print/albaran/${id}`} target="_blank">
                             <Truck className="mr-2 h-4 w-4" />
                             Albarán
                         </Link>
@@ -172,7 +175,7 @@ export default async function FacturaDetailPage({
                     {factura.estado === "borrador" && (
                         <>
                             <Button variant="outline" asChild>
-                                <Link href={`/facturas/${params.id}?editar=true`}>
+                                <Link href={`/facturas/${id}?editar=true`}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Editar
                                 </Link>
@@ -204,7 +207,7 @@ export default async function FacturaDetailPage({
                                 Cliente
                             </CardTitle>
                             <CambiarClienteButton
-                                facturaId={params.id}
+                                facturaId={id}
                                 facturaNumero={factura.numero}
                                 clienteActualId={factura.cliente?.id}
                                 clientes={todosClientes || []}
