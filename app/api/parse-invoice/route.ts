@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
                 // Renderizar primera página
                 const imageBuffer = await convertPdfToImage(buffer, { scale: 2.0 })
 
+                // convertPdfToImage ahora lanza error si falla, así que imageBuffer siempre tendrá valor aquí
                 if (imageBuffer) {
                     const imageBase64 = imageBuffer.toString('base64')
                     const parsed = await analyzeImageWithGPT(imageBase64, 'image/png')
@@ -114,9 +115,9 @@ export async function POST(request: NextRequest) {
                         parsed,
                         method: "pdf-to-image-canvas"
                     })
-                } else {
-                    throw new Error("No se pudo generar imagen del PDF (Canvas retornó null)")
                 }
+                // Si llegamos aquí sin throw, es raro, pero por seguridad:
+                throw new Error("No se pudo generar imagen del PDF (Buffer vacío)")
             } catch (e: any) {
                 console.error("PDF to image failed:", e)
 
