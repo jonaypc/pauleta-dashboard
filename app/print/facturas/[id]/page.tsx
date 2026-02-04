@@ -40,8 +40,9 @@ export async function generateMetadata() {
   }
 }
 
-export default async function FacturaPrintPage({ params }: PageProps) {
+export default async function FacturaPrintPage({ params, searchParams }: { params: { id: string }, searchParams: { copia?: string } }) {
   const supabase = await createClient()
+  const isCopia = searchParams.copia === 'true'
 
   const { data: factura, error } = await supabase
     .from("facturas")
@@ -106,14 +107,35 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           position: relative;
           background: white;
           box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+          overflow: hidden; /* Ensure watermark doesn't overflow */
         }
         
+        /* === WATERMARK === */
+        .watermark {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          font-size: 150px;
+          font-weight: 900;
+          color: rgba(0, 0, 0, 0.05);
+          pointer-events: none;
+          z-index: 0;
+          white-space: nowrap;
+          border: 10px solid rgba(0, 0, 0, 0.05);
+          padding: 20px 100px;
+          border-radius: 20px;
+          text-transform: uppercase;
+        }
+
         /* === HEADER === */
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
           margin-bottom: 8mm;
+          position: relative;
+          z-index: 1;
         }
         
         .company-info {
@@ -176,6 +198,8 @@ export default async function FacturaPrintPage({ params }: PageProps) {
           padding: 15px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
+          position: relative;
+          z-index: 1;
         }
         
         .party-box {
@@ -430,6 +454,10 @@ export default async function FacturaPrintPage({ params }: PageProps) {
       `}} />
 
       <div className="invoice">
+        {isCopia && (
+          <div className="watermark">COPIA</div>
+        )}
+
         {/* HEADER */}
         <div className="header">
           <div className="company-info">
@@ -456,9 +484,9 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               {empresa?.email && <div><a href={`mailto:${empresa.email}`}>{empresa.email}</a></div>}
             </div>
           </div>
-          
+
           <div className="invoice-title-box">
-            <div className="invoice-label">Factura</div>
+            <div className="invoice-label">{isCopia ? 'Factura (COPIA)' : 'Factura'}</div>
             <div className="invoice-number">N.º {factura.numero}</div>
             <div className="invoice-date">{formatFecha(factura.fecha)}</div>
           </div>
@@ -481,7 +509,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               {factura.cliente?.pais && <div>{factura.cliente.pais}</div>}
             </div>
           </div>
-          
+
           {factura.cliente?.direccion_envio && (
             <div className="party-box">
               <div className="party-label">Enviar a</div>
@@ -530,7 +558,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               <span className="label">Subtotal</span>
               <span className="value">{formatPrecio(factura.base_imponible)}</span>
             </div>
-            
+
             {/* Desglose IGIC */}
             {(() => {
               const desglose = (factura.lineas || []).reduce((acc: any, linea: any) => {
@@ -549,7 +577,7 @@ export default async function FacturaPrintPage({ params }: PageProps) {
                 </div>
               ));
             })()}
-            
+
             <div className="totals-row total">
               <span className="label">Total</span>
               <span className="value">{formatPrecio(factura.total)}</span>
@@ -565,14 +593,14 @@ export default async function FacturaPrintPage({ params }: PageProps) {
               <div className="bank-number">{empresa.cuenta_bancaria}</div>
             </div>
           )}
-          
+
           <div className="thank-you">
             Gracias por su compra. Para cualquier consulta sobre esta factura, no dude en contactarnos.
           </div>
-          
+
           <div className="legal-text">
-            De conformidad con lo establecido en el Reglamento (UE) 2016/679, de Protección de Datos (RGPD) y en la Ley Orgánica 3/2018, 
-            de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), le informamos que sus datos personales 
+            De conformidad con lo establecido en el Reglamento (UE) 2016/679, de Protección de Datos (RGPD) y en la Ley Orgánica 3/2018,
+            de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), le informamos que sus datos personales
             forman parte de un fichero responsabilidad de {empresa?.nombre || 'Pauleta Canaria SL'}, con la finalidad de gestionar la relación comercial.
           </div>
         </div>

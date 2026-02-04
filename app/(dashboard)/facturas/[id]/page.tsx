@@ -150,7 +150,13 @@ export default async function FacturaDetailPage({
                     <Button variant="outline" asChild>
                         <Link href={`/print/facturas/${params.id}`} target="_blank">
                             <Printer className="mr-2 h-4 w-4" />
-                            Imprimir PDF
+                            Original
+                        </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href={`/print/facturas/${params.id}?copia=true`} target="_blank">
+                            <Printer className="mr-2 h-4 w-4" opacity={0.5} />
+                            Copia
                         </Link>
                     </Button>
                     <SendEmailButton
