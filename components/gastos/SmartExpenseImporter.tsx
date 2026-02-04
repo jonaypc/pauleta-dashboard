@@ -34,7 +34,8 @@ export function SmartExpenseImporter({ onDataExtracted, isProcessing = false }: 
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+            // Usar CDN para asegurar que el worker carga correctamente y coincide con la versión
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`
         }
     }, [])
 
