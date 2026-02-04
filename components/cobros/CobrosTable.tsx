@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import type { Cobro, MetodoPago } from "@/types"
 
 interface CobrosTableProps {
-    cobros: (Cobro & { factura?: { numero: string; cliente?: { nombre: string } } })[]
+    cobros: (Cobro & { factura?: { numero: string; cliente?: { nombre: string; persona_contacto?: string } } })[]
 }
 
 // Formatea el precio con el símbolo del euro
@@ -101,7 +101,16 @@ export function CobrosTable({ cobros }: CobrosTableProps) {
                                     )}
                                 </td>
                                 <td className="px-4 py-3">
-                                    {cobro.factura?.cliente?.nombre || "-"}
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">
+                                            {cobro.factura?.cliente?.persona_contacto || cobro.factura?.cliente?.nombre || "-"}
+                                        </span>
+                                        {cobro.factura?.cliente?.persona_contacto && cobro.factura?.cliente?.nombre && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {cobro.factura.cliente.nombre}
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-4 py-3 text-right font-medium tabular-nums text-green-600">
                                     +{formatPrecio(cobro.importe)}
