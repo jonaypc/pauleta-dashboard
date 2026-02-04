@@ -2,8 +2,38 @@
 
 // ... imports
 import { Plus, Trash2, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import type { Producto, LineaFacturaFormData } from "@/types"
 
-// ... types
+interface LineasFacturaProps {
+    lineas: LineaFacturaFormData[]
+    productos: Producto[]
+    onChange: (lineas: LineaFacturaFormData[]) => void
+    disabled?: boolean
+}
+
+// Formatea precio
+function formatPrecio(precio: number): string {
+    return new Intl.NumberFormat("es-ES", {
+        style: "currency",
+        currency: "EUR",
+    }).format(precio)
+}
+
+const IGIC_OPTIONS = [
+    { value: 0, label: "0%" },
+    { value: 3, label: "3%" },
+    { value: 7, label: "7%" },
+]
 
 export function LineasFactura({
     lineas,
