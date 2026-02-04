@@ -147,7 +147,7 @@ export function SmartExpenseImporter({ onDataExtracted, isProcessing = false }: 
         // 1. FECHA
         // Patrones: dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd
         const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/g
-        const dates = [...text.matchAll(dateRegex)]
+        const dates = Array.from(text.matchAll(dateRegex))
         if (dates.length > 0) {
             // Intentar encontrar la fecha más probable (cercana a hoy pero no futura)
             // Por simplicidad, tomamos la primera que parezca válida
@@ -161,7 +161,7 @@ export function SmartExpenseImporter({ onDataExtracted, isProcessing = false }: 
         // Buscar importes con formato moneda y "Total" cerca
         // Regex simplificado para buscar números con decimales
         const moneyRegex = /(\d+[.,]\d{2})/g
-        const moneyMatches = [...text.matchAll(moneyRegex)]
+        const moneyMatches = Array.from(text.matchAll(moneyRegex))
 
         // Convertir matches a números
         const amounts = moneyMatches.map(m => parseFloat(m[0].replace(',', '.'))).filter(n => !isNaN(n))
