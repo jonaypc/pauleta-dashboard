@@ -76,10 +76,11 @@ export default async function FacturaDetailPage({
             <div className="p-8 bg-red-50 border border-red-200 rounded-lg m-4">
                 <h1 className="text-2xl font-bold text-red-800 mb-4">Error al cargar factura</h1>
                 <p className="text-red-600 mb-2"><strong>ID solicitado:</strong> {id}</p>
-                <p className="text-red-600 mb-2"><strong>Código de error:</strong> {error.code}</p>
-                <p className="text-red-600 mb-2"><strong>Mensaje:</strong> {error.message}</p>
-                <p className="text-red-600 mb-2"><strong>Detalles:</strong> {error.details}</p>
-                <p className="text-red-600"><strong>Hint:</strong> {error.hint}</p>
+                <p className="text-red-600 mb-2"><strong>Código de error:</strong> {String(error.code || 'N/A')}</p>
+                <p className="text-red-600 mb-2"><strong>Mensaje:</strong> {String(error.message || 'N/A')}</p>
+                <p className="text-red-600 mb-2"><strong>Detalles:</strong> {JSON.stringify(error.details) || 'N/A'}</p>
+                <p className="text-red-600"><strong>Hint:</strong> {String(error.hint || 'N/A')}</p>
+                <pre className="mt-4 p-4 bg-red-100 rounded text-xs overflow-auto">{JSON.stringify(error, null, 2)}</pre>
             </div>
         )
     }
