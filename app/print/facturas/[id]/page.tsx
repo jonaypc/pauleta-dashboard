@@ -6,7 +6,8 @@ import NextImage from "next/image"
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ copia?: string }>
 }
 
 function formatPrecio(precio: number): string {
@@ -40,9 +41,11 @@ export async function generateMetadata() {
   }
 }
 
-export default async function FacturaPrintPage({ params, searchParams }: { params: { id: string }, searchParams: { copia?: string } }) {
+export default async function FacturaPrintPage({ params, searchParams }: PageProps) {
+  const { id } = await params
+  const { copia } = await searchParams
   const supabase = await createClient()
-  const isCopia = searchParams.copia === 'true'
+  const isCopia = copia === 'true'
 
   const { data: factura, error } = await supabase
     .from("facturas")
@@ -51,7 +54,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
       cliente:clientes(*),
       lineas:lineas_factura(*, producto:productos(codigo_barras, nombre))
     `)
-    .eq("id", params.id)
+    .eq("id", id)
     .single()
 
   if (error) {
@@ -59,7 +62,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
   }
 
   if (error || !factura) {
-    if (!factura) console.error("Invoice not found (null data) for ID:", params.id)
+    if (!factura) console.error("Invoice not found (null data) for ID:", id)
     notFound()
   }
 
