@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -36,9 +36,10 @@ const formSchema = z.object({
 
 interface GastoFormProps {
     initialData?: ExtractedExpenseData | null
+    onSaveSuccess?: () => void
 }
 
-export function GastoForm({ initialData }: GastoFormProps) {
+export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
     const router = useRouter()
     const supabase = createClient()
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -57,6 +58,22 @@ export function GastoForm({ initialData }: GastoFormProps) {
             notas: ""
         },
     })
+
+    // Resetear formulario cuando cambia initialData (modo múltiple)
+    useEffect(() => {
+        if (initialData) {
+            form.reset({
+                numero: initialData.numero || "",
+                fecha: initialData.fecha || new Date().toISOString().split('T')[0],
+                proveedor: initialData.nombre_proveedor || "",
+                importe: initialData.importe?.toString() || "",
+                estado: "pendiente",
+                categoria: "",
+                metodo_pago: "transferencia",
+                notas: ""
+            })
+        }
+    }, [initialData, form])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
@@ -137,8 +154,13 @@ export function GastoForm({ initialData }: GastoFormProps) {
                 description: "La factura se ha guardado correctamente.",
             })
 
-            router.push("/gastos")
-            router.refresh()
+            // Si hay callback (modo múltiple), usarlo en lugar de redireccionar
+            if (onSaveSuccess) {
+                onSaveSuccess()
+            } else {
+                router.push("/gastos")
+                router.refresh()
+            }
 
         } catch (error: any) {
             console.error(error)
