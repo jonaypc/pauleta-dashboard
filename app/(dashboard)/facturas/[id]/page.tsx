@@ -24,8 +24,8 @@ import type { EstadoFactura } from "@/types"
 import { CambiarClienteButton } from "@/components/facturas/CambiarClienteButton"
 
 interface PageProps {
-    params: Promise<{ id: string }>
-    searchParams: Promise<{ editar?: string }>
+    params: { id: string }
+    searchParams: { editar?: string }
 }
 
 // Formatea precio
@@ -37,12 +37,11 @@ function formatPrecio(precio: number): string {
 }
 
 export async function generateMetadata({ params }: PageProps) {
-    const { id } = await params
     const supabase = await createClient()
     const { data: factura } = await supabase
         .from("facturas")
         .select("numero")
-        .eq("id", id)
+        .eq("id", params.id)
         .single()
 
     return {
@@ -54,10 +53,9 @@ export default async function FacturaDetailPage({
     params,
     searchParams,
 }: PageProps) {
-    const { id } = await params
-    const { editar } = await searchParams
     const supabase = await createClient()
-    const isEditing = editar === "true"
+    const isEditing = searchParams.editar === "true"
+    const id = params.id
 
     // Obtener factura con cliente y líneas
     const { data: factura, error } = await supabase
