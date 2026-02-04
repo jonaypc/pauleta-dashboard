@@ -3,6 +3,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards"
 import { RecentInvoices } from "@/components/dashboard/RecentInvoices"
 import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments"
 import { TopClientes } from "@/components/dashboard/TopClientes"
+import { FinancialSummary } from "@/components/dashboard/FinancialSummary"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
@@ -18,6 +19,7 @@ async function getDashboardData() {
   const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
   const ultimoDiaMesAnterior = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
   const hace6Meses = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+  const nombreMes = now.toLocaleDateString('es-ES', { month: 'long' })
 
   try {
     const { data: facturasMes } = await supabase
@@ -44,13 +46,13 @@ async function getDashboardData() {
 
     const cobrosPendientes = facturasPendientes?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
     const numFacturasPendientes = facturasPendientes?.length || 0
-    
+
     // Calcular días promedio de antigüedad de facturas pendientes
-    const diasPromedioPendiente = facturasPendientes?.length 
+    const diasPromedioPendiente = facturasPendientes?.length
       ? facturasPendientes.reduce((sum, f) => {
-          const dias = Math.floor((now.getTime() - new Date(f.fecha).getTime()) / (1000 * 60 * 60 * 24))
-          return sum + dias
-        }, 0) / facturasPendientes.length
+        const dias = Math.floor((now.getTime() - new Date(f.fecha).getTime()) / (1000 * 60 * 60 * 24))
+        return sum + dias
+      }, 0) / facturasPendientes.length
       : 0
 
     // Cobros realizados este mes
@@ -83,11 +85,11 @@ async function getDashboardData() {
     for (let i = 5; i >= 0; i--) {
       const fecha = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
-      const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'short' })
+      const nombreMesGraph = fecha.toLocaleDateString('es-ES', { month: 'short' })
       const total = facturas6Meses
         ?.filter(f => f.fecha.startsWith(mesKey))
         .reduce((sum, f) => sum + (f.total || 0), 0) || 0
-      ventasPorMes.push({ mes: nombreMes, total })
+      ventasPorMes.push({ mes: nombreMesGraph, total })
     }
 
     // Top productos del mes
@@ -155,11 +157,29 @@ async function getDashboardData() {
       }
     }) || []
 
+    // Pagos Fijos (Gastos Fijos)
     const { data: pagosFijos } = await supabase
       .from('pagos_fijos')
       .select('*')
       .eq('activo', true)
       .order('dia_inicio', { ascending: true })
+
+    // Sumar todos los pagos fijos activos como estimación mensual
+    // NOTA: Para ser más precisos, deberíamos ver si ya se ha pagado este mes, 
+    // pero para una estimación financiera, sumar los activos es correcto.
+    const totalGastosFijos = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
+
+    // Gastos Variables (Facturas de proveedores de este mes)
+    const { data: gastosData } = await supabase
+      .from('gastos')
+      .select('importe')
+      .gte('fecha', primerDiaMes)
+    // Opcional: filtrar por estado? Generalmente gasto registrado = gasto a contabilizar
+    //.neq('estado', 'cancelado') // Asumiendo que existiera estado cancelado
+
+    // Importante: Asegurar que la tabla gastos existe y tiene datos. 
+    // Si falla, retornamos 0 para no romper el dashboard
+    const totalGastosVariables = gastosData?.reduce((sum, g) => sum + (g.importe || 0), 0) || 0
 
     const { data: facturasClientes } = await supabase
       .from('facturas')
@@ -216,6 +236,10 @@ async function getDashboardData() {
       diasPromedioPendiente: Math.round(diasPromedioPendiente),
       ventasPorMes,
       topProductosMes,
+      // Financiero
+      nombreMes,
+      totalGastosFijos,
+      totalGastosVariables,
     }
   } catch (error) {
     console.error('CRITICAL ERROR IN GETDASHBOARDDATA:', error)
@@ -245,6 +269,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Resumen Financiero (Ingresos vs Gastos) */}
+      <FinancialSummary
+        ingresos={data.facturacionMes}
+        gastosFijos={data.totalGastosFijos}
+        gastosVariables={data.totalGastosVariables}
+        mes={data.nombreMes}
+      />
+
       <StatsCards
         facturacionMes={data.facturacionMes}
         facturacionMesAnterior={data.facturacionMesAnterior}
@@ -264,7 +296,7 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{data.numFacturasPendientes}</div>
             <p className="text-xs text-muted-foreground">
-              {data.diasPromedioPendiente > 0 
+              {data.diasPromedioPendiente > 0
                 ? `~${data.diasPromedioPendiente} días de antigüedad media`
                 : 'Sin facturas pendientes'}
             </p>
@@ -285,7 +317,7 @@ export default async function DashboardPage() {
                 const isCurrentMonth = i === data.ventasPorMes.length - 1
                 return (
                   <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
-                    <div 
+                    <div
                       className={`w-full rounded-t transition-all ${isCurrentMonth ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                       style={{ height: `${Math.max(height, 4)}%` }}
                       title={`${m.mes}: ${m.total.toFixed(0)}€`}
@@ -322,7 +354,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <RecentInvoices facturas={data.ultimasFacturas} />
-          
+
           {/* Top productos del mes */}
           {data.topProductosMes.length > 1 && (
             <Card>
@@ -337,12 +369,11 @@ export default async function DashboardPage() {
                   {data.topProductosMes.map((producto, index) => (
                     <div key={producto.nombre} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${
-                          index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                          index === 1 ? 'bg-gray-100 text-gray-700' :
-                          index === 2 ? 'bg-orange-100 text-orange-700' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
+                        <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                            index === 1 ? 'bg-gray-100 text-gray-700' :
+                              index === 2 ? 'bg-orange-100 text-orange-700' :
+                                'bg-muted text-muted-foreground'
+                          }`}>
                           {index + 1}
                         </span>
                         <span className="text-sm font-medium truncate max-w-[200px]">{producto.nombre}</span>
