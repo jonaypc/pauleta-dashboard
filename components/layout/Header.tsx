@@ -63,10 +63,11 @@ export function Header({ user, onMenuClick }: HeaderProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-2">
-        {/* Search mobile */}
+        {/* Search mobile - Hidden until implemented
         <Button variant="ghost" size="icon" className="md:hidden">
           <Search className="h-5 w-5" />
         </Button>
+        */}
 
         {/* Notifications */}
         <NotificationsMenu />

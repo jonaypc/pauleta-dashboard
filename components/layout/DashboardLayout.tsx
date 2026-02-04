@@ -20,15 +20,15 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Sidebar para desktop */}
       <Sidebar className="hidden lg:block" />
-      
+
       {/* Sidebar móvil con overlay */}
       {sidebarOpen && (
         <>
-          <div 
-            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-          <Sidebar className="lg:hidden" />
+          <Sidebar className="lg:hidden z-50" />
         </>
       )}
 
