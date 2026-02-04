@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
-import { parsePdfAction, ParsedExpenseData } from "@/app/actions/parse-pdf"
 import {
     Dialog,
     DialogContent,
@@ -16,6 +15,40 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+
+// Interfaz para la respuesta de la API
+interface ParsedExpenseData {
+    fecha: string | null
+    importe: number | null
+    numero: string | null
+    cif_proveedor: string | null
+    nombre_proveedor: string | null
+    base_imponible: number | null
+    iva: number | null
+    raw_text: string
+}
+
+// Función para llamar a la API de parsing
+async function parsePdfAction(formData: FormData): Promise<{
+    success: boolean
+    error?: string
+    parsed?: ParsedExpenseData
+}> {
+    try {
+        const response = await fetch('/api/parse-pdf', {
+            method: 'POST',
+            body: formData
+        })
+        
+        const data = await response.json()
+        return data
+    } catch (error: any) {
+        return {
+            success: false,
+            error: error.message || "Error al conectar con el servidor"
+        }
+    }
+}
 
 // Definir tipos para los datos extraídos
 export interface ExtractedExpenseData {
