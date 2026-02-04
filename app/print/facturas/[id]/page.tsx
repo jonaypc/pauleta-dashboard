@@ -111,17 +111,20 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
         
         /* === COPY LABEL === */
         .copy-label {
+          position: absolute;
+          top: 15mm;
+          left: 50%;
+          transform: translateX(-50%) rotate(-5deg);
           font-size: 24px;
           font-weight: 700;
           color: #dc2626;
           border: 3px solid #dc2626;
           padding: 8px 24px;
           border-radius: 8px;
-          transform: rotate(-5deg);
-          opacity: 0.9;
+          opacity: 0.8;
           letter-spacing: 2px;
-          align-self: center;
-          margin: 0 20mm;
+          background: rgba(255,255,255,0.9);
+          z-index: 10;
         }
 
         /* === HEADER === */
@@ -452,7 +455,7 @@ export default async function FacturaPrintPage({ params, searchParams }: { param
 
       <div className="invoice">
         {isCopia && (
-          <div className="watermark">COPIA</div>
+          <div className="copy-label">COPIA</div>
         )}
 
         {/* HEADER */}
