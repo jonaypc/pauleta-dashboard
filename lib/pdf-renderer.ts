@@ -44,9 +44,10 @@ export async function convertPdfToImage(buffer: Buffer, options: RenderOptions =
 
         // Renderizar
         await page.render({
-            canvasContext: context as any, // "as any" porque el tipo NodeCanvasContext no siempre coincide exacto con DOM CanvasRenderingContext2D
-            viewport: viewport
-        }).promise
+            canvasContext: context as any,
+            viewport: viewport,
+            canvas: canvas as any
+        } as any).promise
 
         // Convertir a buffer (PNG)
         return canvas.toBuffer('image/png')
