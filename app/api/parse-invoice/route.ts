@@ -31,10 +31,12 @@ function getOpenAI(): OpenAI {
     return openai
 }
 
+// @ts-ignore
+import pdf from "pdf-parse"
+
 export async function POST(request: NextRequest) {
     try {
         // Verificar API key
-        // getOpenAI() se llamará dentro de analyze... si no se llama, verificamos aquí
         if (!process.env.OPENAI_API_KEY) {
             return NextResponse.json({
                 success: false,
@@ -52,26 +54,17 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        // Determinar el tipo de archivo
         console.log("File received:", { name: file.name, type: file.type, size: file.size })
+
         const isImage = file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
 
-        if (!isImage) {
-            return NextResponse.json({
-                success: false,
-                error: `El servidor solo acepta imágenes. Recibido: ${file.name} (${file.type})`,
-                debug: { name: file.name, type: file.type, size: file.size }
-            }, { status: 400 })
-        }
-
-        let imageBase64: string
-        let mimeType: string
+        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
 
         if (isImage) {
             console.log("Processing Image file...")
-            imageBase64 = buffer.toString('base64')
-            mimeType = file.type || 'image/jpeg'
+            const imageBase64 = buffer.toString('base64')
+            const mimeType = file.type || 'image/jpeg'
 
             const parsed = await analyzeImageWithGPT(imageBase64, mimeType)
 
@@ -81,10 +74,46 @@ export async function POST(request: NextRequest) {
                 parsed,
                 method: "vision-analysis"
             })
+        } else if (isPdf) {
+            console.log("Processing PDF file with pdf-parse (SERVER SIDE)...")
+            try {
+                const pdfData = await pdf(buffer)
+                const text = pdfData.text.trim()
+
+                console.log(`PDF Text extracted length: ${text.length} chars`)
+
+                // Si hay muy poco texto, probablemente sea una imagen escaneada
+                if (text.length < 50) {
+                    return NextResponse.json({
+                        success: false,
+                        error: "El PDF parece ser una imagen escaneada (sin texto seleccionable). Por favor, sube una foto (JPG/PNG) de la factura.",
+                        debug: { reason: "insufficient_text", textLength: text.length }
+                    }, { status: 422 })
+                }
+
+                // Analizar texto extraído
+                const parsed = await analyzeTextWithGPT(text)
+
+                return NextResponse.json({
+                    success: true,
+                    text: text.substring(0, 100) + "...",
+                    parsed,
+                    method: "pdf-text-analysis"
+                })
+
+            } catch (pdfError: any) {
+                console.error("PDF Parse Error:", pdfError)
+                return NextResponse.json({
+                    success: false,
+                    error: "Error al leer el archivo PDF. Intenta subirlo como imagen.",
+                    debug: { error: pdfError.message }
+                }, { status: 400 })
+            }
         } else {
             return NextResponse.json({
                 success: false,
-                error: "Tipo de archivo no soportado. Solo PDF o imágenes."
+                error: `Tipo de archivo no soportado. Recibido: ${file.name} (${file.type})`,
+                debug: { name: file.name, type: file.type }
             }, { status: 400 })
         }
 
