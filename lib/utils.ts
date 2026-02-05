@@ -273,8 +273,10 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 // ===========================================
 
 export function calculatePercentageChange(current: number, previous: number): number {
+  if (!isFinite(current) || !isFinite(previous)) return 0
   if (previous === 0) return current > 0 ? 100 : 0
-  return Math.round(((current - previous) / previous) * 100 * 10) / 10
+  const change = ((current - previous) / previous) * 100
+  return isFinite(change) ? Math.round(change * 10) / 10 : 0
 }
 
 export function getDaysUntilDue(dueDate: string | Date): number {
