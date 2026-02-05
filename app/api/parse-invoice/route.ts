@@ -77,9 +77,31 @@ export async function POST(request: NextRequest) {
         } else if (isPdf) {
             console.log("Processing PDF file with pdf-parse (SERVER SIDE)...")
             try {
-                const pdfData = await pdf(buffer)
-                const text = pdfData.text.trim()
+                // Defensive check for library loading
+                let pdfParser = pdf;
+                // @ts-ignore
+                if (typeof pdfParser !== 'function' && pdfParser?.default) {
+                    // @ts-ignore
+                    pdfParser = pdfParser.default;
+                }
 
+                if (typeof pdfParser !== 'function') {
+                    console.error("PDF Parsing library failed to load:", typeof pdfParser)
+                    return NextResponse.json({
+                        success: false,
+                        error: "Error interno del servidor al cargar el lector de PDF. Por favor sube una imagen (JPG/PNG).",
+                        debug: { reason: "library_load_failed" }
+                    }, { status: 422 })
+                }
+
+                const pdfData = await pdfParser(buffer)
+
+                // Extra defensive check for result
+                if (!pdfData || typeof pdfData.text !== 'string') {
+                    throw new Error("Invalid PDF data returned from parser")
+                }
+
+                const text = pdfData.text.trim()
                 console.log(`PDF Text extracted length: ${text.length} chars`)
 
                 // Si hay muy poco texto, probablemente sea una imagen escaneada
@@ -102,12 +124,13 @@ export async function POST(request: NextRequest) {
                 })
 
             } catch (pdfError: any) {
-                console.error("PDF Parse Error:", pdfError)
+                console.error("PDF Parse Error (CRITICAL):", pdfError)
+                // Return 422 to avoid confusing 400s, and generic message to avoid crashing
                 return NextResponse.json({
                     success: false,
-                    error: "Error al leer el archivo PDF. Intenta subirlo como imagen.",
-                    debug: { error: pdfError.message }
-                }, { status: 400 })
+                    error: "No se pudo leer el PDF automáticamente. Por favor, convierte el archivo a Imagen (JPG/PNG) y vuelve a intentarlo.",
+                    debug: { error: pdfError.message || "Unknown PDF error" }
+                }, { status: 422 })
             }
         } else {
             return NextResponse.json({
