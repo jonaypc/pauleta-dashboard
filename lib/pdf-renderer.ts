@@ -6,9 +6,13 @@ import { createCanvas } from "canvas"
 // Si falla el build, moveremos esto a un archivo separado que solo se importe en servidor.
 
 // Aseguramos que pdfjs use el worker fake
-const pdfjs = require("pdfjs-dist")
-if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = ""
+import * as pdfjsLib from "pdfjs-dist"
+
+// Aseguramos que pdfjs use el worker fake
+if (typeof window === 'undefined') {
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+    }
 }
 
 interface RenderOptions {

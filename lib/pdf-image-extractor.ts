@@ -1,9 +1,13 @@
 import { getDocument, OPS, PDFDocumentProxy } from "pdfjs-dist"
 
 // Configurar worker falso para Node.js
-const pdfjs = require("pdfjs-dist") // v5+ ya no tiene legacy build
-if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = ""
+import * as pdfjsLib from "pdfjs-dist"
+
+// Configurar worker falso para Node.js (necesario para pdfjs-dist en servidor)
+if (typeof window === 'undefined') {
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+    }
 }
 
 /**
