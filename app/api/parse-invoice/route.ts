@@ -32,7 +32,8 @@ function getOpenAI(): OpenAI {
 }
 
 // @ts-ignore
-const pdf = require("pdf-parse")
+// @ts-ignore
+const pdf = require("pdf-parse") // Force deploy check
 
 export async function POST(request: NextRequest) {
     try {
