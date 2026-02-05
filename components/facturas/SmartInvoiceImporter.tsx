@@ -551,8 +551,23 @@ function SmartInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) 
                             body: formData
                         })
 
-                        const data = await response.json()
+
+                        let data;
+                        const responseText = await response.text();
+
+                        try {
+                            data = JSON.parse(responseText);
+                        } catch (e) {
+                            console.error("API Response JSON Error. Raw response:", responseText.substring(0, 500));
+                            throw new Error(`Error de comunicación con el servidor (${response.status}). Intente con una imagen más pequeña.`);
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(data.error || `Error del servidor: ${response.status}`);
+                        }
+
                         console.log("Respuesta API IA:", data)
+
 
                         if (data.success && data.parsed) {
                             const p = data.parsed
