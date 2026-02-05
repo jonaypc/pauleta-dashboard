@@ -69,7 +69,9 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     useEffect(() => {
         // Usar el worker desde el directorio public para evitar problemas de CSP
         if (typeof window !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+            console.log("Configurando worker de PDF.js (v3.11.174)...")
+            // Añadimos ?v=3.11.174 para evitar caché del navegador si había versiones antiguas (ej: 5.4.x)
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js?v=3.11.174'
         }
     }, [])
 
