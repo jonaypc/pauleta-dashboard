@@ -22,26 +22,17 @@ export async function POST(request: NextRequest) {
 
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
-        
+
         let text = ""
 
         // Determinar el tipo de archivo
         const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
-        const isImage = file.type.includes("image") || 
+        const isImage = file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
 
         if (isPdf) {
-            // Usar unpdf para extraer texto de PDFs
-            try {
-                const { extractText } = await import("unpdf")
-                const result = await extractText(buffer)
-                // result.text es un array de strings (una por página)
-                text = Array.isArray(result.text) ? result.text.join('\n') : (result.text || "")
-            } catch (unpdfError: any) {
-                console.error("unpdf error:", unpdfError)
-                // Fallback: intentar con una extracción básica
-                text = extractTextFromBuffer(buffer)
-            }
+            // Server-side parsing disable. Client must convert to image or text.
+            text = "[PDF Server Parsing Disabled - Use Client Side]"
         } else if (isImage) {
             // Para imágenes, no hay OCR integrado por ahora
             // Devolver datos vacíos con un mensaje indicando que es una imagen
@@ -62,15 +53,15 @@ export async function POST(request: NextRequest) {
                 }
             })
         } else {
-            return NextResponse.json({ 
-                success: false, 
-                error: "Tipo de archivo no soportado. Solo PDF o imágenes." 
+            return NextResponse.json({
+                success: false,
+                error: "Tipo de archivo no soportado. Solo PDF o imágenes."
             }, { status: 400 })
         }
 
         if (!text || text.trim().length === 0) {
-            return NextResponse.json({ 
-                success: true, 
+            return NextResponse.json({
+                success: true,
                 text: "[No se pudo extraer texto del PDF]",
                 numpages: 1,
                 parsed: {
@@ -98,9 +89,9 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error("PDF Parse Error:", error)
-        return NextResponse.json({ 
-            success: false, 
-            error: error.message || "Error al leer el archivo. Asegúrate de que no esté protegido o dañado." 
+        return NextResponse.json({
+            success: false,
+            error: error.message || "Error al leer el archivo. Asegúrate de que no esté protegido o dañado."
         }, { status: 500 })
     }
 }
@@ -111,7 +102,7 @@ function extractTextFromBuffer(buffer: Buffer): string {
         // Intentar extraer texto básico del PDF buscando streams de texto
         const content = buffer.toString('binary')
         const textMatches: string[] = []
-        
+
         // Buscar objetos de texto en el PDF
         const regex = /\(([^)]+)\)/g
         let match
@@ -122,7 +113,7 @@ function extractTextFromBuffer(buffer: Buffer): string {
                 textMatches.push(text)
             }
         }
-        
+
         return textMatches.join(' ')
     } catch {
         return ""
