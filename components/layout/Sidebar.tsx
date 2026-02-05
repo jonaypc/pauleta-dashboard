@@ -13,11 +13,10 @@ import {
   BarChart3,
   Settings,
   CreditCard,
-  IceCream,
+  ShoppingBag,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  Wallet,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -51,7 +50,7 @@ const navigation = [
   {
     name: "Tesorería",
     href: "/tesoreria",
-    icon: Wallet,
+    icon: CreditCard,
   },
   {
     name: "Gastos",
@@ -100,7 +99,7 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="flex h-16 items-center justify-between border-b px-4">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-pauleta-mango to-pauleta-fresa">
-            <IceCream className="h-5 w-5 text-white" />
+            <ShoppingBag className="h-8 w-8 text-white" /> {/* Changed from IceCream to ShoppingBag */}
           </div>
           {!collapsed && (
             <div className="flex flex-col">

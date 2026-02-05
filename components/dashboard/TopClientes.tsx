@@ -33,8 +33,8 @@ export function TopClientes({ clientes }: TopClientesProps) {
     )
   }
 
-  // Calcular el máximo para las barras de progreso
-  const maxFacturado = Math.max(...clientes.map((c) => c.total_facturado))
+  // Calcular el máximo para las barras de progreso de forma segura
+  const maxFacturado = Math.max(...clientes.map((c) => Number(c.total_facturado) || 0), 1)
 
   return (
     <Card>
@@ -50,7 +50,9 @@ export function TopClientes({ clientes }: TopClientesProps) {
       <CardContent>
         <div className="space-y-4">
           {clientes.map((cliente, index) => {
-            const porcentaje = (cliente.total_facturado / maxFacturado) * 100
+            const safeTotal = Number(cliente.total_facturado) || 0
+            const porcentaje = Math.min((safeTotal / maxFacturado) * 100, 100)
+            const safePorcentaje = isFinite(porcentaje) ? porcentaje : 0
 
             return (
               <div key={cliente.cliente_id} className="space-y-2">
@@ -61,22 +63,22 @@ export function TopClientes({ clientes }: TopClientesProps) {
                     </div>
                     <div>
                       <p className="text-sm font-medium line-clamp-1">
-                        {cliente.nombre}
+                        {cliente.nombre || "Sin nombre"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {cliente.num_facturas} factura
+                        {cliente.num_facturas || 0} factura
                         {cliente.num_facturas !== 1 ? "s" : ""}
                       </p>
                     </div>
                   </div>
                   <p className="text-sm font-semibold">
-                    {formatCurrency(cliente.total_facturado)}
+                    {formatCurrency(safeTotal)}
                   </p>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-primary to-pauleta-green transition-all duration-500"
-                    style={{ width: `${porcentaje}%` }}
+                    style={{ width: `${safePorcentaje}%` }}
                   />
                 </div>
               </div>
