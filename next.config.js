@@ -11,6 +11,7 @@ const nextConfig = {
     ],
   },
   experimental: {
+    serverComponentsExternalPackages: ['pdfjs-dist', 'canvas'],
     serverActions: {
       bodySizeLimit: '10mb',
     },
