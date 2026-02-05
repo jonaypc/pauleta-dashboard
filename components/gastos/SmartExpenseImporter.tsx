@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload, Loader2, AlertTriangle, FileText, X, CheckCircle, Eye } from "lucide-react"
@@ -118,7 +118,7 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
         })
     }
 
-    const processFile = async (file: File, index: number) => {
+    const processFile = useCallback(async (file: File, index: number) => {
         // Actualizar estado del archivo a processing
         setProcessedFiles(prev => prev.map((pf, i) => i === index ? { ...pf, status: 'processing' } : pf))
 
@@ -203,7 +203,7 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
                 variant: "destructive",
             })
         }
-    }
+    }, [allowMultiple, onDataExtracted, toast])
 
     // Efecto para procesar cola
     useEffect(() => {
@@ -221,14 +221,14 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
                     .filter(f => f.status === 'success' && f.data)
                     .map(f => f.data!)
                 if (successful.length > 0) {
-                    // Solo si no se ha notificado ya... 
+                    // Solo si no se ha notificado ya...
                     // Mejor dejar que el padre 'NuevoGastoPage' observe el estado o usar un boton 'Continuar'?
                     // En este diseño, el padre observa 'onMultipleExtracted'
                     onMultipleExtracted(successful)
                 }
             }
         }
-    }, [processedFiles, isProcessing])
+    }, [processedFiles, isProcessing, allowMultiple, onMultipleExtracted, processFile])
 
 
     const handleFileSelect = (files: FileList | null) => {

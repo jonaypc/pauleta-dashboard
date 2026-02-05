@@ -83,7 +83,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
             numero: initialData?.numero || "",
             fecha: initialData?.fecha || new Date().toISOString().split('T')[0],
             proveedor: initialData?.nombre_proveedor || "",
-            importe: initialData?.importe?.toString() || "",
+            importe: initialData?.importe || 0,
             estado: "pendiente",
             categoria: "",
             metodo_pago: "transferencia",
