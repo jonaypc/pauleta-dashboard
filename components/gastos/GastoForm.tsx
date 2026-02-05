@@ -83,14 +83,14 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
             numero: initialData?.numero || "",
             fecha: initialData?.fecha || new Date().toISOString().split('T')[0],
             proveedor: initialData?.nombre_proveedor || "",
-            importe: initialData?.importe || 0,
+            importe: initialData?.importe ? Number(initialData.importe) : 0,
             estado: "pendiente",
             categoria: "",
             metodo_pago: "transferencia",
             notas: "",
-            base_imponible: initialData?.base_imponible?.toString() || "",
-            impuestos: initialData?.impuestos?.toString() || "",
-            tipo_impuesto: initialData?.tipo_impuesto?.toString() || "7.00",
+            base_imponible: initialData?.base_imponible ? Number(initialData.base_imponible) : undefined,
+            impuestos: initialData?.impuestos ? Number(initialData.impuestos) : undefined,
+            tipo_impuesto: initialData?.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
             pago_fijo_id: initialData?.pago_fijo_id || "none" // "none" para controlar el select
         },
     })
@@ -102,14 +102,14 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                 numero: initialData.numero || "",
                 fecha: initialData.fecha || new Date().toISOString().split('T')[0],
                 proveedor: initialData.nombre_proveedor || "",
-                importe: initialData.importe?.toString() || "",
+                importe: initialData.importe ? Number(initialData.importe) : 0,
                 estado: "pendiente",
                 categoria: "",
                 metodo_pago: "transferencia",
                 notas: "",
-                base_imponible: initialData.base_imponible?.toString() || "",
-                impuestos: initialData.impuestos?.toString() || "",
-                tipo_impuesto: initialData.tipo_impuesto?.toString() || "7.00",
+                base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : undefined,
+                impuestos: initialData.impuestos ? Number(initialData.impuestos) : undefined,
+                tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
                 pago_fijo_id: initialData.pago_fijo_id || "none"
             })
         }
