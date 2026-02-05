@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
         if (!isImage) {
             return NextResponse.json({
                 success: false,
-                error: "El servidor solo acepta imágenes. El cliente debe convertir el PDF antes de enviarlo."
+                error: `El servidor solo acepta imágenes. Recibido: ${file.name} (${file.type})`,
+                debug: { name: file.name, type: file.type, size: file.size }
             }, { status: 400 })
         }
 
