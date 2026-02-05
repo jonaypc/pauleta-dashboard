@@ -475,7 +475,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        console.log("=== handleFileUpload iniciado ===")
+        console.log("=== handleFileUpload V5 - IMAGE BLOB ===")
         const file = e.target.files?.[0]
         if (!file) {
             console.log("No se seleccionó archivo")
@@ -541,6 +541,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     if (!imageBlob) continue
 
                     // Preparar FormData para la API
+                    console.log(`Appending Blob to FormData: size=${imageBlob.size}, type=${imageBlob.type}`)
                     const formData = new FormData()
                     formData.append('file', imageBlob, `page-${i}.jpg`)
 
