@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Wallet,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,11 @@ const navigation = [
     name: "Cobros",
     href: "/cobros",
     icon: CreditCard,
+  },
+  {
+    name: "Tesorería",
+    href: "/tesoreria",
+    icon: Wallet,
   },
   {
     name: "Gastos",
