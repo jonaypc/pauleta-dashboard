@@ -53,14 +53,20 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(arrayBuffer)
 
         // Determinar el tipo de archivo
-        const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
         const isImage = file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
+
+        if (!isImage) {
+            return NextResponse.json({
+                success: false,
+                error: "El servidor solo acepta imágenes. El cliente debe convertir el PDF antes de enviarlo."
+            }, { status: 400 })
+        }
 
         let imageBase64: string
         let mimeType: string
 
-        if (isPdf) {
+        if (isImage) {
             console.log("Processing PDF file...")
 
             // PRIMERO: Intentar extraer texto (más barato y rápido)
