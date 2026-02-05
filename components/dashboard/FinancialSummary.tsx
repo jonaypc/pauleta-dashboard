@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { TrendingDown, TrendingUp, DollarSign, PieChart } from "lucide-react"
@@ -10,10 +12,12 @@ interface FinancialSummaryProps {
 }
 
 function formatCurrency(amount: number) {
+    const num = Number(amount)
+    if (!isFinite(num)) return "0,00 €"
     return new Intl.NumberFormat("es-ES", {
         style: "currency",
         currency: "EUR",
-    }).format(amount)
+    }).format(num)
 }
 
 export function FinancialSummary({
@@ -22,26 +26,28 @@ export function FinancialSummary({
     gastosVariables,
     mes,
 }: FinancialSummaryProps) {
-    const totalGastos = gastosFijos + gastosVariables
-    const resultado = ingresos - totalGastos
-    const margen = ingresos > 0 ? (resultado / ingresos) * 100 : 0
+    const totalGastos = (gastosFijos || 0) + (gastosVariables || 0)
+    const safeIngresos = ingresos || 0
+    const resultado = safeIngresos - totalGastos
+    const margen = safeIngresos > 0 ? (resultado / safeIngresos) * 100 : 0
     const esPositivo = resultado >= 0
 
     // Porcentajes para barras de progreso (max 100%)
-    const maxVal = Math.max(ingresos, totalGastos) || 1
-    const porcentajeIngresos = Math.min((ingresos / maxVal) * 100, 100)
+    const maxVal = Math.max(safeIngresos, totalGastos) || 1
+    const porcentajeIngresos = Math.min((safeIngresos / maxVal) * 100, 100)
     const porcentajeGastos = Math.min((totalGastos / maxVal) * 100, 100)
 
     // Porcentaje de gastos sobre ingresos (para ver salud)
-    // Si gastamos más de lo que ingresamos, será > 100%
-    const ratioGastos = ingresos > 0 ? (totalGastos / ingresos) * 100 : 0
+    const ratioGastos = safeIngresos > 0 ? (totalGastos / safeIngresos) * 100 : 0
+
+    const safeMargen = isFinite(margen) ? margen : 0
 
     return (
         <Card className="col-span-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <PieChart className="h-5 w-5 text-primary" />
-                    Situación Financiera ({mes})
+                    Situación Financiera ({mes || "Mes"})
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -58,15 +64,15 @@ export function FinancialSummary({
                             ) : (
                                 <TrendingDown className="mr-1 h-3 w-3 text-red-600" />
                             )}
-                            <span>{margen.toFixed(1)}% margen</span>
+                            <span>{safeMargen.toFixed(1)}% margen</span>
                         </div>
                     </div>
 
                     {/* Ingresos */}
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground">Ingresos Totales</p>
-                        <div className="text-2xl font-bold">{formatCurrency(ingresos)}</div>
-                        <Progress value={porcentajeIngresos} className="h-2 bg-muted" indicatorClassName="bg-blue-600" />
+                        <div className="text-2xl font-bold">{formatCurrency(safeIngresos)}</div>
+                        <Progress value={porcentajeIngresos || 0} className="h-2 bg-muted" indicatorClassName="bg-blue-600" />
                     </div>
 
                     {/* Gastos Totales */}
@@ -74,7 +80,7 @@ export function FinancialSummary({
                         <p className="text-sm font-medium text-muted-foreground">Gastos Totales</p>
                         <div className="text-2xl font-bold text-red-600">{formatCurrency(totalGastos)}</div>
                         <Progress
-                            value={porcentajeGastos}
+                            value={porcentajeGastos || 0}
                             className="h-2 bg-muted"
                             indicatorClassName={ratioGastos > 90 ? "bg-red-600" : "bg-amber-500"}
                         />
@@ -96,7 +102,7 @@ export function FinancialSummary({
                         </div>
                         <div className="text-xs text-right text-muted-foreground border-t pt-1">
                             {totalGastos > 0
-                                ? `${((gastosFijos / totalGastos) * 100).toFixed(0)}% Fijos vs ${((gastosVariables / totalGastos) * 100).toFixed(0)}% Variables`
+                                ? `${isFinite((gastosFijos / totalGastos) * 100) ? ((gastosFijos / totalGastos) * 100).toFixed(0) : 0}% Fijos vs ${isFinite((gastosVariables / totalGastos) * 100) ? ((gastosVariables / totalGastos) * 100).toFixed(0) : 0}% Variables`
                                 : "Sin gastos registrados"
                             }
                         </div>

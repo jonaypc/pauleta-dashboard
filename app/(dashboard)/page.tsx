@@ -9,11 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Plus, TrendingUp, Package, Clock, FileText } from "lucide-react"
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 async function getDashboardData() {
-  const supabase = await createClient()
-
   // Default safe data
   const defaultData = {
     facturacionMes: 0,
@@ -34,14 +32,15 @@ async function getDashboardData() {
     totalGastosVariables: 0,
   }
 
-  const now = new Date()
-  const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
-  const ultimoDiaMesAnterior = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
-  const hace6Meses = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
-  const nombreMes = now.toLocaleDateString('es-ES', { month: 'long' })
-
   try {
+    const supabase = await createClient()
+
+    const now = new Date()
+    const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
+    const ultimoDiaMesAnterior = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+    const hace6Meses = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+    const nombreMes = now.toLocaleDateString('es-ES', { month: 'long' })
     console.log('Fetching facturasMes...')
     const { data: facturasMes } = await supabase
       .from('facturas')
