@@ -32,7 +32,7 @@ function getOpenAI(): OpenAI {
 }
 
 // @ts-ignore
-import pdf from "pdf-parse"
+const pdf = require("pdf-parse")
 
 export async function POST(request: NextRequest) {
     try {
