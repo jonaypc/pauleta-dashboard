@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(arrayBuffer)
 
         // Determinar el tipo de archivo
+        console.log("File received:", { name: file.name, type: file.type, size: file.size })
         const isImage = file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)
 
