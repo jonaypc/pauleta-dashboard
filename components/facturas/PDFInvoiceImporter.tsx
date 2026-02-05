@@ -70,8 +70,8 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
         // Usar el worker desde CDN para asegurar la versión exacta 3.11.174 y evitar conflictos con v5.4
         // que viene de otras librerías (pdf-parse)
         if (typeof window !== 'undefined') {
-            console.log("Configurando worker de PDF.js (CDN v3.11.174)...")
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+            console.log("Configurando worker de PDF.js (CDN v5.4.296)...")
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.js'
         }
     }, [])
 
