@@ -40,14 +40,26 @@ export function formatPercent(num: number): string {
 // FORMATEO DE FECHAS
 // ===========================================
 
-export function formatDate(date: string | Date, formatStr: string = 'dd/MM/yyyy'): string {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date
-  return format(dateObj, formatStr, { locale: es })
+export function formatDate(date: string | Date | null | undefined, formatStr: string = 'dd/MM/yyyy'): string {
+  if (!date) return 'Sin fecha'
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(dateObj.getTime())) return 'Fecha inválida'
+    return format(dateObj, formatStr, { locale: es })
+  } catch (error) {
+    return 'Error fecha'
+  }
 }
 
-export function formatDateTime(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date
-  return format(dateObj, "dd/MM/yyyy HH:mm", { locale: es })
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return 'Sin fecha'
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(dateObj.getTime())) return 'Fecha inválida'
+    return format(dateObj, "dd/MM/yyyy HH:mm", { locale: es })
+  } catch (error) {
+    return 'Error fecha'
+  }
 }
 
 export function formatDateLong(date: string | Date): string {
