@@ -28,7 +28,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://unpkg.com blob:; worker-src 'self' blob: https://unpkg.com; connect-src 'self' https://vercel.live https://va.vercel-scripts.com https://unpkg.com;",
+            value: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://unpkg.com blob:; worker-src 'self' blob: https://unpkg.com; connect-src 'self' https://vercel.live https://va.vercel-scripts.com https://unpkg.com https://www.google-analytics.com https://*.supabase.co wss://*.supabase.co;",
           },
         ],
       },
