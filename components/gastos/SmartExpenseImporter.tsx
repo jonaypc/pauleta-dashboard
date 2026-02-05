@@ -104,7 +104,8 @@ export function SmartExpenseImporter({
         // Usar el worker desde CDN para asegurar compatibilidad
         if (typeof window !== 'undefined') {
             console.log("Configurando worker de PDF.js (SmartExpenseImporter)...")
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.js'
+            // Usar la versión .mjs que es compatible con módulos ES (Next.js 14 + pdfjs-dist v5)
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs'
         }
     }, [])
 
