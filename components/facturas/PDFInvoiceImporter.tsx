@@ -108,17 +108,17 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     // Parser específico para el formato de Pauleta Canaria
     const parsePauletaInvoices = (text: string): ParsedInvoice[] => {
         const results: ParsedInvoice[] = []
-        
+
         // Dividir por cada factura usando "FACTURA N.º" como separador
         const splitParts = text.split(/FACTURA\s*N\.º\s*/i)
-        
+
         console.log(`Partes encontradas: ${splitParts.length}`)
-        
+
         // Procesar cada parte (la primera parte es la cabecera, el resto son facturas)
         for (let i = 1; i < splitParts.length; i++) {
             const block = splitParts[i]
             const prevBlock = splitParts[i - 1] // Parte anterior (puede contener FACTURAR A)
-            
+
             try {
                 // 1. NÚMERO DE FACTURA - primeros dígitos del bloque
                 const numMatch = block.match(/^\s*(\d+)/)
@@ -127,14 +127,14 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     continue
                 }
                 const numero = numMatch[1]
-                
+
                 // 2. FECHA - formato FECHA 29/01/2026
                 const fechaMatch = block.match(/FECHA\s*(\d{2})\/(\d{2})\/(\d{4})/)
                 let fecha = new Date().toISOString().split("T")[0]
                 if (fechaMatch) {
                     fecha = `${fechaMatch[3]}-${fechaMatch[2]}-${fechaMatch[1]}`
                 }
-                
+
                 // 3. CLIENTE - Buscar el ÚLTIMO bloque FACTURAR A...ENVIAR A antes del número de factura
                 let clienteRaw = "Desconocido"
                 let clienteCIF = ""
@@ -142,7 +142,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 let clienteCP = ""
                 let clienteCiudad = ""
                 let enviarADireccion = "" // Dirección de ENVIAR A (puede ser diferente a la de facturación)
-                
+
                 // Función para extraer cliente del ÚLTIMO bloque FACTURAR A...ENVIAR A en un texto
                 const extractLastCliente = (textToSearch: string) => {
                     // Buscar TODAS las ocurrencias de FACTURAR A...ENVIAR A...FACTURA y extraer ambos bloques
@@ -153,16 +153,16 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         allMatches.push(m)
                     }
                     if (allMatches.length === 0) return false
-                    
+
                     // Usar el último match (el más cercano al número de factura)
                     const lastMatch = allMatches[allMatches.length - 1]
                     const facturarAText = lastMatch[1]
                     const enviarAText = lastMatch[2] || ""
-                    
+
                     // Extraer dirección de ENVIAR A (puede tener nombre de tienda específica)
                     enviarADireccion = enviarAText.trim()
                     console.log(`Bloque ENVIAR A encontrado: "${enviarADireccion.substring(0, 100)}..."`)
-                    
+
                     // Buscar CIF/NIF en el texto de FACTURAR A (formato: B02973170 - letra + 8 dígitos)
                     const cifMatch = facturarAText.match(/([A-Z]\d{8})/i)
                     if (cifMatch) {
@@ -173,7 +173,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         // Limpiar el nombre
                         nombrePart = nombrePart.replace(/[\.\,\s]+$/, '').trim()
                         if (nombrePart) clienteRaw = nombrePart
-                        
+
                         // Extraer dirección (después del CIF)
                         const afterCIF = facturarAText.substring(cifIndex + cifMatch[0].length)
                         // Buscar código postal (5 dígitos)
@@ -198,14 +198,14 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     }
                     return true
                 }
-                
+
                 // SIEMPRE buscar en el bloque anterior, porque el FACTURAR A de esta factura
                 // está ANTES de "FACTURA N.º", es decir, en el bloque anterior.
                 extractLastCliente(prevBlock)
-                
+
                 console.log(`Factura ${numero}: Cliente = "${clienteRaw}", CIF = "${clienteCIF}", Dir = "${clienteDireccion}", CP = "${clienteCP}"`)
                 console.log(`Factura ${numero}: ENVIAR A = "${enviarADireccion.substring(0, 80)}..."`)
-                
+
                 // Buscar cliente en la base de datos - CON DIFERENCIACIÓN POR DIRECCIÓN
                 // Primero buscar todos los clientes con el mismo CIF
                 const clientesConMismoCIF = clientes.filter(c => {
@@ -216,9 +216,9 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     }
                     return false
                 })
-                
+
                 let foundCliente: Cliente | undefined
-                
+
                 if (clientesConMismoCIF.length === 1) {
                     // Solo hay un cliente con ese CIF, usarlo
                     foundCliente = clientesConMismoCIF[0]
@@ -227,38 +227,38 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     console.log(`Factura ${numero}: Múltiples clientes con CIF ${clienteCIF}, diferenciando por dirección...`)
                     console.log(`Factura ${numero}: PDF tiene CP="${clienteCP}", Dir="${clienteDireccion}"`)
                     console.log(`Factura ${numero}: Clientes disponibles:`, clientesConMismoCIF.map(c => ({ nombre: c.nombre, cp: c.codigo_postal, dir: c.direccion })))
-                    
+
                     // Palabras a ignorar en las búsquedas
                     const ignoredWords = ['calle', 'avenida', 'avda', 'local', 'planta', 'numero', 'palmas', 'mogan', 'gran', 'canaria', 'barranco', 'verga', 'stores', 'tienda', 'allday', 'spar', 'espana', 'spain']
-                    
+
                     // Extraer palabras clave de la dirección de facturación
                     const dirKeywords = normalize(clienteDireccion)
                         .split(" ")
                         .filter(w => w.length > 3 && !ignoredWords.includes(w))
-                    
+
                     // Extraer palabras clave de la dirección de ENVIAR A (más importante para sucursales)
                     const enviarKeywords = normalize(enviarADireccion)
                         .split(" ")
                         .filter(w => w.length > 3 && !ignoredWords.includes(w))
-                    
+
                     console.log(`Factura ${numero}: Keywords de FACTURAR A: [${dirKeywords.join(', ')}]`)
                     console.log(`Factura ${numero}: Keywords de ENVIAR A: [${enviarKeywords.join(', ')}]`)
-                    
+
                     // Calcular puntuación para cada cliente
                     let bestMatch: { cliente: Cliente; score: number } | null = null
-                    
+
                     for (const c of clientesConMismoCIF) {
                         let score = 0
                         const reasons: string[] = []
                         const nombreNorm = normalize(c.nombre)
                         const dirClienteNorm = c.direccion ? normalize(c.direccion) : ""
-                        
+
                         // 1. Comparar código postal (+10 puntos)
                         if (clienteCP && c.codigo_postal && c.codigo_postal === clienteCP) {
                             score += 10
                             reasons.push(`CP=${clienteCP}`)
                         }
-                        
+
                         // 2. Buscar palabras clave de ENVIAR A en el nombre del cliente (+15 por match - más importante!)
                         for (const keyword of enviarKeywords) {
                             if (nombreNorm.includes(keyword)) {
@@ -271,7 +271,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                 reasons.push(`ENVIAR→dir: "${keyword}"`)
                             }
                         }
-                        
+
                         // 3. Buscar palabras clave de FACTURAR A en la dirección registrada (+5 por match)
                         for (const keyword of dirKeywords) {
                             if (dirClienteNorm.includes(keyword)) {
@@ -279,7 +279,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                 reasons.push(`FACTURAR→dir: "${keyword}"`)
                             }
                         }
-                        
+
                         // 4. Buscar palabras clave de FACTURAR A en el nombre del cliente (+3 por match)
                         for (const keyword of dirKeywords) {
                             if (nombreNorm.includes(keyword)) {
@@ -287,26 +287,26 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                 reasons.push(`FACTURAR→nombre: "${keyword}"`)
                             }
                         }
-                        
+
                         console.log(`Factura ${numero}: Cliente "${c.nombre}" (dir: ${c.direccion}) → Score: ${score} [${reasons.join(', ')}]`)
-                        
+
                         if (score > 0 && (!bestMatch || score > bestMatch.score)) {
                             bestMatch = { cliente: c, score }
                         }
                     }
-                    
+
                     if (bestMatch) {
                         foundCliente = bestMatch.cliente
                         console.log(`Factura ${numero}: MEJOR MATCH → "${foundCliente.nombre}" con score ${bestMatch.score}`)
                     }
-                    
+
                     // Si no encuentra por dirección, usar el primero (como fallback)
                     if (!foundCliente) {
                         console.log(`Factura ${numero}: No se pudo diferenciar por dirección, usando primer cliente`)
                         foundCliente = clientesConMismoCIF[0]
                     }
                 }
-                
+
                 // Si no encontró por CIF, buscar por nombre
                 if (!foundCliente && clienteRaw !== "Desconocido") {
                     foundCliente = clientes.find(c => {
@@ -314,41 +314,41 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         const n2 = normalize(c.nombre)
                         if (n1 === n2) return true
                         if (n1.includes(n2) || n2.includes(n1)) return true
-                        
+
                         const words1 = n1.split(" ").filter(w => w.length > 2)
                         const words2 = n2.split(" ").filter(w => w.length > 2)
                         const commonWords = words1.filter(w => words2.includes(w))
                         if (commonWords.length >= 2) return true
-                        
+
                         return false
                     })
                 }
-                
+
                 console.log(`Factura ${numero}: Cliente encontrado = ${foundCliente ? foundCliente.nombre : 'NINGUNO'}`)
-                
+
                 // 4. LÍNEAS DE PRODUCTOS
                 // Formato con espacios: 8437027630002 Pauleta de Fresa 60 1.25 75.00
                 const lineas: ParsedLine[] = []
-                
+
                 // Regex mejorado para el formato con espacios (productos con código de barras)
                 const lineRegex = /(843702763\d{4})\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)\s+(\d+)\s+(\d+\.\d{2})\s+(\d+\.\d{2})/g
                 let match
-                
+
                 while ((match = lineRegex.exec(block)) !== null) {
                     const codigo = match[1]
                     let descripcion = match[2].trim()
                     const cantidad = parseInt(match[3])
                     const precio = parseFloat(match[4])
                     const importe = parseFloat(match[5])
-                    
+
                     // Buscar producto por código de barras
                     const productMatch = productos.find(p => p.codigo_barras === codigo)
-                    
+
                     // Usar nombre del producto de la DB si existe
                     if (productMatch) {
                         descripcion = productMatch.nombre
                     }
-                    
+
                     lineas.push({
                         codigo,
                         descripcion,
@@ -359,19 +359,19 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                         igic: productMatch?.igic ?? 3 // IGIC general Canarias
                     })
                 }
-                
+
                 // Si no se encontraron líneas de productos, buscar conceptos genéricos como "Venta eventos"
                 if (lineas.length === 0) {
                     // Buscar líneas con formato: Concepto Cantidad Precio Importe (sin código de barras)
                     const genericLineRegex = /(Venta\s+eventos?|Servicio|Catering|Evento)[^\d]*(\d+)\s+(\d+[\.,]?\d*)\s+([\d,\.]+)/gi
                     let genericMatch
-                    
+
                     while ((genericMatch = genericLineRegex.exec(block)) !== null) {
                         const descripcion = genericMatch[1].trim()
                         const cantidad = parseInt(genericMatch[2])
                         const precio = parseFloat(genericMatch[3].replace(',', '.'))
                         const importe = parseFloat(genericMatch[4].replace(/,/g, ''))
-                        
+
                         lineas.push({
                             codigo: "EVENTO",
                             descripcion: descripcion || "Venta eventos",
@@ -382,15 +382,15 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                             igic: 3
                         })
                     }
-                    
+
                     // Si aún no hay líneas pero hay un total, crear una línea genérica
                     if (lineas.length === 0) {
                         console.log(`Factura ${numero}: Sin líneas de producto, verificando si es factura de eventos...`)
                     }
                 }
-                
+
                 console.log(`Factura ${numero}: ${lineas.length} líneas encontradas`)
-                
+
                 // 5. TOTALES - Manejar formato con comas de miles (ej: 1,234.56)
                 const parseMoneda = (valor: string | undefined): number => {
                     if (!valor) return 0
@@ -398,28 +398,28 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     const limpio = valor.replace(/,/g, '')
                     return parseFloat(limpio) || 0
                 }
-                
+
                 const subtotalMatch = block.match(/SUBTOTAL\s*([\d,\.]+)/i)
                 const impuestoMatch = block.match(/IMPUESTO\s*([\d,\.]+)/i)
                 const totalMatch = block.match(/TOTAL\s*([\d,\.]+)/i)
-                
+
                 const subtotal = parseMoneda(subtotalMatch?.[1])
                 const impuesto = parseMoneda(impuestoMatch?.[1])
                 const total = parseMoneda(totalMatch?.[1])
-                
+
                 console.log(`Factura ${numero}: Totales parseados - Subtotal: ${subtotal}, Impuesto: ${impuesto}, Total: ${total}`)
-                
+
                 // 6. ESTADO DE PAGO - buscar "SALDO PENDIENTE EUR 0.00" o similar
                 const saldoPendienteMatch = block.match(/SALDO\s*PENDIENTE\s*EUR\s*([\d.]+)/i)
                 const saldoPendiente = parseFloat(saldoPendienteMatch?.[1] || "999")
                 const isPagada = saldoPendiente < 0.01
-                
+
                 // Una factura es válida si:
                 // - Tiene cliente Y líneas de productos, O
                 // - Tiene cliente Y total > 0 (facturas de eventos sin líneas)
                 const esFacturaEvento = lineas.length === 0 && total > 0
                 const esValida = !!foundCliente && (lineas.length > 0 || total > 0)
-                
+
                 results.push({
                     id: Math.random().toString(36),
                     numero,
@@ -435,7 +435,7 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                     valida: esValida,
                     error: !foundCliente ? "Cliente no encontrado" : (esFacturaEvento ? "Factura de eventos (sin productos)" : undefined)
                 })
-                
+
             } catch (err) {
                 console.error(`Error parsing factura ${i}:`, err)
             }
@@ -443,6 +443,33 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
 
         console.log("Resultado del parsing:", results)
         return results
+    }
+
+    // Helper para renderizar página PDF a imagen (Blob/File) para enviar a la API
+    const renderPageToImage = async (pdfData: any, pageNum: number): Promise<Blob | null> => {
+        try {
+            const page = await pdfData.getPage(pageNum)
+            const viewport = page.getViewport({ scale: 2.0 }) // Buena calidad para OCR
+
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
+            canvas.height = viewport.height
+            canvas.width = viewport.width
+
+            if (!context) return null
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95)
+            })
+        } catch (err) {
+            console.error("Error rendering page to image:", err)
+            return null
+        }
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,18 +484,20 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
         setIsProcessing(true)
         setFacturas([])
 
+        // Reset input value to allow re-uploading the same file
+        e.target.value = ''
+
         try {
             console.log("Leyendo archivo...")
             const arrayBuffer = await file.arrayBuffer()
             console.log("ArrayBuffer obtenido, tamaño:", arrayBuffer.byteLength)
-            
+
             console.log("Iniciando carga de PDF con pdfjs...")
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
-            console.log("Loading task creado")
-            
             const pdfData = await loadingTask.promise
             console.log("PDF cargado, páginas:", pdfData.numPages)
 
+            // 1. INTENTO DE EXTRACCIÓN DE TEXTO LOCAL (RÁPIDO)
             let fullText = ""
             for (let i = 1; i <= pdfData.numPages; i++) {
                 console.log(`Procesando página ${i}/${pdfData.numPages}`)
@@ -477,17 +506,132 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                 const strings = content.items.map((item: any) => item.str)
                 fullText += strings.join("") + "\n"
             }
-            
-            console.log("=== Texto extraído del PDF ===")
-            console.log(fullText.substring(0, 3000))
-            console.log("=== Fin texto ===")
 
-            const parsed = parsePauletaInvoices(fullText)
-            console.log("Facturas parseadas:", parsed.length)
+            // Limpieza básica para evaluar si es escaneado
+            const cleanText = fullText.replace(/\s+/g, "").trim()
+            const isScanned = cleanText.length < 50 // Umbral muy bajo, si hay menos de 50 chars legibles es probable que sea imagen
+
+            console.log("Longitud texto limpio:", cleanText.length)
+            console.log("¿Posible PDF escaneado?", isScanned)
+
+            // Intentar parseo local
+            let parsed = parsePauletaInvoices(fullText)
+            const validLocal = parsed.filter(f => f.valida).length
+
+            console.log(`Facturas parseadas localmente: ${parsed.length} (Válidas: ${validLocal})`)
+
+            // 2. FALLBACK A IA (SI ES ESCANEADO O FALLÓ PARSEO LOCAL)
+            if (isScanned || validLocal === 0) {
+                console.log("=== ACTIVANDO FALLBACK IA ===")
+                toast({
+                    title: "Analizando con IA...",
+                    description: isScanned ? "El PDF parece ser una imagen escaneada." : "El formato no coincide con el estándar habitual."
+                })
+
+                const aiInvoices: ParsedInvoice[] = []
+
+                // Procesar página a página (o solo la primera si es muy pesado)
+                // Por ahora limitamos a las primeras 3 páginas para evitar timeouts masivos
+                const pagesToProcess = Math.min(pdfData.numPages, 3)
+
+                for (let i = 1; i <= pagesToProcess; i++) {
+                    const imageBlob = await renderPageToImage(pdfData, i)
+                    if (!imageBlob) continue
+
+                    // Preparar FormData para la API
+                    const formData = new FormData()
+                    formData.append('file', imageBlob, `page-${i}.jpg`)
+
+                    try {
+                        const response = await fetch('/api/parse-invoice', {
+                            method: 'POST',
+                            body: formData
+                        })
+
+                        const data = await response.json()
+                        console.log("Respuesta API IA:", data)
+
+                        if (data.success && data.parsed) {
+                            const p = data.parsed
+
+                            // Mapear respuesta API a ParsedInvoice
+                            // Buscamos cliente por CIF o Nombre devuelto por la IA
+
+                            // Buscar cliente - Lógica simplificada vs la local, pero efectiva
+                            let foundCliente: Cliente | undefined
+
+                            // 1. Buscar por CIF
+                            if (p.cif_proveedor) {
+                                const cifSearch = p.cif_proveedor.replace(/[-\s]/g, '').toUpperCase()
+                                foundCliente = clientes.find(c => c.cif && c.cif.replace(/[-\s]/g, '').toUpperCase().includes(cifSearch) || cifSearch.includes(c.cif?.replace(/[-\s]/g, '').toUpperCase() || "XXXX"))
+                            }
+
+                            // 2. Buscar por Nombre
+                            if (!foundCliente && p.nombre_proveedor) {
+                                const n1 = normalize(p.nombre_proveedor)
+                                foundCliente = clientes.find(c => {
+                                    const n2 = normalize(c.nombre)
+                                    return n1.includes(n2) || n2.includes(n1)
+                                })
+                            }
+
+                            // Construir líneas (La API devuelve totales, creamos una línea genérica basada en concepto)
+                            const lineasAI: ParsedLine[] = []
+                            if (p.base_imponible) {
+                                lineasAI.push({
+                                    codigo: "IA-EXTRACT",
+                                    descripcion: p.concepto || "Servicios / Productos (Extracto IA)",
+                                    cantidad: 1,
+                                    precio: p.base_imponible,
+                                    importe: p.base_imponible,
+                                    igic: p.iva_porcentaje || 7 // Default 7% si no lo detecta
+                                })
+                            }
+
+                            // Construir factura
+                            aiInvoices.push({
+                                id: Math.random().toString(36),
+                                numero: p.numero || `IA-${Date.now()}`,
+                                fecha: p.fecha || new Date().toISOString().split('T')[0],
+                                clienteRaw: p.nombre_proveedor || "Desconocido (IA)",
+                                clienteId: foundCliente?.id,
+                                clienteNombreMatch: foundCliente?.nombre,
+                                lineas: lineasAI,
+                                subtotal: p.base_imponible || 0,
+                                impuesto: p.iva || 0,
+                                total: p.importe || (p.base_imponible || 0) + (p.iva || 0),
+                                cobrada: false, // Por defecto pendiente
+                                valida: !!foundCliente && (p.base_imponible || 0) > 0,
+                                error: !foundCliente ? "Cliente no encontrado (IA)" : undefined
+                            })
+                        }
+
+                    } catch (apiError) {
+                        console.error(`Error enviando página ${i} a la API:`, apiError)
+                    }
+                }
+
+                if (aiInvoices.length > 0) {
+                    setFacturas(aiInvoices)
+                    toast({
+                        title: "Análisis IA Completado",
+                        description: `Se han extraído ${aiInvoices.length} facturas usando Inteligencia Artificial.`,
+                        className: "bg-green-50 border-green-200"
+                    })
+                    return // Salir, ya tenemos datos
+                }
+            }
+
+            // Si llegamos aquí: o el parseo local funcionó, o el fallback IA falló
+            console.log("Facturas procesadas (Local):", parsed.length)
             setFacturas(parsed)
-            
-            toast({ title: "PDF procesado", description: `Se encontraron ${parsed.length} facturas` })
-            
+
+            if (parsed.length > 0) {
+                toast({ title: "PDF procesado", description: `Se encontraron ${parsed.length} facturas` })
+            } else {
+                toast({ title: "No se encontraron facturas", description: "No se pudo extraer información válida. Intente con una imagen más clara.", variant: "destructive" })
+            }
+
         } catch (err: any) {
             console.error("=== ERROR PROCESANDO PDF ===", err)
             toast({ title: "Error", description: err.message || "Fallo al leer el PDF", variant: "destructive" })
@@ -621,16 +765,16 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
                                                         value={f.clienteId || ""}
                                                         onChange={(e) => {
                                                             const clienteSeleccionado = clientes.find(c => c.id === e.target.value)
-                                                            setFacturas(prev => prev.map(fac => 
-                                                                fac.id === f.id 
-                                                                    ? { 
-                                                                        ...fac, 
-                                                                        clienteId: clienteSeleccionado?.id, 
+                                                            setFacturas(prev => prev.map(fac =>
+                                                                fac.id === f.id
+                                                                    ? {
+                                                                        ...fac,
+                                                                        clienteId: clienteSeleccionado?.id,
                                                                         clienteNombreMatch: clienteSeleccionado?.persona_contacto || clienteSeleccionado?.nombre,
                                                                         // Válida si tiene cliente Y (líneas > 0 O total > 0)
                                                                         valida: !!clienteSeleccionado && (fac.lineas.length > 0 || fac.total > 0),
                                                                         error: !clienteSeleccionado ? "Cliente no encontrado" : undefined
-                                                                    } 
+                                                                    }
                                                                     : fac
                                                             ))
                                                         }}
