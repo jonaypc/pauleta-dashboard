@@ -48,11 +48,12 @@ async function getDashboardData() {
     const numFacturasPendientes = facturasPendientes?.length || 0
 
     // Calcular días promedio de antigüedad de facturas pendientes
-    const diasPromedioPendiente = facturasPendientes?.length
-      ? facturasPendientes.reduce((sum, f) => {
+    const facturasValidas = facturasPendientes?.filter(f => f.fecha && !isNaN(new Date(f.fecha).getTime())) || []
+    const diasPromedioPendiente = facturasValidas.length
+      ? facturasValidas.reduce((sum, f) => {
         const dias = Math.floor((now.getTime() - new Date(f.fecha).getTime()) / (1000 * 60 * 60 * 24))
-        return sum + dias
-      }, 0) / facturasPendientes.length
+        return sum + Math.max(0, dias)
+      }, 0) / facturasValidas.length
       : 0
 
     // Cobros realizados este mes
@@ -87,7 +88,7 @@ async function getDashboardData() {
       const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
       const nombreMesGraph = fecha.toLocaleDateString('es-ES', { month: 'short' })
       const total = facturas6Meses
-        ?.filter(f => f.fecha.startsWith(mesKey))
+        ?.filter(f => f.fecha && typeof f.fecha === 'string' && f.fecha.startsWith(mesKey))
         .reduce((sum, f) => sum + (f.total || 0), 0) || 0
       ventasPorMes.push({ mes: nombreMesGraph, total })
     }
@@ -104,11 +105,11 @@ async function getDashboardData() {
 
     const productosVendidos: Record<string, { nombre: string; cantidad: number }> = {}
     lineasMes?.forEach((l: any) => {
-      const key = l.descripcion
+      const key = l.descripcion || "Sin descripción"
       if (!productosVendidos[key]) {
         productosVendidos[key] = { nombre: key, cantidad: 0 }
       }
-      productosVendidos[key].cantidad += l.cantidad || 0
+      productosVendidos[key].cantidad += Number(l.cantidad || 0)
     })
     const topProductosMes = Object.values(productosVendidos)
       .sort((a, b) => b.cantidad - a.cantidad)
@@ -233,7 +234,7 @@ async function getDashboardData() {
       topClientes: topClientesList,
       // Nuevas métricas
       numFacturasPendientes,
-      diasPromedioPendiente: Math.round(diasPromedioPendiente),
+      diasPromedioPendiente: isNaN(diasPromedioPendiente) ? 0 : Math.round(diasPromedioPendiente),
       ventasPorMes,
       topProductosMes,
       // Financiero
@@ -370,9 +371,9 @@ export default async function DashboardPage() {
                     <div key={producto.nombre} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                            index === 1 ? 'bg-gray-100 text-gray-700' :
-                              index === 2 ? 'bg-orange-100 text-orange-700' :
-                                'bg-muted text-muted-foreground'
+                          index === 1 ? 'bg-gray-100 text-gray-700' :
+                            index === 2 ? 'bg-orange-100 text-orange-700' :
+                              'bg-muted text-muted-foreground'
                           }`}>
                           {index + 1}
                         </span>
