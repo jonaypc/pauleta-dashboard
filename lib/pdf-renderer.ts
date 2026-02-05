@@ -1,4 +1,4 @@
-import { getDocument } from "pdfjs-dist/legacy/build/pdf"
+import { getDocument } from "pdfjs-dist"
 import { createCanvas } from "canvas"
 
 // Configurar worker falso para Node.js (necesario para pdfjs-dist en servidor)
@@ -6,7 +6,7 @@ import { createCanvas } from "canvas"
 // Si falla el build, moveremos esto a un archivo separado que solo se importe en servidor.
 
 // Aseguramos que pdfjs use el worker fake
-const pdfjs = require("pdfjs-dist/legacy/build/pdf")
+const pdfjs = require("pdfjs-dist")
 if (!pdfjs.GlobalWorkerOptions.workerSrc) {
     pdfjs.GlobalWorkerOptions.workerSrc = ""
 }
