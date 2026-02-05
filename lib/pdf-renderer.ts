@@ -1,11 +1,5 @@
 import { getDocument } from "pdfjs-dist"
-import { createCanvas } from "canvas"
-
-// Configurar worker falso para Node.js (necesario para pdfjs-dist en servidor)
-// En Next.js a veces hay que manejar esto con cuidado para evitar errores de compilación
-// Si falla el build, moveremos esto a un archivo separado que solo se importe en servidor.
-
-// Aseguramos que pdfjs use el worker fake
+import * as Canvas from "canvas"
 import * as pdfjsLib from "pdfjs-dist"
 
 // Aseguramos que pdfjs use el worker fake
@@ -39,6 +33,12 @@ export async function convertPdfToImage(buffer: Buffer, options: RenderOptions =
         const viewport = page.getViewport({ scale: options.scale || 1.5 })
 
         // Crear canvas
+        // Manejo robusto de importaciones CJS/ESM para canvas
+        const createCanvas = Canvas.createCanvas || (Canvas as any).default?.createCanvas
+        if (!createCanvas) {
+            throw new Error("Could not load createCanvas from canvas module. Check server logs for import details.")
+        }
+
         const canvas = createCanvas(viewport.width, viewport.height)
         const context = canvas.getContext('2d')
 
