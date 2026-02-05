@@ -1,7 +1,7 @@
-import { getDocument, OPS, PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf"
+import { getDocument, OPS, PDFDocumentProxy } from "pdfjs-dist"
 
 // Configurar worker falso para Node.js
-const pdfjs = require("pdfjs-dist/legacy/build/pdf")
+const pdfjs = require("pdfjs-dist") // v5+ ya no tiene legacy build
 if (!pdfjs.GlobalWorkerOptions.workerSrc) {
     pdfjs.GlobalWorkerOptions.workerSrc = ""
 }
@@ -17,7 +17,7 @@ export async function extractFirstImageFromPDF(buffer: Buffer): Promise<{ data: 
 
         // Load document
         const loadingTask = getDocument({
-            
+
             data,
             verbosity: 0,
             useSystemFonts: false,
