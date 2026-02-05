@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FileText, Loader2, Upload, AlertTriangle, CheckCircle, X, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -332,7 +332,30 @@ export function SmartExpenseImporter({
 
         try {
             const formData = new FormData()
-            formData.append("file", file)
+
+            // Si es PDF, convertir a imagen
+            if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+                try {
+                    setProgress(10)
+                    const arrayBuffer = await file.arrayBuffer()
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+                    const pdfData = await loadingTask.promise
+
+                    setProgress(20)
+                    // Renderizar página 1
+                    const imageBlob = await renderPageToImage(pdfData, 1)
+                    if (imageBlob) {
+                        formData.append("file", imageBlob, file.name.replace(".pdf", ".jpg"))
+                    } else {
+                        throw new Error("No se pudo renderizar el PDF")
+                    }
+                } catch (pdfErr: any) {
+                    console.error("Error local PDF:", pdfErr)
+                    formData.append("file", file) // Fallback al original
+                }
+            } else {
+                formData.append("file", file)
+            }
 
             setProgress(30)
 
