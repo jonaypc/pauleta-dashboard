@@ -108,7 +108,7 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
 
         if (!context) throw new Error("Canvas context failed")
 
-        await page.render({ canvasContext: context, viewport }).promise
+        await page.render({ canvasContext: context, viewport } as any).promise
 
         return new Promise((resolve, reject) => {
             canvas.toBlob((blob) => {
