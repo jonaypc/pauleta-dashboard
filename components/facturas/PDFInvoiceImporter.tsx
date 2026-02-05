@@ -67,11 +67,11 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     const [isImporting, setIsImporting] = useState(false)
 
     useEffect(() => {
-        // Usar el worker desde el directorio public para evitar problemas de CSP
+        // Usar el worker desde CDN para asegurar la versión exacta 3.11.174 y evitar conflictos con v5.4
+        // que viene de otras librerías (pdf-parse)
         if (typeof window !== 'undefined') {
-            console.log("Configurando worker de PDF.js (v3.11.174)...")
-            // Añadimos ?v=3.11.174 para evitar caché del navegador si había versiones antiguas (ej: 5.4.x)
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js?v=3.11.174'
+            console.log("Configurando worker de PDF.js (CDN v3.11.174)...")
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
         }
     }, [])
 
