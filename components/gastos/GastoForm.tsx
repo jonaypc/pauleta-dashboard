@@ -126,7 +126,9 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                 const getMergedValue = (key: keyof typeof currentValues, incomingVal: any, defaultVal: any = "") => {
                     const currentVal = currentValues[key]
                     // Si el usuario ya escribió algo (y no es el valor por defecto/vacío), lo respetamos
-                    if (currentVal && currentVal !== 0 && currentVal !== "7.00" && currentVal !== "none") {
+                    // NOTA: Para strings, chequeamos que no sea el defaultVal o vacío
+                    // Para números, chequeamos que no sea 0 o undefined
+                    if (currentVal !== undefined && currentVal !== null && currentVal !== "" && currentVal !== 0 && currentVal !== "7.00" && currentVal !== "none") {
                         return currentVal
                     }
                     return incomingVal || defaultVal
@@ -343,7 +345,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Estado</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Estado del pago" />
@@ -449,7 +451,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Categoría</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona categoría" />
@@ -477,7 +479,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                                 </FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
-                                    defaultValue={field.value || "none"}
+                                    value={field.value || "none"}
                                     disabled={pagosFijos.length === 0}
                                 >
                                     <FormControl>
