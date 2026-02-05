@@ -59,7 +59,7 @@ interface PDFInvoiceImporterProps {
     productos: Producto[]
 }
 
-function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
+function SmartInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     const supabase = createClient()
     const [isProcessing, setIsProcessing] = useState(false)
     const [facturas, setFacturas] = useState<ParsedInvoice[]>([])
@@ -848,4 +848,4 @@ function PDFInvoiceImporter({ clientes, productos }: PDFInvoiceImporterProps) {
     )
 }
 
-export default PDFInvoiceImporter
+export default SmartInvoiceImporter

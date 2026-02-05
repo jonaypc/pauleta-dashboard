@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import dynamic from "next/dynamic"
 
 // Cargar dinámicamente para evitar errores de SSR con pdfjs-dist
-const PDFInvoiceImporter = dynamic(
-    () => import("@/components/facturas/PDFInvoiceImporter"),
+const SmartInvoiceImporter = dynamic(
+    () => import("@/components/facturas/SmartInvoiceImporter"),
     { ssr: false }
 )
 
