@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -95,23 +95,58 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
         },
     })
 
-    // Resetear formulario cuando cambia initialData (modo múltiple)
+    // Track previous ID to detect if we are switching context or just refining
+    const lastIdRef = useRef<string | undefined>(initialData?.id)
+
+    // Resetear o fusionar formulario cuando cambia initialData
     useEffect(() => {
         if (initialData) {
-            form.reset({
-                numero: initialData.numero || "",
-                fecha: initialData.fecha || new Date().toISOString().split('T')[0],
-                proveedor: initialData.nombre_proveedor || "",
-                importe: initialData.importe ? Number(initialData.importe) : 0,
-                estado: "pendiente",
-                categoria: "",
-                metodo_pago: "transferencia",
-                notas: "",
-                base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : undefined,
-                impuestos: initialData.impuestos ? Number(initialData.impuestos) : undefined,
-                tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
-                pago_fijo_id: initialData.pago_fijo_id || "none"
-            })
+            // Si cambia el ID (es otro gasto distinto), reseteamos todo
+            if (initialData.id !== lastIdRef.current) {
+                form.reset({
+                    numero: initialData.numero || "",
+                    fecha: initialData.fecha || new Date().toISOString().split('T')[0],
+                    proveedor: initialData.nombre_proveedor || "",
+                    importe: initialData.importe ? Number(initialData.importe) : 0,
+                    estado: initialData.estado || "pendiente",
+                    categoria: initialData.categoria || "",
+                    metodo_pago: initialData.metodo_pago || "transferencia",
+                    notas: initialData.notas || "",
+                    base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : undefined,
+                    impuestos: initialData.impuestos ? Number(initialData.impuestos) : undefined,
+                    tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
+                    pago_fijo_id: initialData.pago_fijo_id || "none"
+                })
+                lastIdRef.current = initialData.id
+            } else {
+                // Si es el Mismo ID (o refinamiento del mismo escaneo), fusionamos
+                // Solo sobrescribimos si el campo actual está vacío
+                const currentValues = form.getValues()
+
+                const getMergedValue = (key: keyof typeof currentValues, incomingVal: any, defaultVal: any = "") => {
+                    const currentVal = currentValues[key]
+                    // Si el usuario ya escribió algo (y no es el valor por defecto/vacío), lo respetamos
+                    if (currentVal && currentVal !== 0 && currentVal !== "7.00" && currentVal !== "none") {
+                        return currentVal
+                    }
+                    return incomingVal || defaultVal
+                }
+
+                form.reset({
+                    numero: getMergedValue("numero", initialData.numero),
+                    fecha: getMergedValue("fecha", initialData.fecha, new Date().toISOString().split('T')[0]),
+                    proveedor: getMergedValue("proveedor", initialData.nombre_proveedor),
+                    importe: initialData.importe ? Number(initialData.importe) : (currentValues.importe || 0),
+                    estado: getMergedValue("estado", initialData.estado, "pendiente"),
+                    categoria: getMergedValue("categoria", initialData.categoria),
+                    metodo_pago: getMergedValue("metodo_pago", initialData.metodo_pago, "transferencia"),
+                    notas: getMergedValue("notas", initialData.notas),
+                    base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : currentValues.base_imponible,
+                    impuestos: initialData.impuestos ? Number(initialData.impuestos) : currentValues.impuestos,
+                    tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : (currentValues.tipo_impuesto || 7.00),
+                    pago_fijo_id: initialData.pago_fijo_id || currentValues.pago_fijo_id || "none"
+                })
+            }
         }
     }, [initialData, form])
 

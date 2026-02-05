@@ -39,26 +39,49 @@ export default function NuevoGastoPage() {
         loadPagosFijos()
     }, [])
 
+    const findMatchingFixedPayment = (proveedor: string | null | undefined, pagos: { id: string, concepto: string }[]) => {
+        if (!proveedor) return null;
+        const cleanProveedor = proveedor.toLowerCase().trim();
+        if (!cleanProveedor) return null;
+
+        // Buscar coincidencia, priorizando la más larga si hay varias?
+        // Simple includes por ahora.
+        return pagos.find(p => {
+            const cleanConcepto = p.concepto.toLowerCase().trim();
+            // Match si el proveedor incluye el concepto (ej: "Vodafone España" incluye "Vodafone")
+            // O si el concepto incluye al proveedor (menos común pero posible)
+            return cleanProveedor.includes(cleanConcepto) || cleanConcepto.includes(cleanProveedor);
+        })?.id || null;
+    }
+
     const handleSingleExtracted = (data: ExtractedExpenseData) => {
+        // Intentar autocompletar pago fijo
+        const matchId = findMatchingFixedPayment(data.nombre_proveedor, pagosFijos);
+        const dataWithMatch = matchId ? { ...data, pago_fijo_id: matchId } : data;
+
         // Si ya hay una cola, agregar a ella
         if (expenseQueue.length > 0) {
             const newItem: QueuedExpense = {
-                ...data,
+                ...dataWithMatch,
                 id: `exp-${Date.now()}`,
                 saved: false
             }
             setExpenseQueue(prev => [...prev, newItem])
         } else {
-            setExtractedData(data)
+            setExtractedData(dataWithMatch)
         }
     }
 
     const handleMultipleExtracted = (dataList: ExtractedExpenseData[]) => {
-        const queue: QueuedExpense[] = dataList.map((data, idx) => ({
-            ...data,
-            id: `exp-${Date.now()}-${idx}`,
-            saved: false
-        }))
+        const queue: QueuedExpense[] = dataList.map((data, idx) => {
+            const matchId = findMatchingFixedPayment(data.nombre_proveedor, pagosFijos);
+            return {
+                ...data,
+                pago_fijo_id: matchId || data.pago_fijo_id, // Usar match o mantener lo que venga (generalmente null)
+                id: `exp-${Date.now()}-${idx}`,
+                saved: false
+            }
+        })
         setExpenseQueue(queue)
         setCurrentIndex(0)
         setSavedCount(0)
@@ -158,10 +181,10 @@ export default function NuevoGastoPage() {
                                     onClick={() => selectFromQueue(idx)}
                                     disabled={item.saved}
                                     className={`flex-shrink-0 p-3 rounded-lg border transition-all min-w-[140px] text-left ${idx === currentIndex
-                                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                                            : item.saved
-                                                ? 'border-green-200 bg-green-50 opacity-60'
-                                                : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                                        : item.saved
+                                            ? 'border-green-200 bg-green-50 opacity-60'
+                                            : 'border-muted hover:border-primary/50 hover:bg-muted/50'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2 mb-1">

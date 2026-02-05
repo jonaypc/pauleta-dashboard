@@ -32,6 +32,7 @@ export interface ExtractedExpenseData {
     concepto?: string | null
     confidence?: number
     isDuplicate?: boolean
+    pago_fijo_id?: string | null
 }
 
 interface ProcessedFile {
