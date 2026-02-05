@@ -27,7 +27,7 @@ export default async function ImportarPDFPage() {
                 </p>
             </div>
 
-            <PDFInvoiceImporter
+            <SmartInvoiceImporter
                 clientes={clientes || []}
                 productos={productos?.map((p: any) => ({
                     ...p,
