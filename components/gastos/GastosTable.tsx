@@ -17,7 +17,7 @@ import { ExternalLink, FileText, Search, X, Trash2, Folder, ChevronDown, Chevron
 import Link from "next/link"
 import { formatDate, formatCurrency } from "@/lib/utils"
 import { CATEGORIAS_GASTOS } from "./constants"
-import { deleteGasto } from "@/lib/actions/gastos"
+import { deleteGasto, updateGastoStatus } from "@/lib/actions/gastos"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
@@ -44,6 +44,7 @@ export function GastosTable({ gastos }: GastosTableProps) {
     const [statusFilter, setStatusFilter] = useState("all")
     const [categoryFilter, setCategoryFilter] = useState("all")
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null)
     // Estado para controlar qué meses están expandidos. Por defecto todos cerrados o el primero abierto.
     // Usaremos un Set o array de strings "YYYY-MM"
     const [expandedMonths, setExpandedMonths] = useState<string[]>([])
@@ -81,6 +82,18 @@ export function GastosTable({ gastos }: GastosTableProps) {
             })
         } finally {
             setIsDeleting(null)
+        }
+    }
+
+    const handleStatusChange = async (id: string, newStatus: string) => {
+        setIsUpdatingStatus(id)
+        try {
+            await updateGastoStatus(id, newStatus)
+            // Toast success?
+        } catch (error) {
+            console.error("Error updating status", error)
+        } finally {
+            setIsUpdatingStatus(null)
         }
     }
 
@@ -263,17 +276,23 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                                                 </Badge>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant={gasto.estado === "pagado" ? "default" : "secondary"}
-                                                                className={
-                                                                    gasto.estado === "pagado"
-                                                                        ? "bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
-                                                                        : "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200"
-                                                                }
+                                                        <TableCell onClick={(e) => e.stopPropagation()}>
+                                                            <Select
+                                                                defaultValue={gasto.estado}
+                                                                onValueChange={(val) => handleStatusChange(gasto.id, val)}
+                                                                disabled={isUpdatingStatus === gasto.id}
                                                             >
-                                                                {gasto.estado === "pagado" ? "PAGADO" : "PENDIENTE"}
-                                                            </Badge>
+                                                                <SelectTrigger className={`h-7 w-[110px] text-xs font-semibold border-0 ${gasto.estado === 'pagado'
+                                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200 focus:ring-green-500'
+                                                                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200 focus:ring-amber-500'
+                                                                    }`}>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="pendiente">PENDIENTE</SelectItem>
+                                                                    <SelectItem value="pagado">PAGADO</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
                                                         </TableCell>
                                                         <TableCell className="text-right font-bold tabular-nums">
                                                             {formatCurrency(gasto.importe)}

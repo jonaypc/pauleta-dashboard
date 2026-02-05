@@ -60,3 +60,15 @@ export async function deleteGasto(id: string) {
     revalidatePath("/gastos")
     return { success: true }
 }
+
+export async function updateGastoStatus(id: string, status: string) {
+    const supabase = await createClient()
+    const { error } = await supabase
+        .from("gastos")
+        .update({ estado: status })
+        .eq("id", id)
+
+    if (error) throw new Error(error.message)
+    revalidatePath("/gastos")
+    return { success: true }
+}
