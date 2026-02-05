@@ -115,10 +115,18 @@ export function NotificationsMenu() {
                                                 {notificacion.mensaje}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {formatDistanceToNow(new Date(notificacion.created_at), {
-                                                    addSuffix: true,
-                                                    locale: es,
-                                                })}
+                                                {(() => {
+                                                    try {
+                                                        const date = new Date(notificacion.created_at)
+                                                        if (isNaN(date.getTime())) return "Fecha desconocida"
+                                                        return formatDistanceToNow(date, {
+                                                            addSuffix: true,
+                                                            locale: es,
+                                                        })
+                                                    } catch (e) {
+                                                        return "Recientemente"
+                                                    }
+                                                })()}
                                             </p>
                                         </div>
                                     </div>

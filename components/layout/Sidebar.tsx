@@ -99,7 +99,7 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="flex h-16 items-center justify-between border-b px-4">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-pauleta-mango to-pauleta-fresa">
-            <ShoppingBag className="h-8 w-8 text-white" /> {/* Changed from IceCream to ShoppingBag */}
+            <ShoppingBag className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
@@ -141,7 +141,7 @@ export function Sidebar({ className }: SidebarProps) {
               )}
               title={collapsed ? item.name : undefined}
             >
-              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />
+              {item.icon && <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />}
               {!collapsed && <span>{item.name}</span>}
             </Link>
           )
