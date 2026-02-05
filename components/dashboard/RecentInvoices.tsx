@@ -92,10 +92,13 @@ export function RecentInvoices({ facturas }: RecentInvoicesProps) {
                   </p>
                 </div>
                 <Badge
-                  variant={factura.estado as "borrador" | "emitida" | "cobrada" | "anulada"}
+                  variant={(() => {
+                    const s = factura.estado as any
+                    return (['borrador', 'emitida', 'cobrada', 'anulada', 'pendiente'].includes(s)) ? s : 'default'
+                  })()}
                   dot
                 >
-                  {estadoFacturaLabels[factura.estado as keyof typeof estadoFacturaLabels] || factura.estado}
+                  {estadoFacturaLabels[factura.estado as keyof typeof estadoFacturaLabels] || factura.estado || "Borrador"}
                 </Badge>
               </div>
             </Link>

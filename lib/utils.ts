@@ -13,12 +13,14 @@ export function cn(...inputs: ClassValue[]) {
 // ===========================================
 
 export function formatCurrency(amount: number): string {
+  const num = Number(amount)
+  if (!isFinite(num)) return '0,00 €'
   return new Intl.NumberFormat('es-ES', {
     style: 'currency',
     currency: 'EUR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(num)
 }
 
 export function formatNumber(num: number, decimals: number = 2): string {
