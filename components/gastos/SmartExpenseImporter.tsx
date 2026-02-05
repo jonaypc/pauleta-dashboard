@@ -15,6 +15,9 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import * as pdfjsLib from "pdfjs-dist"
+
+// Interface definitions... (unchanged)
 
 // Interfaz para la respuesta de la API con IA
 interface ParsedExpenseData {
@@ -44,7 +47,7 @@ async function parseInvoiceWithAI(formData: FormData): Promise<{
             method: 'POST',
             body: formData
         })
-        
+
         const data = await response.json()
         return data
     } catch (error: any) {
@@ -84,11 +87,11 @@ interface SmartExpenseImporterProps {
     allowMultiple?: boolean
 }
 
-export function SmartExpenseImporter({ 
-    onDataExtracted, 
+export function SmartExpenseImporter({
+    onDataExtracted,
     onMultipleExtracted,
     isProcessing = false,
-    allowMultiple = true 
+    allowMultiple = true
 }: SmartExpenseImporterProps) {
     const [isParsing, setIsParsing] = useState(false)
     const [dragActive, setDragActive] = useState(false)
@@ -96,6 +99,42 @@ export function SmartExpenseImporter({
     const [showRawText, setShowRawText] = useState<string | null>(null)
     const [progress, setProgress] = useState(0)
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        // Usar el worker desde CDN para asegurar compatibilidad
+        if (typeof window !== 'undefined') {
+            console.log("Configurando worker de PDF.js (SmartExpenseImporter)...")
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.296/build/pdf.worker.min.js'
+        }
+    }, [])
+
+
+    // Helper para renderizar página PDF a imagen (Blob/File)
+    const renderPageToImage = async (pdfData: any, pageNum: number): Promise<Blob | null> => {
+        try {
+            const page = await pdfData.getPage(pageNum)
+            const viewport = page.getViewport({ scale: 2.0 }) // Buena calidad para OCR
+
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
+            canvas.height = viewport.height
+            canvas.width = viewport.width
+
+            if (!context) return null
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95)
+            })
+        } catch (err) {
+            console.error("Error rendering page to image:", err)
+            return null
+        }
+    }
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault()
@@ -135,12 +174,12 @@ export function SmartExpenseImporter({
 
     const processMultipleFiles = async (files: File[]) => {
         // Filtrar solo PDFs e imágenes
-        const validFiles = files.filter(f => 
-            f.type.includes("pdf") || 
+        const validFiles = files.filter(f =>
+            f.type.includes("pdf") ||
             f.type.includes("image") ||
             f.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|webp|bmp)$/)
         )
-        
+
         if (validFiles.length === 0) {
             toast({
                 title: "Sin archivos válidos",
@@ -174,16 +213,39 @@ export function SmartExpenseImporter({
         // Procesar cada archivo
         for (let i = 0; i < validFiles.length; i++) {
             const file = validFiles[i]
-            
+
             // Actualizar estado a processing
-            setProcessedFiles(prev => prev.map((pf, idx) => 
+            setProcessedFiles(prev => prev.map((pf, idx) =>
                 idx === i ? { ...pf, status: 'processing' } : pf
             ))
 
             try {
                 const formData = new FormData()
-                formData.append("file", file)
-                
+
+                // Si es PDF, convertir primera página a imagen
+                if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+                    try {
+                        console.log(`Convirtiendo PDF ${file.name} a imagen...`)
+                        const arrayBuffer = await file.arrayBuffer()
+                        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+                        const pdfData = await loadingTask.promise
+
+                        // Renderizar solo la primera página para gastos (normalmente suficiente)
+                        const imageBlob = await renderPageToImage(pdfData, 1)
+                        if (imageBlob) {
+                            formData.append("file", imageBlob, file.name.replace(".pdf", ".jpg"))
+                        } else {
+                            throw new Error("No se pudo renderizar el PDF a imagen")
+                        }
+                    } catch (pdfErr: any) {
+                        console.error("Error local PDF:", pdfErr)
+                        // Fallback: enviar archivo original si falla conversión
+                        formData.append("file", file)
+                    }
+                } else {
+                    formData.append("file", file)
+                }
+
                 const result = await parseInvoiceWithAI(formData)
 
                 if (result.success && result.parsed) {
@@ -204,18 +266,18 @@ export function SmartExpenseImporter({
                     results.push(extracted)
                     successCount++
 
-                    setProcessedFiles(prev => prev.map((pf, idx) => 
+                    setProcessedFiles(prev => prev.map((pf, idx) =>
                         idx === i ? { ...pf, status: 'success', data: extracted } : pf
                     ))
                 } else {
                     errorCount++
-                    setProcessedFiles(prev => prev.map((pf, idx) => 
+                    setProcessedFiles(prev => prev.map((pf, idx) =>
                         idx === i ? { ...pf, status: 'error', error: result.error || 'Error desconocido' } : pf
                     ))
                 }
             } catch (error: any) {
                 errorCount++
-                setProcessedFiles(prev => prev.map((pf, idx) => 
+                setProcessedFiles(prev => prev.map((pf, idx) =>
                     idx === i ? { ...pf, status: 'error', error: error.message } : pf
                 ))
             }
@@ -230,7 +292,7 @@ export function SmartExpenseImporter({
         if (successCount > 0) {
             toast({
                 title: `${successCount} factura${successCount > 1 ? 's' : ''} procesada${successCount > 1 ? 's' : ''}`,
-                description: errorCount > 0 
+                description: errorCount > 0
                     ? `${errorCount} archivo${errorCount > 1 ? 's' : ''} con errores.`
                     : "Revisa los datos extraídos antes de guardar.",
             })
@@ -252,10 +314,10 @@ export function SmartExpenseImporter({
 
     const processFile = async (file: File) => {
         // Validar tipo - aceptar PDF e imágenes
-        const isValid = file.type.includes("pdf") || 
+        const isValid = file.type.includes("pdf") ||
             file.type.includes("image") ||
             file.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|webp|bmp)$/)
-            
+
         if (!isValid) {
             toast({
                 title: "Formato no válido",
@@ -271,12 +333,12 @@ export function SmartExpenseImporter({
         try {
             const formData = new FormData()
             formData.append("file", file)
-            
+
             setProgress(30)
-            
+
             // Usar IA (GPT-4 Vision) para análisis preciso
             const result = await parseInvoiceWithAI(formData)
-            
+
             setProgress(80)
 
             if (result.success && result.parsed) {
@@ -373,7 +435,7 @@ export function SmartExpenseImporter({
                             {isParsing ? "Analizando documento..." : "Arrastra tus facturas aquí"}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            {allowMultiple 
+                            {allowMultiple
                                 ? "Puedes subir varios PDFs a la vez"
                                 : "o haz clic para seleccionar (PDF)"
                             }
@@ -419,8 +481,8 @@ export function SmartExpenseImporter({
                         <h4 className="font-medium mb-3">Archivos procesados ({processedFiles.length})</h4>
                         <div className="space-y-2">
                             {processedFiles.map((pf, idx) => (
-                                <div 
-                                    key={idx} 
+                                <div
+                                    key={idx}
                                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -451,7 +513,7 @@ export function SmartExpenseImporter({
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-2 ml-2">
                                         {pf.status === 'pending' && (
                                             <Badge variant="outline">Pendiente</Badge>
@@ -463,8 +525,8 @@ export function SmartExpenseImporter({
                                             <>
                                                 <CheckCircle className="h-4 w-4 text-green-500" />
                                                 {pf.data?.raw_text && (
-                                                    <Button 
-                                                        variant="ghost" 
+                                                    <Button
+                                                        variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8"
                                                         onClick={() => setShowRawText(pf.data?.raw_text || null)}
@@ -472,8 +534,8 @@ export function SmartExpenseImporter({
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                 )}
-                                                <Button 
-                                                    variant="outline" 
+                                                <Button
+                                                    variant="outline"
                                                     size="sm"
                                                     onClick={() => selectFileToEdit(pf)}
                                                 >
@@ -484,8 +546,8 @@ export function SmartExpenseImporter({
                                         {pf.status === 'error' && (
                                             <AlertTriangle className="h-4 w-4 text-destructive" />
                                         )}
-                                        <Button 
-                                            variant="ghost" 
+                                        <Button
+                                            variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => removeFile(idx)}
