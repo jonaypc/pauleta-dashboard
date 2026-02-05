@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SmartExpenseImporter, ExtractedExpenseData } from "@/components/gastos/SmartExpenseImporter"
 import { GastoForm } from "@/components/gastos/GastoForm"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, FileText, ChevronRight, CheckCircle2, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
 
 interface QueuedExpense extends ExtractedExpenseData {
     id: string
@@ -21,6 +22,22 @@ export default function NuevoGastoPage() {
     const [expenseQueue, setExpenseQueue] = useState<QueuedExpense[]>([])
     const [currentIndex, setCurrentIndex] = useState(0)
     const [savedCount, setSavedCount] = useState(0)
+    const [pagosFijos, setPagosFijos] = useState<{ id: string, concepto: string }[]>([])
+
+    // Cargar pagos fijos al inicio
+    useEffect(() => {
+        const loadPagosFijos = async () => {
+            const supabase = createClient()
+            const { data } = await supabase
+                .from("pagos_fijos")
+                .select("id, concepto")
+                .eq("activo", true)
+                .order("concepto")
+
+            if (data) setPagosFijos(data)
+        }
+        loadPagosFijos()
+    }, [])
 
     const handleSingleExtracted = (data: ExtractedExpenseData) => {
         // Si ya hay una cola, agregar a ella
@@ -45,7 +62,7 @@ export default function NuevoGastoPage() {
         setExpenseQueue(queue)
         setCurrentIndex(0)
         setSavedCount(0)
-        
+
         // Cargar el primero en el formulario
         if (queue.length > 0) {
             setExtractedData(queue[0])
@@ -55,7 +72,7 @@ export default function NuevoGastoPage() {
     const handleGastoSaved = () => {
         if (expenseQueue.length > 0) {
             // Marcar como guardado
-            setExpenseQueue(prev => prev.map((item, idx) => 
+            setExpenseQueue(prev => prev.map((item, idx) =>
                 idx === currentIndex ? { ...item, saved: true } : item
             ))
             setSavedCount(prev => prev + 1)
@@ -101,8 +118,8 @@ export default function NuevoGastoPage() {
                 </Button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold tracking-tight">
-                        {extractedData 
-                            ? expenseQueue.length > 1 
+                        {extractedData
+                            ? expenseQueue.length > 1
                                 ? `Gasto ${currentIndex + 1} de ${expenseQueue.length}`
                                 : "Verificar Datos del Gasto"
                             : "Registrar Nuevo Gasto"
@@ -140,13 +157,12 @@ export default function NuevoGastoPage() {
                                     key={item.id}
                                     onClick={() => selectFromQueue(idx)}
                                     disabled={item.saved}
-                                    className={`flex-shrink-0 p-3 rounded-lg border transition-all min-w-[140px] text-left ${
-                                        idx === currentIndex 
-                                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                            : item.saved 
+                                    className={`flex-shrink-0 p-3 rounded-lg border transition-all min-w-[140px] text-left ${idx === currentIndex
+                                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                                            : item.saved
                                                 ? 'border-green-200 bg-green-50 opacity-60'
                                                 : 'border-muted hover:border-primary/50 hover:bg-muted/50'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-center gap-2 mb-1">
                                         {item.saved ? (
@@ -176,7 +192,7 @@ export default function NuevoGastoPage() {
             {!extractedData ? (
                 <div className="space-y-8">
                     {/* Smart Import con soporte múltiple */}
-                    <SmartExpenseImporter 
+                    <SmartExpenseImporter
                         onDataExtracted={handleSingleExtracted}
                         onMultipleExtracted={handleMultipleExtracted}
                         allowMultiple={true}
@@ -221,7 +237,7 @@ export default function NuevoGastoPage() {
 
                             {/* Formulario Manual (sin datos) */}
                             <div className="bg-card p-6 rounded-lg border shadow-sm">
-                                <GastoForm />
+                                <GastoForm pagosFijos={pagosFijos} />
                             </div>
                         </>
                     )}
@@ -241,7 +257,7 @@ export default function NuevoGastoPage() {
                             {expenseQueue.length > 1 ? "Cancelar todo" : "Subir otro archivo"}
                         </Button>
                     </div>
-                    
+
                     {/* Indicador de calidad de extracción */}
                     {extractedData && (
                         <div className="mb-4 p-3 rounded-lg bg-muted/50">
@@ -269,9 +285,10 @@ export default function NuevoGastoPage() {
                     )}
 
                     {/* Formulario pre-llenado */}
-                    <GastoForm 
-                        initialData={extractedData} 
+                    <GastoForm
+                        initialData={extractedData}
                         onSaveSuccess={expenseQueue.length > 1 ? handleGastoSaved : undefined}
+                        pagosFijos={pagosFijos}
                     />
                 </div>
             )}

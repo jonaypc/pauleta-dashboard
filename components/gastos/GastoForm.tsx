@@ -12,6 +12,7 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
+    FormDescription,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
-import { Loader2, Save } from "lucide-react"
+import { Loader2, Save, Calculator, Link as LinkIcon } from "lucide-react"
 import { CATEGORIAS_GASTOS } from "./constants"
 
 // Definición local flexible para aceptar datos de BD o de Extracción
@@ -36,18 +37,41 @@ export interface GastoFormData {
     notas?: string | null
     archivo_file?: File | null // Para subidas nuevas
     archivo_url?: string | null // Para visualización
+    // Campos fiscales
+    base_imponible?: number | string | null
+    impuestos?: number | string | null
+    tipo_impuesto?: number | string | null
+    pago_fijo_id?: string | null
 }
 
 const formSchema = z.object({
-    // ... existing schema ...
+    proveedor: z.string().min(2, "El nombre del proveedor es requerido"),
+    numero: z.string().optional(),
+    fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+    importe: z.coerce.number().min(0.01, "El importe debe ser mayor a 0"),
+    estado: z.string(),
+    categoria: z.string().optional(),
+    metodo_pago: z.string().optional(),
+    notas: z.string().optional(),
+    // Fiscalidad
+    base_imponible: z.coerce.number().optional(),
+    impuestos: z.coerce.number().optional(),
+    tipo_impuesto: z.coerce.number().default(7.00),
+    pago_fijo_id: z.string().optional().nullable()
 })
+
+interface PagoFijoOption {
+    id: string
+    concepto: string
+}
 
 interface GastoFormProps {
     initialData?: GastoFormData | null
     onSaveSuccess?: () => void
+    pagosFijos?: PagoFijoOption[] // Lista para el dropdown
 }
 
-export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
+export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: GastoFormProps) {
     const router = useRouter()
     const supabase = createClient()
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -63,7 +87,11 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
             estado: "pendiente",
             categoria: "",
             metodo_pago: "transferencia",
-            notas: ""
+            notas: "",
+            base_imponible: initialData?.base_imponible?.toString() || "",
+            impuestos: initialData?.impuestos?.toString() || "",
+            tipo_impuesto: initialData?.tipo_impuesto?.toString() || "7.00",
+            pago_fijo_id: initialData?.pago_fijo_id || "none" // "none" para controlar el select
         },
     })
 
@@ -78,23 +106,44 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                 estado: "pendiente",
                 categoria: "",
                 metodo_pago: "transferencia",
-                notas: ""
+                notas: "",
+                base_imponible: initialData.base_imponible?.toString() || "",
+                impuestos: initialData.impuestos?.toString() || "",
+                tipo_impuesto: initialData.tipo_impuesto?.toString() || "7.00",
+                pago_fijo_id: initialData.pago_fijo_id || "none"
             })
         }
     }, [initialData, form])
+
+    // Autocalculadora de Impuestos
+    const calculateTaxes = () => {
+        const total = parseFloat(form.getValues("importe").toString())
+        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
+
+        if (total && !isNaN(total)) {
+            // Asumiendo que Total = Base + (Base * Rate / 100)
+            // Total = Base * (1 + Rate / 100)
+            // Base = Total / (1 + Rate / 100)
+            const base = total / (1 + (taxRate / 100))
+            const taxAmount = total - base
+
+            form.setValue("base_imponible", parseFloat(base.toFixed(2)))
+            form.setValue("impuestos", parseFloat(taxAmount.toFixed(2)))
+            toast({ title: "Cálculo Fiscal", description: "Base e impuestos recalculados desde el total." })
+        }
+    }
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
         try {
             // 1. Gestionar Proveedor (Crear si no existe o usar existente)
-            // Simplificado: Buscar por nombre exacto o crear
             let proveedorId = null
 
             const { data: existingProvider } = await supabase
                 .from("proveedores")
                 .select("id")
                 .ilike("nombre", values.proveedor)
-                .single()
+                .maybeSingle()
 
             if (existingProvider) {
                 proveedorId = existingProvider.id
@@ -145,16 +194,22 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                 proveedor_id: proveedorId,
                 numero: values.numero,
                 fecha: values.fecha,
-                importe: parseFloat(values.importe),
+                importe: values.importe,
                 estado: values.estado,
                 categoria: values.categoria,
                 metodo_pago: values.metodo_pago,
                 notas: values.notas,
-                // Solo actualizar archivo si hay uno nuevo, si no mantener el anterior (implícito en backend si no se manda, pero aquí lo controlamos)
+                // Campos Fiscales
+                base_imponible: values.base_imponible || null,
+                impuestos: values.impuestos || null,
+                tipo_impuesto: values.tipo_impuesto || 7.00,
+                // Campo de vinculación (convertir "none" a null)
+                pago_fijo_id: values.pago_fijo_id === "none" ? null : values.pago_fijo_id,
+                // Archivo
                 ...(archivoUrl ? { archivo_url: archivoUrl } : {})
             }
 
-            if (initialData?.id) { // Modo Editar (usamos initialData.id como flag de registro existente en BD)
+            if (initialData?.id) { // Modo Editar
                 const { error: updateError } = await supabase
                     .from("gastos")
                     .update(expenseData)
@@ -168,14 +223,14 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                     .from("gastos")
                     .insert({
                         ...expenseData,
-                        archivo_url: archivoUrl || null // En insert sí mandamos null si no hay
+                        archivo_url: archivoUrl || null
                     })
 
                 if (insertError) throw insertError
                 toast({ description: "Gasto registrado correctamente." })
             }
 
-            // Si hay callback (modo múltiple), usarlo en lugar de redireccionar
+            // Si hay callback (modo múltiple), usarlo
             if (onSaveSuccess) {
                 onSaveSuccess()
             } else {
@@ -198,6 +253,8 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+                {/* Section: Datos Principales */}
                 <div className="grid gap-4 md:grid-cols-2">
                     {/* Proveedor */}
                     <FormField
@@ -244,45 +301,6 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                         )}
                     />
 
-                    {/* Importe */}
-                    <FormField
-                        control={form.control}
-                        name="importe"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Importe Total (€)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    {/* Categoría */}
-                    <FormField
-                        control={form.control}
-                        name="categoria"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Categoría</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona una categoría" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {CATEGORIAS_GASTOS.map(cat => (
-                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
                     {/* Estado Pago */}
                     <FormField
                         control={form.control}
@@ -301,6 +319,147 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                                         <SelectItem value="pagado">Pagado</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {/* Section: Fiscalidad */}
+                <div className="bg-muted/30 p-4 rounded-lg border border-dashed border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-800">
+                            <Calculator className="h-4 w-4" /> Desglose Fiscal (IGIC/IVA)
+                        </h3>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={calculateTaxes}
+                        >
+                            Calcular desde Total
+                        </Button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {/* Importe Total */}
+                        <FormField
+                            control={form.control}
+                            name="importe"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">Total Factura (€)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" step="0.01" className="font-bold" placeholder="0.00" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Base Imponible */}
+                        <FormField
+                            control={form.control}
+                            name="base_imponible"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Base Imponible (€)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="flex gap-2">
+                            {/* % Impuesto */}
+                            <FormField
+                                control={form.control}
+                                name="tipo_impuesto"
+                                render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                        <FormLabel>% Imp.</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" placeholder="7.00" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {/* Importe Impuesto */}
+                            <FormField
+                                control={form.control}
+                                name="impuestos"
+                                render={({ field }) => (
+                                    <FormItem className="flex-[1.5]">
+                                        <FormLabel>Cuota IGIC (€)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section: Vinculaciones y Categoría */}
+                <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                        control={form.control}
+                        name="categoria"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Categoría</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona categoría" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {CATEGORIAS_GASTOS.map(cat => (
+                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Vinculación Pago Fijo */}
+                    <FormField
+                        control={form.control}
+                        name="pago_fijo_id"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <LinkIcon className="h-3 w-3" /> Vincular a Pago Fijo
+                                </FormLabel>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value || "none"}
+                                    disabled={pagosFijos.length === 0}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={pagosFijos.length === 0 ? "No hay pagos fijos" : "Selecciona si corresponde"} />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="none">-- No vincular --</SelectItem>
+                                        {pagosFijos.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>{p.concepto}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                    Si seleccionas un pago (ej. Alquiler), esta factura contará como el comprobante del mes.
+                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
