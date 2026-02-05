@@ -31,6 +31,10 @@ function getOpenAI(): OpenAI {
     return openai
 }
 
+// Configurar tiempo máximo de ejecución en Vercel (segundos)
+// Pro plan permite más, Free plan limitado a 10s (o 60 con config)
+export const maxDuration = 60;
+
 // pdf-parse will be lazy loaded
 
 export async function POST(request: NextRequest) {
