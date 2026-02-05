@@ -31,9 +31,7 @@ function getOpenAI(): OpenAI {
     return openai
 }
 
-// @ts-ignore
-// @ts-ignore
-const pdf = require("pdf-parse") // Force deploy check
+// pdf-parse will be lazy loaded
 
 export async function POST(request: NextRequest) {
     try {
@@ -78,22 +76,9 @@ export async function POST(request: NextRequest) {
         } else if (isPdf) {
             console.log("Processing PDF file with pdf-parse (SERVER SIDE)...")
             try {
-                // Defensive check for library loading
-                let pdfParser = pdf;
+                // Lazy load pdf-parse to avoid initialization errors if not needed
                 // @ts-ignore
-                if (typeof pdfParser !== 'function' && pdfParser?.default) {
-                    // @ts-ignore
-                    pdfParser = pdfParser.default;
-                }
-
-                if (typeof pdfParser !== 'function') {
-                    console.error("PDF Parsing library failed to load:", typeof pdfParser)
-                    return NextResponse.json({
-                        success: false,
-                        error: "Error interno del servidor al cargar el lector de PDF. Por favor sube una imagen (JPG/PNG).",
-                        debug: { reason: "library_load_failed" }
-                    }, { status: 422 })
-                }
+                const pdfParser = require("pdf-parse");
 
                 const pdfData = await pdfParser(buffer)
 
