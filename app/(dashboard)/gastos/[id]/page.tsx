@@ -55,6 +55,13 @@ export default async function GastoDetailPage({ params }: PageProps) {
                         {gasto.proveedor?.nombre}
                     </p>
                 </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href={`/gastos/${params.id}/editar`}>
+                            Editar
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">

@@ -216,8 +216,8 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
     "numero": "número de factura completo",
     "concepto": "descripción breve de los productos/servicios facturados",
     "base_imponible": número decimal (sin símbolo €),
-    "iva_porcentaje": número del porcentaje de IVA aplicado (ej: 21),
-    "iva": número decimal del importe del IVA,
+    "iva_porcentaje": número del porcentaje de impuesto aplicado (IVA o IGIC) (ej: 7, 21),
+    "iva": número decimal del importe del impuesto (IVA/IGIC),
     "importe": número decimal del total a pagar,
     "confidence": número de 0 a 100 indicando tu confianza en la extracción
 }`
@@ -228,7 +228,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
             messages: [
                 {
                     role: "system",
-                    content: "Eres un experto en análisis de facturas españolas. Extraes información con máxima precisión de imágenes de facturas, tickets y recibos. Los importes deben ser números decimales sin símbolos de moneda. Las fechas en formato YYYY-MM-DD."
+                    content: "Eres un experto en análisis de facturas españolas, con especial atención al régimen fiscal de Canarias (IGIC). Extraes información con máxima precisión de imágenes de facturas, tickets y recibos. Los importes deben ser números decimales sin símbolos de moneda. Las fechas en formato YYYY-MM-DD. Detecta correctamente si es IVA o IGIC."
                 },
                 {
                     role: "user",

@@ -21,21 +21,29 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Loader2, Save } from "lucide-react"
 import { CATEGORIAS_GASTOS } from "./constants"
-import { ExtractedExpenseData } from "./SmartExpenseImporter"
+
+// Definición local flexible para aceptar datos de BD o de Extracción
+export interface GastoFormData {
+    id?: string
+    numero?: string | null
+    fecha?: string | null
+    nombre_proveedor?: string | null
+    cif_proveedor?: string | null
+    importe?: number | string | null
+    estado?: string
+    categoria?: string | null
+    metodo_pago?: string | null
+    notas?: string | null
+    archivo_file?: File | null // Para subidas nuevas
+    archivo_url?: string | null // Para visualización
+}
 
 const formSchema = z.object({
-    numero: z.string().optional(),
-    fecha: z.string().min(1, "La fecha es obligatoria"),
-    proveedor: z.string().min(1, "El nombre del proveedor es obligatorio"),
-    importe: z.string().min(1, "El importe es obligatorio"),
-    categoria: z.string().optional(),
-    estado: z.string().default("pendiente"),
-    metodo_pago: z.string().optional(),
-    notas: z.string().optional(),
+    // ... existing schema ...
 })
 
 interface GastoFormProps {
-    initialData?: ExtractedExpenseData | null
+    initialData?: GastoFormData | null
     onSaveSuccess?: () => void
 }
 
@@ -132,27 +140,40 @@ export function GastoForm({ initialData, onSaveSuccess }: GastoFormProps) {
                 }
             }
 
-            // 3. Crear Gasto
-            const { error: gastoError } = await supabase
-                .from("gastos")
-                .insert({
-                    proveedor_id: proveedorId,
-                    numero: values.numero,
-                    fecha: values.fecha,
-                    importe: parseFloat(values.importe),
-                    estado: values.estado,
-                    categoria: values.categoria,
-                    metodo_pago: values.metodo_pago,
-                    notas: values.notas,
-                    archivo_url: archivoUrl
-                })
+            // 3. Crear o Actualizar Gasto
+            const expenseData = {
+                proveedor_id: proveedorId,
+                numero: values.numero,
+                fecha: values.fecha,
+                importe: parseFloat(values.importe),
+                estado: values.estado,
+                categoria: values.categoria,
+                metodo_pago: values.metodo_pago,
+                notas: values.notas,
+                // Solo actualizar archivo si hay uno nuevo, si no mantener el anterior (implícito en backend si no se manda, pero aquí lo controlamos)
+                ...(archivoUrl ? { archivo_url: archivoUrl } : {})
+            }
 
-            if (gastoError) throw gastoError
+            if (initialData?.id) { // Modo Editar (usamos initialData.id como flag de registro existente en BD)
+                const { error: updateError } = await supabase
+                    .from("gastos")
+                    .update(expenseData)
+                    .eq('id', initialData.id)
 
-            toast({
-                title: "Gasto registrado",
-                description: "La factura se ha guardado correctamente.",
-            })
+                if (updateError) throw updateError
+                toast({ description: "Gasto actualizado correctamente." })
+            } else {
+                // Modo Crear
+                const { error: insertError } = await supabase
+                    .from("gastos")
+                    .insert({
+                        ...expenseData,
+                        archivo_url: archivoUrl || null // En insert sí mandamos null si no hay
+                    })
+
+                if (insertError) throw insertError
+                toast({ description: "Gasto registrado correctamente." })
+            }
 
             // Si hay callback (modo múltiple), usarlo en lugar de redireccionar
             if (onSaveSuccess) {
