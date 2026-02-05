@@ -34,9 +34,14 @@ export async function convertPdfToImage(buffer: Buffer, options: RenderOptions =
 
         // Crear canvas
         // Manejo robusto de importaciones CJS/ESM para canvas
+        // Debugging import issues
+        console.log("Canvas Import Type:", typeof Canvas)
+        console.log("Canvas Keys:", Object.keys(Canvas))
+        console.log("Canvas.default Keys:", (Canvas as any).default ? Object.keys((Canvas as any).default) : "No default")
+
         const createCanvas = Canvas.createCanvas || (Canvas as any).default?.createCanvas
         if (!createCanvas) {
-            throw new Error("Could not load createCanvas from canvas module. Check server logs for import details.")
+            throw new Error(`Could not load createCanvas. Keys: ${Object.keys(Canvas).join(',')}`)
         }
 
         const canvas = createCanvas(viewport.width, viewport.height)
