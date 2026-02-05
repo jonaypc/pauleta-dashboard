@@ -14,6 +14,26 @@ export const revalidate = 60
 async function getDashboardData() {
   const supabase = await createClient()
 
+  // Default safe data
+  const defaultData = {
+    facturacionMes: 0,
+    facturacionMesAnterior: 0,
+    cobrosPendientes: 0,
+    cobrosMes: 0,
+    facturasEmitidas: 0,
+    totalClientes: 0,
+    ultimasFacturas: [],
+    pagosFijos: [],
+    topClientes: [],
+    numFacturasPendientes: 0,
+    diasPromedioPendiente: 0,
+    ventasPorMes: [],
+    topProductosMes: [],
+    nombreMes: new Date().toLocaleDateString('es-ES', { month: 'long' }),
+    totalGastosFijos: 0,
+    totalGastosVariables: 0,
+  }
+
   const now = new Date()
   const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
@@ -22,6 +42,7 @@ async function getDashboardData() {
   const nombreMes = now.toLocaleDateString('es-ES', { month: 'long' })
 
   try {
+    console.log('Fetching facturasMes...')
     const { data: facturasMes } = await supabase
       .from('facturas')
       .select('total')
@@ -30,6 +51,7 @@ async function getDashboardData() {
 
     const facturacionMes = facturasMes?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
 
+    console.log('Fetching facturasMesAnterior...')
     const { data: facturasMesAnterior } = await supabase
       .from('facturas')
       .select('total')
@@ -39,6 +61,7 @@ async function getDashboardData() {
 
     const facturacionMesAnterior = facturasMesAnterior?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
 
+    console.log('Fetching facturasPendientes...')
     const { data: facturasPendientes } = await supabase
       .from('facturas')
       .select('total, fecha')
@@ -49,14 +72,16 @@ async function getDashboardData() {
 
     // Calcular días promedio de antigüedad de facturas pendientes
     const facturasValidas = facturasPendientes?.filter(f => f.fecha && !isNaN(new Date(f.fecha).getTime())) || []
-    const diasPromedioPendiente = facturasValidas.length
+    const diasPromedioPendienteTotal = facturasValidas.length
       ? facturasValidas.reduce((sum, f) => {
         const dias = Math.floor((now.getTime() - new Date(f.fecha).getTime()) / (1000 * 60 * 60 * 24))
         return sum + Math.max(0, dias)
       }, 0) / facturasValidas.length
       : 0
 
-    // Cobros realizados este mes
+    const diasPromedioPendiente = isNaN(diasPromedioPendienteTotal) ? 0 : Math.round(diasPromedioPendienteTotal)
+
+    console.log('Fetching cobrosMesData...')
     const { data: cobrosMesData } = await supabase
       .from('cobros')
       .select('importe')
@@ -64,18 +89,20 @@ async function getDashboardData() {
 
     const cobrosMes = cobrosMesData?.reduce((sum, c) => sum + (c.importe || 0), 0) || 0
 
-    const { count: facturasEmitidas } = await supabase
+    console.log('Fetching facturasEmitidas count...')
+    const { count: facturasEmitidasCount } = await supabase
       .from('facturas')
       .select('*', { count: 'exact', head: true })
       .gte('fecha', primerDiaMes)
       .neq('estado', 'anulada')
 
-    const { count: totalClientes } = await supabase
+    console.log('Fetching totalClientes count...')
+    const { count: totalClientesCount } = await supabase
       .from('clientes')
       .select('*', { count: 'exact', head: true })
       .eq('activo', true)
 
-    // Datos para gráfico de últimos 6 meses
+    console.log('Fetching facturas6Meses...')
     const { data: facturas6Meses } = await supabase
       .from('facturas')
       .select('fecha, total')
@@ -87,13 +114,13 @@ async function getDashboardData() {
       const fecha = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
       const nombreMesGraph = fecha.toLocaleDateString('es-ES', { month: 'short' })
-      const total = facturas6Meses
-        ?.filter(f => f.fecha && typeof f.fecha === 'string' && f.fecha.startsWith(mesKey))
+      const total = (facturas6Meses || [])
+        .filter(f => f.fecha && typeof f.fecha === 'string' && f.fecha.startsWith(mesKey))
         .reduce((sum, f) => sum + (f.total || 0), 0) || 0
       ventasPorMes.push({ mes: nombreMesGraph, total })
     }
 
-    // Top productos del mes
+    console.log('Fetching lineasMes...')
     const { data: lineasMes } = await supabase
       .from('lineas_factura')
       .select(`
@@ -115,6 +142,7 @@ async function getDashboardData() {
       .sort((a, b) => b.cantidad - a.cantidad)
       .slice(0, 5)
 
+    console.log('Fetching ultimasFacturas...')
     const { data: ultimasFacturas } = await supabase
       .from('facturas')
       .select(`
@@ -130,18 +158,18 @@ async function getDashboardData() {
       .limit(5)
 
     const facturasFormateadas = ultimasFacturas?.map(f => {
-      const clientesData = f.clientes as unknown
+      const clienteData = f.clientes as any
       let clienteNombre = 'Sin nombre'
       let clienteContacto = undefined
 
-      if (Array.isArray(clientesData) && clientesData[0]) {
-        clienteNombre = clientesData[0].nombre
-        clienteContacto = clientesData[0].persona_contacto
-      } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
-        // @ts-ignore
-        clienteNombre = clientesData.nombre
-        // @ts-ignore
-        clienteContacto = clientesData.persona_contacto
+      if (clienteData) {
+        if (Array.isArray(clienteData) && clienteData[0]) {
+          clienteNombre = clienteData[0].nombre
+          clienteContacto = clienteData[0].persona_contacto
+        } else if (typeof clienteData === 'object') {
+          clienteNombre = clienteData.nombre
+          clienteContacto = clienteData.persona_contacto
+        }
       }
 
       return {
@@ -158,19 +186,16 @@ async function getDashboardData() {
       }
     }) || []
 
-    // Pagos Fijos (Gastos Fijos)
+    console.log('Fetching pagosFijos...')
     const { data: pagosFijos } = await supabase
       .from('pagos_fijos')
       .select('*')
       .eq('activo', true)
       .order('dia_inicio', { ascending: true })
 
-    // Sumar todos los pagos fijos activos como estimación mensual
-    // NOTA: Para ser más precisos, deberíamos ver si ya se ha pagado este mes, 
-    // pero para una estimación financiera, sumar los activos es correcto.
     const totalGastosFijos = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
 
-    // Gastos Variables (Facturas de proveedores de este mes)
+    console.log('Fetching gastosData...')
     const { data: gastosData } = await supabase
       .from('gastos')
       .select('importe')
@@ -182,6 +207,7 @@ async function getDashboardData() {
     // Si falla, retornamos 0 para no romper el dashboard
     const totalGastosVariables = gastosData?.reduce((sum, g) => sum + (g.importe || 0), 0) || 0
 
+    console.log('Fetching facturasClientes for topClientes...')
     const { data: facturasClientes } = await supabase
       .from('facturas')
       .select(`
@@ -195,15 +221,15 @@ async function getDashboardData() {
 
     facturasClientes?.forEach(factura => {
       if (!factura.cliente_id) return
-      const clientesData = factura.clientes as unknown
+      const clienteData = factura.clientes as any
       let clienteNombre = 'Sin nombre'
 
-      if (Array.isArray(clientesData) && clientesData[0]) {
-        // Priorizar persona_contacto si existe
-        clienteNombre = clientesData[0].persona_contacto || clientesData[0].nombre
-      } else if (clientesData && typeof clientesData === 'object' && 'nombre' in clientesData) {
-        // @ts-ignore
-        clienteNombre = clientesData.persona_contacto || clientesData.nombre
+      if (clienteData) {
+        if (Array.isArray(clienteData) && clienteData[0]) {
+          clienteNombre = clienteData[0].persona_contacto || clienteData[0].nombre
+        } else if (typeof clienteData === 'object') {
+          clienteNombre = clienteData.persona_contacto || clienteData.nombre
+        }
       }
 
       if (!clienteStats[factura.cliente_id]) {
@@ -217,34 +243,49 @@ async function getDashboardData() {
       clienteStats[factura.cliente_id].total_facturado += factura.total || 0
       clienteStats[factura.cliente_id].num_facturas += 1
     })
-
     const topClientesList = Object.values(clienteStats)
       .sort((a, b) => b.total_facturado - a.total_facturado)
       .slice(0, 5)
 
-    return {
+    const result = {
       facturacionMes,
       facturacionMesAnterior,
       cobrosPendientes,
       cobrosMes,
-      facturasEmitidas: facturasEmitidas || 0,
-      totalClientes: totalClientes || 0,
+      facturasEmitidas: facturasEmitidasCount || 0,
+      totalClientes: totalClientesCount || 0,
       ultimasFacturas: facturasFormateadas,
       pagosFijos: pagosFijos || [],
       topClientes: topClientesList,
-      // Nuevas métricas
       numFacturasPendientes,
-      diasPromedioPendiente: isNaN(diasPromedioPendiente) ? 0 : Math.round(diasPromedioPendiente),
+      diasPromedioPendiente,
       ventasPorMes,
       topProductosMes,
-      // Financiero
       nombreMes,
       totalGastosFijos,
       totalGastosVariables,
     }
+
+    // Sanitizar números para evitar errores de serialización (NaN/Infinity)
+    const sanitizeNumber = (n: any) => (typeof n === 'number' && isFinite(n) ? n : 0)
+
+    return {
+      ...result,
+      facturacionMes: sanitizeNumber(result.facturacionMes),
+      facturacionMesAnterior: sanitizeNumber(result.facturacionMesAnterior),
+      cobrosPendientes: sanitizeNumber(result.cobrosPendientes),
+      cobrosMes: sanitizeNumber(result.cobrosMes),
+      numFacturasPendientes: sanitizeNumber(result.numFacturasPendientes),
+      diasPromedioPendiente: sanitizeNumber(result.diasPromedioPendiente),
+      totalGastosFijos: sanitizeNumber(result.totalGastosFijos),
+      totalGastosVariables: sanitizeNumber(result.totalGastosVariables),
+      ventasPorMes: result.ventasPorMes.map(v => ({ ...v, total: sanitizeNumber(v.total) })),
+      topClientes: result.topClientes.map(c => ({ ...c, total_facturado: sanitizeNumber(c.total_facturado) }))
+    }
   } catch (error) {
     console.error('CRITICAL ERROR IN GETDASHBOARDDATA:', error)
-    throw error // Re-throw to be caught by error.tsx
+    // Return safe defaults instead of crashing the whole tree
+    return defaultData
   }
 }
 
