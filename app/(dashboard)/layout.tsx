@@ -17,12 +17,18 @@ export default async function AuthenticatedLayout({
     redirect("/login")
   }
 
-  // Obtener datos del usuario de la tabla usuarios
-  const { data: userData } = await supabase
-    .from("usuarios")
-    .select("nombre, email, rol")
-    .eq("id", user.id)
-    .single()
+  // Obtener datos del usuario de la tabla usuarios de forma segura
+  let userData = null
+  try {
+    const { data } = await supabase
+      .from("usuarios")
+      .select("nombre, email, rol")
+      .eq("id", user.id)
+      .single()
+    userData = data
+  } catch (error) {
+    console.error("Error fetching user data:", error)
+  }
 
   return (
     <DashboardLayout user={userData || { email: user.email }}>

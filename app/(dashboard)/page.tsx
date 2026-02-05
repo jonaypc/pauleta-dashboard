@@ -267,7 +267,10 @@ async function getDashboardData() {
     }
 
     // Sanitizar números para evitar errores de serialización (NaN/Infinity)
-    const sanitizeNumber = (n: any) => (typeof n === 'number' && isFinite(n) ? n : 0)
+    const sanitizeNumber = (n: any) => {
+      const num = Number(n)
+      return (typeof num === 'number' && isFinite(num)) ? num : 0
+    }
 
     return {
       ...result,
@@ -279,8 +282,22 @@ async function getDashboardData() {
       diasPromedioPendiente: sanitizeNumber(result.diasPromedioPendiente),
       totalGastosFijos: sanitizeNumber(result.totalGastosFijos),
       totalGastosVariables: sanitizeNumber(result.totalGastosVariables),
-      ventasPorMes: result.ventasPorMes.map(v => ({ ...v, total: sanitizeNumber(v.total) })),
-      topClientes: result.topClientes.map(c => ({ ...c, total_facturado: sanitizeNumber(c.total_facturado) }))
+      ventasPorMes: result.ventasPorMes.map(v => ({
+        ...v,
+        total: sanitizeNumber(v.total)
+      })),
+      topClientes: result.topClientes.map(c => ({
+        ...c,
+        total_facturado: sanitizeNumber(c.total_facturado)
+      })),
+      topProductosMes: result.topProductosMes.map(p => ({
+        ...p,
+        cantidad: sanitizeNumber(p.cantidad)
+      })),
+      ultimasFacturas: result.ultimasFacturas.map(f => ({
+        ...f,
+        total: sanitizeNumber(f.total)
+      }))
     }
   } catch (error) {
     console.error('CRITICAL ERROR IN GETDASHBOARDDATA:', error)
