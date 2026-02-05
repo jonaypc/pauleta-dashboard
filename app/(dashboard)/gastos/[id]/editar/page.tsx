@@ -22,6 +22,13 @@ export default async function EditGastoPage({ params }: PageProps) {
         .eq("id", params.id)
         .single()
 
+    // Fetch fixed payments for dropdown
+    const { data: pagosFijos } = await supabase
+        .from("pagos_fijos")
+        .select("id, concepto")
+        .eq("activo", true)
+        .order("concepto")
+
     if (error || !gasto) {
         notFound()
     }
@@ -38,7 +45,12 @@ export default async function EditGastoPage({ params }: PageProps) {
         categoria: gasto.categoria,
         metodo_pago: gasto.metodo_pago,
         notas: gasto.notas,
-        archivo_url: gasto.archivo_url
+        archivo_url: gasto.archivo_url,
+        // New fiscal fields
+        base_imponible: gasto.base_imponible,
+        impuestos: gasto.impuestos,
+        tipo_impuesto: gasto.tipo_impuesto,
+        pago_fijo_id: gasto.pago_fijo_id
     }
 
     return (
@@ -60,7 +72,10 @@ export default async function EditGastoPage({ params }: PageProps) {
                     <CardTitle>Datos del Gasto</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <GastoForm initialData={initialData} />
+                    <GastoForm
+                        initialData={initialData}
+                        pagosFijos={pagosFijos || []}
+                    />
                 </CardContent>
             </Card>
         </div>
