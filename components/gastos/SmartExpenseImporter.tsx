@@ -239,8 +239,9 @@ export function SmartExpenseImporter({
                         }
                     } catch (pdfErr: any) {
                         console.error("Error local PDF:", pdfErr)
-                        // Fallback: enviar archivo original si falla conversión
-                        formData.append("file", file)
+                        // Fallback DESACTIVADO para ver el error real
+                        // formData.append("file", file)
+                        throw new Error(`Error al procesar PDF en el navegador: ${pdfErr.message}. Intenta subir una imagen (JPG/PNG).`)
                     }
                 } else {
                     formData.append("file", file)
