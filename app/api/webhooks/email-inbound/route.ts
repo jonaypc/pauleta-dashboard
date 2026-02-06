@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
         // 1. Validar API Key (Seguridad básica)
         const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
         if (apiKey !== process.env.EMAIL_INBOUND_API_KEY) {
+            console.error(`[Webhook Auth Error] Received: '${apiKey}', Expected: '${process.env.EMAIL_INBOUND_API_KEY}'`)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
