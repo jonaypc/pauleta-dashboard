@@ -232,6 +232,9 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
         }
     }, [initialData, form, handleTotalChange])
 
+    const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    const isEditMode = !!(initialData?.id && isUUID(initialData.id))
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
         try {
@@ -308,21 +311,22 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                 ...(archivoUrl ? { archivo_url: archivoUrl } : {})
             }
 
-            if (initialData?.id) { // Modo Editar
+            if (isEditMode && initialData?.id) { // Modo Editar
+                const editId = initialData.id
                 const { error: updateError } = await supabase
                     .from("gastos")
                     .update(expenseData)
-                    .eq('id', initialData.id)
+                    .eq('id', editId)
 
                 if (updateError) throw updateError
 
                 // Actualizar líneas
-                await supabase.from("lineas_gasto").delete().eq("gasto_id", initialData.id)
+                await supabase.from("lineas_gasto").delete().eq("gasto_id", editId)
                 if (values.lineas.length > 0) {
                     const { error: linesError } = await supabase
                         .from("lineas_gasto")
                         .insert(values.lineas.map(l => ({
-                            gasto_id: initialData.id,
+                            gasto_id: editId,
                             descripcion: l.descripcion,
                             base_imponible: l.base_imponible,
                             tipo_impuesto: l.tipo_impuesto,
