@@ -26,7 +26,7 @@ async function getDashboardData() {
     topClientes: [],
     numFacturasPendientes: 0,
     diasPromedioPendiente: 0,
-    ventasPorMes: [],
+    comparativaMensual: [],
     topProductosMes: [],
     nombreMes: new Date().toLocaleDateString('es-ES', { month: 'long' }),
     totalGastosFijos: 0,
