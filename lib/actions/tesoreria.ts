@@ -223,3 +223,64 @@ export async function getReconciliationSuggestions(movementId: string) {
 
     return { movement, suggestions }
 }
+
+// ===========================================
+// AUTOMATIZACIÓN BANCARIA (PSD2 / GOCARDLESS)
+// ===========================================
+
+import { gocardless } from "@/lib/gocardless"
+
+export async function initiateBankConnection(institutionId: string) {
+    const supabase = await createClient()
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/tesoreria/configuracion/callback`
+    const reference = `pauleta-${Date.now()}`
+
+    try {
+        const requisition = await gocardless.createRequisition(institutionId, redirectUrl, reference)
+
+        // Guardar estado inicial en BD
+        await supabase.from("bank_connections").insert({
+            institution_id: institutionId,
+            requisition_id: requisition.id,
+            reference: reference,
+            status: 'initiated'
+        })
+
+        return { url: requisition.link }
+    } catch (error: any) {
+        console.error("Error initiating bank connection:", error)
+        throw new Error(error.message)
+    }
+}
+
+export async function completeBankConnection(requisitionId: string) {
+    const supabase = await createClient()
+
+    try {
+        const requisition = await gocardless.getRequisition(requisitionId)
+
+        if (requisition.status === 'LN') { // Linked
+            await supabase.from("bank_connections")
+                .update({
+                    status: 'linked',
+                    agreement_id: requisition.agreement
+                })
+                .eq("requisition_id", requisitionId)
+
+            return { success: true }
+        }
+
+        return { success: false, status: requisition.status }
+    } catch (error: any) {
+        console.error("Error completing bank connection:", error)
+        throw new Error(error.message)
+    }
+}
+
+export async function getBankInstitutions() {
+    try {
+        return await gocardless.getInstitutions("ES")
+    } catch (error) {
+        return []
+    }
+}

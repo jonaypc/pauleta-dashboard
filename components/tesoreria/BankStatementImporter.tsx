@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, FileText, AlertTriangle, CheckCircle, Loader2, X } from "lucide-react"
+import { Upload, FileText, AlertTriangle, CheckCircle, Loader2, X, Zap, ExternalLink } from "lucide-react"
 import Papa from "papaparse"
 import * as XLSX from "xlsx"
 import { format } from "date-fns"
 import { saveBankMovements } from "@/lib/actions/tesoreria"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
 interface BankStatementImporterProps {
@@ -259,6 +260,21 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-between gap-4">
+                    <div className="flex gap-3 items-start">
+                        <Zap className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="text-sm font-bold text-blue-900">¿Cansado de subir archivos?</p>
+                            <p className="text-xs text-blue-700">Conecta tu cuenta de Cajamar y recibe movimientos automáticamente.</p>
+                        </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild className="border-blue-200 hover:bg-blue-100 shrink-0">
+                        <Link href="/tesoreria/configuracion">
+                            <ExternalLink className="h-4 w-4 mr-2" /> Configurar
+                        </Link>
+                    </Button>
+                </div>
+
                 {!file ? (
                     <div
                         className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-muted/50 transition-colors cursor-pointer"
