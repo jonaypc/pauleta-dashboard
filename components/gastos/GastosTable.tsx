@@ -63,26 +63,39 @@ export function GastosTable({ gastos }: GastosTableProps) {
         )
     }
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("¿Estás seguro de que deseas eliminar este gasto? Esta acción no se puede deshacer.")) return
-
-        setIsDeleting(id)
-        try {
-            await deleteGasto(id)
-            toast({
-                title: "Gasto eliminado",
-                description: "El registro se ha borrado correctamente."
-            })
-            router.refresh()
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "No se pudo eliminar el gasto.",
-                variant: "destructive"
-            })
-        } finally {
-            setIsDeleting(null)
-        }
+    const handleDelete = async (id: string, numero: string | null) => {
+        // Optimistic UI update (could be implemented with local state if needed, but for now just non-blocking)
+        toast({
+            title: "¿Eliminar gasto?",
+            description: `Se eliminará el gasto ${numero || ''}.`,
+            action: (
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                        setIsDeleting(id)
+                        try {
+                            await deleteGasto(id)
+                            toast({
+                                title: "Gasto eliminado",
+                                description: "El registro se ha borrado correctamente."
+                            })
+                            router.refresh()
+                        } catch (error) {
+                            toast({
+                                title: "Error",
+                                description: "No se pudo eliminar el gasto.",
+                                variant: "destructive"
+                            })
+                        } finally {
+                            setIsDeleting(null)
+                        }
+                    }}
+                >
+                    Confirmar
+                </Button>
+            ),
+        })
     }
 
     const handleStatusChange = async (id: string, newStatus: string) => {
@@ -283,8 +296,8 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                                                 disabled={isUpdatingStatus === gasto.id}
                                                             >
                                                                 <SelectTrigger className={`h-7 w-[110px] text-xs font-semibold border-0 ${gasto.estado === 'pagado'
-                                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200 focus:ring-green-500'
-                                                                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200 focus:ring-amber-500'
+                                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 focus:ring-green-500'
+                                                                    : 'bg-amber-100 text-amber-700 hover:bg-amber-200 focus:ring-amber-500'
                                                                     }`}>
                                                                     <SelectValue />
                                                                 </SelectTrigger>
@@ -315,7 +328,7 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                                                     size="icon"
                                                                     variant="ghost"
                                                                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                    onClick={() => handleDelete(gasto.id)}
+                                                                    onClick={() => handleDelete(gasto.id, gasto.numero)}
                                                                     disabled={isDeleting === gasto.id}
                                                                     title="Eliminar"
                                                                 >
