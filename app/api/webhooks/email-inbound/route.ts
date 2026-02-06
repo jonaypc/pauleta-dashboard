@@ -115,10 +115,9 @@ export async function POST(request: NextRequest) {
                     fecha: parsedData?.fecha || new Date().toISOString(),
                     importe: parsedData?.importe || 0,
                     numero: parsedData?.numero || `EMAIL-${Date.now()}`,
-                    concepto: parsedData?.concepto || `Factura recibida por email: ${subject}`,
                     proveedor_id,
                     estado: 'pendiente', // Pendiente de pago
-                    notas: `Importado automáticamente desde email de: ${from}. \nTexto extraído: ${parsedData ? 'SI' : 'NO'}. \nConfianza IA: ${parsedData?.confidence || 0}%`,
+                    notas: `Importado automáticamente desde email de: ${from}. \nConcepto: ${parsedData?.concepto || subject}\nTexto extraído: ${parsedData ? 'SI' : 'NO'}. \nConfianza IA: ${parsedData?.confidence || 0}%`,
                     archivo_url: publicUrl,
                     base_imponible: parsedData?.base_imponible,
                     iva: parsedData?.iva
