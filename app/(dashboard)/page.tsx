@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { StatsCards } from "@/components/dashboard/StatsCards"
 import { RecentInvoices } from "@/components/dashboard/RecentInvoices"
-import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments"
+import { UnpaidExpenses } from "@/components/dashboard/UpcomingPayments"
 import { TopClientes } from "@/components/dashboard/TopClientes"
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary"
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart"
@@ -22,7 +22,7 @@ async function getDashboardData() {
     facturasEmitidas: 0,
     totalClientes: 0,
     ultimasFacturas: [],
-    pagosFijos: [],
+    gastosPendientes: [],
     topClientes: [],
     numFacturasPendientes: 0,
     diasPromedioPendiente: 0,
@@ -115,13 +115,20 @@ async function getDashboardData() {
       .select('fecha, importe')
       .gte('fecha', hace6Meses)
 
-    console.log('Fetching pagosFijos...')
-    const { data: pagosFijos } = await supabase
-      .from('pagos_fijos')
-      .select('*')
-      .eq('activo', true)
+    // 3. (REMOVED) Fetch Fixed Payments - Now using only REAL expenses from 'gastos' table
+    const totalGastosFijos = 0
 
-    const totalGastosFijos = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
+    // Fetch Pending Expenses
+    console.log('Fetching gastosPendientes...')
+    const { data: gastosPendientes } = await supabase
+      .from('gastos')
+      .select(`
+            id, fecha, importe, numero,
+            proveedor:proveedores(nombre)
+        `)
+      .eq('estado', 'pendiente')
+      .order('fecha', { ascending: true }) // Oldest first (most urgent)
+      .limit(5)
 
     const comparativaMensual: { mes: string; ingresos: number; gastos: number }[] = []
     for (let i = 5; i >= 0; i--) {
@@ -133,14 +140,14 @@ async function getDashboardData() {
         .filter(f => f.fecha && typeof f.fecha === 'string' && f.fecha.startsWith(mesKey))
         .reduce((sum, f) => sum + (f.total || 0), 0) || 0
 
-      const gastosVariables = (gastos6Meses || [])
+      const gastosTotalesMes = (gastos6Meses || [])
         .filter(g => g.fecha && typeof g.fecha === 'string' && g.fecha.startsWith(mesKey))
         .reduce((sum, g) => sum + (g.importe || 0), 0) || 0
 
       comparativaMensual.push({
         mes: nombreMesGraph,
         ingresos,
-        gastos: gastosVariables + totalGastosFijos
+        gastos: gastosTotalesMes
       })
     }
 
@@ -178,7 +185,8 @@ async function getDashboardData() {
         cliente_id,
         clientes (nombre, persona_contacto)
       `)
-      .order('created_at', { ascending: false })
+      .order('fecha', { ascending: false })
+      .order('numero', { ascending: false })
       .limit(5)
 
     const facturasFormateadas = ultimasFacturas?.map(f => {
@@ -262,7 +270,7 @@ async function getDashboardData() {
       facturasEmitidas: facturasEmitidasCount || 0,
       totalClientes: totalClientesCount || 0,
       ultimasFacturas: facturasFormateadas,
-      pagosFijos: pagosFijos || [],
+      gastosPendientes: gastosPendientes || [],
       topClientes: topClientesList,
       numFacturasPendientes,
       diasPromedioPendiente,
@@ -305,6 +313,14 @@ async function getDashboardData() {
       ultimasFacturas: result.ultimasFacturas.map(f => ({
         ...f,
         total: sanitizeNumber(f.total)
+      })),
+      gastosPendientes: result.gastosPendientes.map(g => ({
+        ...g,
+        id: g.id,
+        fecha: g.fecha,
+        importe: sanitizeNumber(g.importe),
+        numero: g.numero || '',
+        proveedor: g.proveedor ? { nombre: (g.proveedor as any).nombre } : null
       }))
     }
   } catch (error) {
@@ -430,7 +446,7 @@ export default async function DashboardPage() {
           )}
         </div>
         <div className="space-y-6">
-          <UpcomingPayments pagos={data.pagosFijos} />
+          <UnpaidExpenses gastos={data.gastosPendientes as any} />
           <TopClientes clientes={data.topClientes} />
         </div>
       </div>
