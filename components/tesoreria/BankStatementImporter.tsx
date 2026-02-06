@@ -123,12 +123,59 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                     header: true,
                     skipEmptyLines: true,
                     complete: async (results) => {
-                        const mapped = results.data.map(row => ({
-                            fecha: (row as any)[mapping.fecha],
-                            importe: parseFloat(String((row as any)[mapping.importe]).replace(',', '.')),
-                            descripcion: (row as any)[mapping.descripcion] || "Sin descripción",
-                            referencia: mapping.referencia && mapping.referencia !== "unmapped" ? (row as any)[mapping.referencia] : ""
+                        try {
+                            const mapped = results.data.map(row => ({
+                                fecha: (row as any)[mapping.fecha],
+                                importe: parseFloat(String((row as any)[mapping.importe]).replace(',', '.')),
+                                descripcion: (row as any)[mapping.descripcion] || "Sin descripción",
+                                referencia: mapping.referencia && mapping.referencia !== "unmapped" ? (row as any)[mapping.referencia] : ""
+                            })).filter(r => r.fecha && !isNaN(r.importe))
+
+                            if (mapped.length === 0) {
+                                throw new Error("No se encontraron movimientos válidos en el archivo.")
+                            }
+
+                            await saveBankMovements(mapped)
+                            toast({
+                                title: "Importación completada",
+                                description: `Se han importado ${mapped.length} movimientos.`,
+                            })
+                            router.refresh()
+                            setFile(null)
+                            onImportComplete?.(mapped)
+                        } catch (err: any) {
+                            console.error("Error during CSV import processing:", err)
+                            toast({
+                                title: "Error al importar",
+                                description: err.message || "Hubo un problema al procesar los movimientos.",
+                                variant: "destructive"
+                            })
+                        } finally {
+                            setIsLoading(false)
+                        }
+                    }
+                })
+            } else {
+                // Implementación Excel (breve)
+                const reader = new FileReader()
+                reader.onload = async (e) => {
+                    try {
+                        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+                        const workbook = XLSX.read(data, { type: 'array' })
+                        const firstSheetName = workbook.SheetNames[0]
+                        const worksheet = workbook.Sheets[firstSheetName]
+                        const json = XLSX.utils.sheet_to_json(worksheet) as any[]
+
+                        const mapped = json.map(row => ({
+                            fecha: row[mapping.fecha],
+                            importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
+                            descripcion: row[mapping.descripcion] || "Sin descripción",
+                            referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
                         })).filter(r => r.fecha && !isNaN(r.importe))
+
+                        if (mapped.length === 0) {
+                            throw new Error("No se encontraron movimientos válidos en el archivo.")
+                        }
 
                         await saveBankMovements(mapped)
                         toast({
@@ -137,36 +184,17 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                         })
                         router.refresh()
                         setFile(null)
-                        setIsLoading(false)
                         onImportComplete?.(mapped)
+                    } catch (err: any) {
+                        console.error("Error during Excel import processing:", err)
+                        toast({
+                            title: "Error al importar",
+                            description: err.message || "Hubo un problema al procesar los movimientos.",
+                            variant: "destructive"
+                        })
+                    } finally {
+                        setIsLoading(false)
                     }
-                })
-            } else {
-                // Implementación Excel (breve)
-                const reader = new FileReader()
-                reader.onload = async (e) => {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer)
-                    const workbook = XLSX.read(data, { type: 'array' })
-                    const firstSheetName = workbook.SheetNames[0]
-                    const worksheet = workbook.Sheets[firstSheetName]
-                    const json = XLSX.utils.sheet_to_json(worksheet) as any[]
-
-                    const mapped = json.map(row => ({
-                        fecha: row[mapping.fecha],
-                        importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
-                        descripcion: row[mapping.descripcion] || "Sin descripción",
-                        referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
-                    })).filter(r => r.fecha && !isNaN(r.importe))
-
-                    await saveBankMovements(mapped)
-                    toast({
-                        title: "Importación completada",
-                        description: `Se han importado ${mapped.length} movimientos.`,
-                    })
-                    router.refresh()
-                    setFile(null)
-                    setIsLoading(false)
-                    onImportComplete?.(mapped)
                 }
                 reader.readAsArrayBuffer(file)
             }
