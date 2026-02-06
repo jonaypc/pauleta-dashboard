@@ -60,7 +60,16 @@ export default function ImportarGastosPage() {
             }
         }
         loadPendingEmails()
+        loadPendingEmails()
     }, [])
+
+    const handleMultipleExtracted = (data: ExtractedExpenseData[]) => {
+        setDrafts(prev => [...prev, ...data])
+        toast({
+            title: "Documentos analizados",
+            description: `Se han añadido ${data.length} facturas a la lista de revisión.`,
+        })
+    }
 
     const removeDraft = async (index: number) => {
         const draft = drafts[index]
