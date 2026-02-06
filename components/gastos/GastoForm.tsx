@@ -35,6 +35,7 @@ export interface GastoLineaData {
 
 export interface GastoFormData {
     id?: string
+    queueId?: string // Identificador temporal para colas de carga
     numero?: string | null
     fecha?: string | null
     nombre_proveedor?: string | null
@@ -119,8 +120,8 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
         name: "lineas"
     })
 
-    // Track previous ID to detect if we are switching context or just refining
-    const lastIdRef = useRef<string | undefined>(initialData?.id)
+    // Track previous ID/QueueId to detect if we are switching context or just refining
+    const lastContextIdRef = useRef<string | undefined>(initialData?.id || initialData?.queueId)
 
     // Autocalculadora de Impuestos Bidireccional
     const handleTotalChange = useCallback((totalValue: number) => {
@@ -164,8 +165,11 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
     // Resetear o fusionar formulario cuando cambia initialData
     useEffect(() => {
         if (initialData) {
-            // Si cambia el ID (es otro gasto distinto), reseteamos todo
-            if (initialData.id !== lastIdRef.current) {
+            const currentContextId = initialData.id || initialData.queueId
+            const hasContextChanged = currentContextId !== lastContextIdRef.current
+
+            // Si ha cambiado el ID real o el temporal de la cola, reseteamos todo
+            if (hasContextChanged) {
                 form.reset({
                     numero: initialData.numero || "",
                     fecha: initialData.fecha || new Date().toISOString().split('T')[0],
@@ -181,7 +185,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     pago_fijo_id: initialData.pago_fijo_id || "none",
                     lineas: (initialData.lineas || []).map(l => ({ ...l, descripcion: l.descripcion || "" }))
                 })
-                lastIdRef.current = initialData.id
+                lastContextIdRef.current = currentContextId
             } else {
                 // Si es el Mismo ID (o refinamiento del mismo escaneo), fusionamos
                 // Solo sobrescribimos si el campo actual está vacío

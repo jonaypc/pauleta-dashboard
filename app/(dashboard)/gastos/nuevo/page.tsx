@@ -68,7 +68,10 @@ export default function NuevoGastoPage() {
             }
             setExpenseQueue(prev => [...prev, newItem])
         } else {
-            setExtractedData(dataWithMatch)
+            setExtractedData({
+                ...dataWithMatch,
+                queueId: `single-${Date.now()}`
+            } as any)
         }
     }
 
