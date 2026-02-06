@@ -1,12 +1,20 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
 })
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   title: {
@@ -16,6 +24,12 @@ export const metadata: Metadata = {
   description: 'Portal de gestión empresarial de Pauleta Canaria S.L.',
   icons: {
     icon: '/favicon.ico',
+    apple: '/logo.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Pauleta',
   },
 }
 
