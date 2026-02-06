@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
 interface BankStatementImporterProps {
-    onImportComplete: (data: any[]) => void
+    onImportComplete?: (data: any[]) => void
 }
 
 export function BankStatementImporter({ onImportComplete }: BankStatementImporterProps) {

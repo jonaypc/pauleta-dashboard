@@ -6,15 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Wallet, ArrowUpRight, ArrowDownLeft, Link as LinkIcon } from "lucide-react"
+import { CreditCard, ArrowUpRight, ArrowDownLeft, Link as LinkIcon } from "lucide-react"
 import Link from "next/link"
 
 export default async function TesoreriaPage() {
-    const movements = await getPendingBankMovements()
+    let movements: any[] = []
+    let totalPositivo = 0
+    let totalNegativo = 0
 
-    // Estadísticas básicas manuales por ahora
-    const totalPositivo = movements.filter(m => m.importe > 0).reduce((acc, m) => acc + Number(m.importe), 0)
-    const totalNegativo = movements.filter(m => m.importe < 0).reduce((acc, m) => acc + Number(m.importe), 0)
+    try {
+        const data = await getPendingBankMovements()
+        movements = Array.isArray(data) ? data : []
+
+        // Estadísticas básicas manuales
+        totalPositivo = movements.filter(m => m.importe > 0).reduce((acc, m) => acc + (Number(m.importe) || 0), 0)
+        totalNegativo = movements.filter(m => m.importe < 0).reduce((acc, m) => acc + (Number(m.importe) || 0), 0)
+    } catch (error) {
+        console.error("Error loading Tesoreria data:", error)
+        // Fallback to empty state
+    }
 
     return (
         <div className="space-y-6 pb-20">
@@ -60,7 +70,7 @@ export default async function TesoreriaPage() {
                             <div className="space-y-4">
                                 {movements.length === 0 ? (
                                     <div className="py-12 text-center">
-                                        <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
+                                        <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
                                         <p className="text-muted-foreground">No hay movimientos pendientes de conciliación.</p>
                                         <p className="text-xs text-muted-foreground mt-1">Importa un extracto para comenzar.</p>
                                     </div>
@@ -102,7 +112,7 @@ export default async function TesoreriaPage() {
 
                 <TabsContent value="importar" className="mt-6">
                     <div className="max-w-xl mx-auto">
-                        <BankStatementImporter onImportComplete={() => { }} />
+                        <BankStatementImporter />
                     </div>
                 </TabsContent>
             </Tabs>
