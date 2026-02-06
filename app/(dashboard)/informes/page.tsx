@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { Metadata } from "next"
-import { DateRangePicker } from "@/components/informes/DateRangePicker"
+import { DateRangeFilter } from "@/components/informes/DateRangeFilter"
 import { SalesChart } from "@/components/informes/SalesChart"
 import { ExportButton } from "@/components/informes/ExportButton"
 import { TopCustomersTable } from "@/components/informes/TopCustomersTable"
@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, Users, Package, CreditCard, AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
 async function getAnalyticsData(from: string, to: string) {
     const supabase = await createClient()
     const now = new Date()
-    
+
     // Calcular período anterior (misma duración)
     const fromDate = new Date(from)
     const toDate = new Date(to)
@@ -52,8 +54,8 @@ async function getAnalyticsData(from: string, to: string) {
 
     const totalFacturadoAnterior = facturasAnterior?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
     const totalFacturado = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
-    const variacionFacturacion = totalFacturadoAnterior > 0 
-        ? ((totalFacturado - totalFacturadoAnterior) / totalFacturadoAnterior) * 100 
+    const variacionFacturacion = totalFacturadoAnterior > 0
+        ? ((totalFacturado - totalFacturadoAnterior) / totalFacturadoAnterior) * 100
         : 0
 
     // 2. Cobros
@@ -144,8 +146,14 @@ export default async function InformesPage({
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild className="hidden sm:flex bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                        <Link href="/informes/financiero">
+                            <TrendingUp className="mr-2 h-4 w-4" />
+                            Rentabilidad
+                        </Link>
+                    </Button>
                     <Suspense fallback={<div className="w-[300px] h-10 bg-muted animate-pulse rounded-md" />}>
-                        <DateRangePicker />
+                        <DateRangeFilter />
                     </Suspense>
                     <ExportButton data={data.rawFacturas} />
                 </div>
