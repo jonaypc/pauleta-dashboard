@@ -10,9 +10,8 @@ export async function simulateWebhook() {
         fecha: new Date().toISOString(),
         importe: 1.00,
         numero: "TEST-WEBHOOK-SIMULATION",
-        concepto: "Simulation Test",
         estado: 'pendiente',
-        notas: "This is a test from the debug script to verify createAdminClient permissions."
+        notas: "Simulation Test. This is a test from the debug script to verify createAdminClient permissions."
     }).select()
 
     if (error) {

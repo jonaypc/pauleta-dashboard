@@ -41,11 +41,11 @@ export default function ImportarGastosPage() {
                     importe: g.importe,
                     numero: g.numero,
                     cif_proveedor: null, // No guardamos CIF en DB aun, se podria mejorar
-                    nombre_proveedor: g.concepto.includes("Factura recibida por email") ? "Revisar Proveedor" : "Proveedor Desconocido",
+                    nombre_proveedor: (g.notas && g.notas.includes("Importado automáticamente")) ? "Revisar Proveedor" : "Proveedor Desconocido",
                     // Intentar recuperar el nombre del proveedor si tenemos ID, pero es complejo aqui sin join
                     archivo_file: null, // No tenemos File object, pero tenemos URL
                     archivo_url: g.archivo_url, // Necesitamos extender la interfaz ExtractedExpenseData para admitir URL ya existente
-                    concepto: g.concepto,
+                    concepto: g.notas, // Usamos notas como concepto visual
                     base_imponible: g.base_imponible,
                     iva: g.iva,
                     // ID para poder eliminarlo de la BD si se descarta o actualizarlo
