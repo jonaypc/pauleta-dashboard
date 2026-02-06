@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
         const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
         if (apiKey !== process.env.EMAIL_INBOUND_API_KEY) {
             console.error(`[Webhook Auth Error] Received: '${apiKey}', Expected: '${process.env.EMAIL_INBOUND_API_KEY}'`)
+            console.log("Headers:", Object.fromEntries(request.headers.entries()))
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        console.log(`[Webhook Success] Processed ${results.length} files successfully.`)
         return NextResponse.json({ success: true, results })
 
     } catch (error: any) {
