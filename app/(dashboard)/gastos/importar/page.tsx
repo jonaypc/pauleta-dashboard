@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { runSimulationAction } from "@/app/actions/debug"
 
 export default function ImportarGastosPage() {
     const { toast } = useToast()
@@ -256,6 +257,14 @@ export default function ImportarGastosPage() {
                                     Guardar Todo ({drafts.length})
                                 </Button>
                             )}
+                            <Button variant="ghost" size="sm" onClick={async () => {
+                                try {
+                                    // Call server action to run simulation
+                                    const result = await runSimulationAction()
+                                    if (result.success) alert("Simulation Success! Check DB.")
+                                    else alert("Simulation Failed: " + JSON.stringify(result.error))
+                                } catch (e) { alert("Error: " + e) }
+                            }}>Debug</Button>
                         </CardHeader>
                         <CardContent className="pt-6">
                             {drafts.length === 0 ? (
