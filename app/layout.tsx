@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   },
   description: 'Portal de gestión empresarial de Pauleta Canaria S.L.',
   icons: {
-    icon: '/favicon.ico',
-    apple: '/icon',
+    icon: '/logo.png',
+    apple: '/logo.png',
   },
   appleWebApp: {
     capable: true,
