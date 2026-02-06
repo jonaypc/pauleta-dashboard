@@ -121,12 +121,17 @@ export async function getReconciliationSuggestions(movementId: string) {
     const absAmount = Math.abs(Number(movement.importe))
     const moveDate = new Date(movement.fecha)
     const startDate = new Date(moveDate)
-    startDate.setDate(startDate.getDate() - 30) // Ventana de 30 días antes
+    startDate.setDate(startDate.getDate() - 45) // Ventana ampliada a 45 días
     const endDate = new Date(moveDate)
     endDate.setDate(endDate.getDate() + 15) // Ventana de 15 días después
 
     const startDateStr = startDate.toISOString().split('T')[0]
     const endDateStr = endDate.toISOString().split('T')[0]
+
+    // Margen de error para importes (fuzzy matching)
+    // Usamos un pequeño margen para compensar redondeos o micro-comisiones
+    const minAmount = parseFloat((absAmount - 0.05).toFixed(2))
+    const maxAmount = parseFloat((absAmount + 0.05).toFixed(2))
 
     let suggestions: any[] = []
 
@@ -135,7 +140,8 @@ export async function getReconciliationSuggestions(movementId: string) {
         const { data: gastos } = await supabase
             .from("gastos")
             .select("*, proveedor:proveedores(nombre)")
-            .eq("importe", absAmount)
+            .gte("importe", minAmount)
+            .lte("importe", maxAmount)
             .eq("estado", "pendiente")
             .gte("fecha", startDateStr)
             .lte("fecha", endDateStr)
@@ -146,14 +152,16 @@ export async function getReconciliationSuggestions(movementId: string) {
             date: g.fecha,
             amount: g.importe,
             entity: g.proveedor?.nombre || "Sin proveedor",
-            reference: g.numero || ""
+            reference: g.numero || "",
+            matchScore: Math.abs(g.importe - absAmount) < 0.01 ? 100 : 80
         }))
     } else {
         // Buscar en FACTURAS (Ventas)
         const { data: facturas } = await supabase
             .from("facturas")
             .select("*, cliente:clientes(nombre)")
-            .eq("total", absAmount)
+            .gte("total", minAmount)
+            .lte("total", maxAmount)
             .neq("estado", "cobrada")
             .neq("estado", "anulada")
             .gte("fecha", startDateStr)
@@ -165,7 +173,8 @@ export async function getReconciliationSuggestions(movementId: string) {
             date: f.fecha,
             amount: f.total,
             entity: f.cliente?.nombre || "Sin cliente",
-            reference: f.numero || ""
+            reference: f.numero || "",
+            matchScore: Math.abs(f.total - absAmount) < 0.01 ? 100 : 80
         }))
     }
 

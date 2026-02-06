@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
-import { Loader2, Save, Calculator, Link as LinkIcon, Plus, Trash2 } from "lucide-react"
+import { Loader2, Save, Calculator, Link as LinkIcon, Plus, Trash2, AlertTriangle } from "lucide-react"
 import { CATEGORIAS_GASTOS } from "./constants"
 
 // Definición local flexible para aceptar datos de BD o de Extracción
@@ -53,6 +53,7 @@ export interface GastoFormData {
     tipo_impuesto?: number | string | null
     pago_fijo_id?: string | null
     lineas?: GastoLineaData[]
+    isDuplicate?: boolean
 }
 
 const formSchema = z.object({
@@ -236,8 +237,12 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
         }
     }, [initialData, form, handleTotalChange])
 
+    const [confirmDuplicate, setConfirmDuplicate] = useState(false)
     const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     const isEditMode = !!(initialData?.id && isUUID(initialData.id))
+
+    const isDuplicate = !!initialData?.isDuplicate
+    const canSave = !isSubmitting && (!isDuplicate || confirmDuplicate)
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
@@ -395,6 +400,33 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Duplicate Warning */}
+                {isDuplicate && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start animate-in fade-in slide-in-from-top-1">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="space-y-2">
+                            <p className="text-sm font-semibold text-amber-800">
+                                Posible gasto duplicado detectado
+                            </p>
+                            <p className="text-xs text-amber-700 leading-relaxed">
+                                Ya existe un gasto registrado con el mismo número de factura ({initialData?.numero}) para {initialData?.nombre_proveedor}.
+                                Por favor, verifica si ya ha sido contabilizado antes de continuar.
+                            </p>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="confirm-duplicate"
+                                    checked={confirmDuplicate}
+                                    onChange={(e) => setConfirmDuplicate(e.target.checked)}
+                                    className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                                />
+                                <label htmlFor="confirm-duplicate" className="text-xs font-medium text-amber-900 cursor-pointer">
+                                    Entiendo el riesgo y quiero guardarlo igualmente
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Section: Datos Principales */}
                 <div className="grid gap-4 md:grid-cols-2">
@@ -770,7 +802,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     )}
                 />
 
-                <Button type="submit" disabled={isSubmitting} className="w-full">
+                <Button type="submit" disabled={!canSave} className="w-full">
                     {isSubmitting ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -779,7 +811,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     ) : (
                         <>
                             <Save className="mr-2 h-4 w-4" />
-                            Guardar Gasto
+                            {isEditMode ? "Guardar Cambios" : "Registrar Gasto"}
                         </>
                     )}
                 </Button>
