@@ -55,10 +55,11 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    setRawHeaders(results.meta.fields || [])
+                    const headers = (results.meta.fields || []).filter(h => h && h.trim() !== "")
+                    setRawHeaders(headers)
                     setPreviewData(results.data.slice(0, 5))
                     // Intentar auto-mapeo básico
-                    autoMap(results.meta.fields || [])
+                    autoMap(headers)
                     setIsLoading(false)
                 },
                 error: (error) => {
@@ -76,7 +77,7 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
 
                 if (json.length > 0) {
-                    const headers = json[0].map(h => String(h))
+                    const headers = json[0].map(h => String(h || "").trim()).filter(h => h !== "")
                     setRawHeaders(headers)
 
                     const formattedData = json.slice(1, 6).map(row => {
@@ -126,7 +127,7 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                             fecha: (row as any)[mapping.fecha],
                             importe: parseFloat(String((row as any)[mapping.importe]).replace(',', '.')),
                             descripcion: (row as any)[mapping.descripcion] || "Sin descripción",
-                            referencia: (row as any)[mapping.referencia] || ""
+                            referencia: mapping.referencia && mapping.referencia !== "unmapped" ? (row as any)[mapping.referencia] : ""
                         })).filter(r => r.fecha && !isNaN(r.importe))
 
                         await saveBankMovements(mapped)
@@ -154,7 +155,7 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                         fecha: row[mapping.fecha],
                         importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
                         descripcion: row[mapping.descripcion] || "Sin descripción",
-                        referencia: row[mapping.referencia] || ""
+                        referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
                     })).filter(r => r.fecha && !isNaN(r.importe))
 
                     await saveBankMovements(mapped)
@@ -254,13 +255,15 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium mb-1 block">Referencia (Opcional)</label>
-                                    <Select value={mapping.referencia} onValueChange={(v) => setMapping(p => ({ ...p, referencia: v }))}>
+                                    <Select value={mapping.referencia || "unmapped"} onValueChange={(v) => setMapping(p => ({ ...p, referencia: v }))}>
                                         <SelectTrigger className="h-8 text-xs">
                                             <SelectValue placeholder="No usar" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">-- No usar --</SelectItem>
-                                            {rawHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                            <SelectItem value="unmapped">-- No usar --</SelectItem>
+                                            {rawHeaders.map((h, i) => (
+                                                <SelectItem key={`${h}-${i}`} value={h}>{h}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
