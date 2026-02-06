@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { GastosTable } from "@/components/gastos/GastosTable"
 import { GastosStats } from "@/components/gastos/GastosStats"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Import } from "lucide-react"
 import Link from "next/link"
 
 export const metadata = {
@@ -54,12 +54,20 @@ export default async function GastosPage() {
                         Gestiona las facturas de tus proveedores y controla el flujo de caja.
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/gastos/nuevo">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Registrar Gasto
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/gastos/importar">
+                            <Import className="mr-2 h-4 w-4" />
+                            Buzón / Importar
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/gastos/nuevo">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Registrar Gasto
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             {/* Estadísticas */}
