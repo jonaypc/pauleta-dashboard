@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import NextImage from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -106,11 +107,13 @@ export function BankConnectionSettings() {
                                     <div className="flex items-center gap-4">
                                         <div className="h-12 w-12 rounded-md border flex items-center justify-center bg-white overflow-hidden p-1">
                                             {inst.logo ? (
-                                                <img
+                                                <NextImage
                                                     src={inst.logo}
                                                     alt={inst.name}
+                                                    width={48}
+                                                    height={48}
                                                     className="h-full w-full object-contain"
-                                                    loading="lazy"
+                                                    unoptimized
                                                 />
                                             ) : (
                                                 <Landmark className="h-6 w-6 text-muted-foreground" />

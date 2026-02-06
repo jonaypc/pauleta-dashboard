@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
         // CloudMailin envía 'attachments[]' o 'attachment1', varia según config.
         // Vamos a iterar sobre todas las entries buscando Files
         const files: File[] = []
-        for (const [key, value] of formData.entries()) {
+        const entries = Array.from(formData.entries())
+        for (const [key, value] of entries) {
             if (value instanceof File) {
                 // Filtrar solo PDFs e Imágenes
                 if (value.type === "application/pdf" || value.type.startsWith("image/")) {
