@@ -49,13 +49,9 @@ export default async function FinancialReportsPage({ searchParams }: PageProps) 
         .gte('fecha', fromStr)
         .lte('fecha', toStr)
 
-    // 3. Fetch Fixed Payments (Gastos Fijos Recurrentes)
-    const { data: pagosFijos } = await supabase
-        .from('pagos_fijos')
-        .select('importe')
-        .eq('activo', true)
-
-    const totalFijoMensual = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
+    // 3. (REMOVED) Fetch Fixed Payments - Now using only REAL expenses from 'gastos' table
+    // const { data: pagosFijos } = await supabase...
+    const totalFijoMensual = 0
 
     // 4. Aggregate by Month
     // Generate all months in range
@@ -71,18 +67,15 @@ export default async function FinancialReportsPage({ searchParams }: PageProps) 
         ).reduce((sum, f) => sum + (f.total || 0), 0) || 0
 
         // Filter expenses in this month
-        const gastosVariablesMes = gastos?.filter(g =>
+        // Filter expenses in this month (ALL expenses, fixed + variable, as recorded in DB)
+        const gastosMes = gastos?.filter(g =>
             g.fecha && isSameMonth(parseISO(g.fecha), monthDate)
         ).reduce((sum, g) => sum + (g.importe || 0), 0) || 0
-
-        // Fixed expenses are added to every full month in range
-        // For simplicity, we add it to every month shown
-        const totalGastosMes = gastosVariablesMes + totalFijoMensual
 
         return {
             mes: format(monthDate, 'MMM yyyy', { locale: es }), // e.g. "ene 2024"
             ingresos: ingresosMes,
-            gastos: totalGastosMes
+            gastos: gastosMes
         }
     })
 
@@ -90,10 +83,10 @@ export default async function FinancialReportsPage({ searchParams }: PageProps) 
     const totalIngresos = comparativaMensual.reduce((sum, m) => sum + m.ingresos, 0)
     const totalGastos = comparativaMensual.reduce((sum, m) => sum + m.gastos, 0)
 
-    // Breakdown for summary component
-    // Note: gastosFijos here is total over the period, not monthly
-    const totalGastosFijosPeriodo = totalFijoMensual * monthsInterval.length
-    const totalGastosVariablesPeriodo = totalGastos - totalGastosFijosPeriodo
+    // Total breakdown (Since we don't distinguish types in 'gastos' table yet easily without a join or type field,
+    // we will show total expenses as variable for now, or just generic expenses)
+    const totalGastosFijosPeriodo = 0
+    const totalGastosVariablesPeriodo = totalGastos
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20">
