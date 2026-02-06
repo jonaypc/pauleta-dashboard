@@ -12,9 +12,19 @@ interface PageProps {
 }
 
 export default async function ConciliarDetallePage({ params }: PageProps) {
-    const { movement, suggestions } = await getReconciliationSuggestions(params.id)
+    let movement: any = null
+    let suggestions: any[] = []
 
-    if (movement.estado === 'conciliado') {
+    try {
+        const result = await getReconciliationSuggestions(params.id)
+        movement = result.movement
+        suggestions = result.suggestions
+    } catch (error) {
+        console.error("Error loading reconciliation details:", error)
+        redirect("/tesoreria")
+    }
+
+    if (!movement || movement.estado === 'conciliado') {
         redirect("/tesoreria")
     }
 
