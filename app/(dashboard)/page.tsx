@@ -4,6 +4,7 @@ import { RecentInvoices } from "@/components/dashboard/RecentInvoices"
 import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments"
 import { TopClientes } from "@/components/dashboard/TopClientes"
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary"
+import { ComparisonChart } from "@/components/dashboard/ComparisonChart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
@@ -108,15 +109,39 @@ async function getDashboardData() {
       .gte('fecha', hace6Meses)
       .neq('estado', 'anulada')
 
-    const ventasPorMes: { mes: string; total: number }[] = []
+    console.log('Fetching gastos6Meses...')
+    const { data: gastos6Meses } = await supabase
+      .from('gastos')
+      .select('fecha, importe')
+      .gte('fecha', hace6Meses)
+
+    console.log('Fetching pagosFijos...')
+    const { data: pagosFijos } = await supabase
+      .from('pagos_fijos')
+      .select('*')
+      .eq('activo', true)
+
+    const totalGastosFijos = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
+
+    const comparativaMensual: { mes: string; ingresos: number; gastos: number }[] = []
     for (let i = 5; i >= 0; i--) {
       const fecha = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
       const nombreMesGraph = fecha.toLocaleDateString('es-ES', { month: 'short' })
-      const total = (facturas6Meses || [])
+
+      const ingresos = (facturas6Meses || [])
         .filter(f => f.fecha && typeof f.fecha === 'string' && f.fecha.startsWith(mesKey))
         .reduce((sum, f) => sum + (f.total || 0), 0) || 0
-      ventasPorMes.push({ mes: nombreMesGraph, total })
+
+      const gastosVariables = (gastos6Meses || [])
+        .filter(g => g.fecha && typeof g.fecha === 'string' && g.fecha.startsWith(mesKey))
+        .reduce((sum, g) => sum + (g.importe || 0), 0) || 0
+
+      comparativaMensual.push({
+        mes: nombreMesGraph,
+        ingresos,
+        gastos: gastosVariables + totalGastosFijos
+      })
     }
 
     console.log('Fetching lineasMes...')
@@ -185,26 +210,9 @@ async function getDashboardData() {
       }
     }) || []
 
-    console.log('Fetching pagosFijos...')
-    const { data: pagosFijos } = await supabase
-      .from('pagos_fijos')
-      .select('*')
-      .eq('activo', true)
-      .order('dia_inicio', { ascending: true })
-
-    const totalGastosFijos = pagosFijos?.reduce((sum, p) => sum + (p.importe || 0), 0) || 0
-
-    console.log('Fetching gastosData...')
-    const { data: gastosData } = await supabase
-      .from('gastos')
-      .select('importe')
-      .gte('fecha', primerDiaMes)
-    // Opcional: filtrar por estado? Generalmente gasto registrado = gasto a contabilizar
-    //.neq('estado', 'cancelado') // Asumiendo que existiera estado cancelado
-
-    // Importante: Asegurar que la tabla gastos existe y tiene datos. 
-    // Si falla, retornamos 0 para no romper el dashboard
-    const totalGastosVariables = gastosData?.reduce((sum, g) => sum + (g.importe || 0), 0) || 0
+    const totalGastosVariables = (gastos6Meses || [])
+      .filter(g => g.fecha && typeof g.fecha === 'string' && g.fecha.startsWith(primerDiaMes.slice(0, 7)))
+      .reduce((sum, g) => sum + (g.importe || 0), 0) || 0
 
     console.log('Fetching facturasClientes for topClientes...')
     const { data: facturasClientes } = await supabase
@@ -258,7 +266,7 @@ async function getDashboardData() {
       topClientes: topClientesList,
       numFacturasPendientes,
       diasPromedioPendiente,
-      ventasPorMes,
+      comparativaMensual,
       topProductosMes,
       nombreMes,
       totalGastosFijos,
@@ -281,9 +289,10 @@ async function getDashboardData() {
       diasPromedioPendiente: sanitizeNumber(result.diasPromedioPendiente),
       totalGastosFijos: sanitizeNumber(result.totalGastosFijos),
       totalGastosVariables: sanitizeNumber(result.totalGastosVariables),
-      ventasPorMes: result.ventasPorMes.map(v => ({
+      comparativaMensual: result.comparativaMensual.map((v: any) => ({
         ...v,
-        total: sanitizeNumber(v.total)
+        ingresos: sanitizeNumber(v.ingresos),
+        gastos: sanitizeNumber(v.gastos)
       })),
       topClientes: result.topClientes.map(c => ({
         ...c,
@@ -361,32 +370,8 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Ventas últimos 6 meses - Mini gráfico de barras */}
-        <Card className="col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventas últimos 6 meses</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-1 h-16">
-              {data.ventasPorMes.map((m, i) => {
-                const maxTotal = Math.max(...data.ventasPorMes.map(v => v.total))
-                const height = maxTotal > 0 ? (m.total / maxTotal) * 100 : 0
-                const isCurrentMonth = i === data.ventasPorMes.length - 1
-                return (
-                  <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className={`w-full rounded-t transition-all ${isCurrentMonth ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                      style={{ height: `${Math.max(height, 4)}%` }}
-                      title={`${m.mes}: ${m.total.toFixed(0)}€`}
-                    />
-                    <span className="text-[10px] text-muted-foreground">{m.mes}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Comparativa Ventas vs Gastos - Gráfico Recharts */}
+        <ComparisonChart data={data.comparativaMensual} />
 
         {/* Top producto del mes */}
         <Card>
