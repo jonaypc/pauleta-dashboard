@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
@@ -13,7 +14,6 @@ import {
   BarChart3,
   Settings,
   CreditCard,
-  ShoppingBag,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -98,8 +98,15 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-pauleta-mango to-pauleta-fresa">
-            <ShoppingBag className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white overflow-hidden border">
+            <Image
+              src="/logo.png"
+              alt="Pauleta Logo"
+              width={36}
+              height={36}
+              className="h-full w-full object-contain"
+              unoptimized
+            />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
