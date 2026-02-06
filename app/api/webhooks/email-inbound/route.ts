@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { analyzeTextWithGPT, analyzeImageWithGPT } from "@/lib/ai/invoice-parser"
 
 // Configurar tiempo máximo - proceso largo
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "No attachments found to process" }, { status: 200 })
         }
 
-        const supabase = await createClient()
+        const supabase = await createAdminClient()
         const results = []
 
         // 3. Procesar cada archivo
