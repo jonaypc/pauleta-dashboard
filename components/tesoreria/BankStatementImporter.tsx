@@ -44,6 +44,38 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
         }
     }
 
+    // Helper to format date consistently for Supabase (YYYY-MM-DD)
+    const formatForSupabase = (dateInput: any): string | null => {
+        if (!dateInput) return null
+
+        try {
+            let d: Date
+
+            // Handle Excel serial numbers
+            if (typeof dateInput === 'number') {
+                // Excel dates are days since 1899-12-30
+                d = new Date((dateInput - 25569) * 86400 * 1000)
+            } else if (dateInput instanceof Date) {
+                d = dateInput
+            } else {
+                // Try parsing string
+                const dateStr = String(dateInput).trim()
+                // Simple DD/MM/YYYY or DD-MM-YYYY check
+                const parts = dateStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/)
+                if (parts) {
+                    d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]))
+                } else {
+                    d = new Date(dateStr)
+                }
+            }
+
+            if (isNaN(d.getTime())) return null
+            return d.toISOString().split('T')[0]
+        } catch (e) {
+            return null
+        }
+    }
+
     const processFile = (file: File) => {
         setIsLoading(true)
         setFile(file)
@@ -124,12 +156,17 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                     skipEmptyLines: true,
                     complete: async (results) => {
                         try {
-                            const mapped = results.data.map(row => ({
-                                fecha: (row as any)[mapping.fecha],
-                                importe: parseFloat(String((row as any)[mapping.importe]).replace(',', '.')),
-                                descripcion: (row as any)[mapping.descripcion] || "Sin descripción",
-                                referencia: mapping.referencia && mapping.referencia !== "unmapped" ? (row as any)[mapping.referencia] : ""
-                            })).filter(r => r.fecha && !isNaN(r.importe))
+                            const mapped = results.data.map((row: any) => {
+                                const fechaRaw = row[mapping.fecha]
+                                const fechaFormatted = formatForSupabase(fechaRaw)
+
+                                return {
+                                    fecha: fechaFormatted,
+                                    importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
+                                    descripcion: row[mapping.descripcion] || "Sin descripción",
+                                    referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
+                                }
+                            }).filter(r => r.fecha && !isNaN(r.importe)) as any[]
 
                             if (mapped.length === 0) {
                                 throw new Error("No se encontraron movimientos válidos en el archivo.")
@@ -166,12 +203,17 @@ export function BankStatementImporter({ onImportComplete }: BankStatementImporte
                         const worksheet = workbook.Sheets[firstSheetName]
                         const json = XLSX.utils.sheet_to_json(worksheet) as any[]
 
-                        const mapped = json.map(row => ({
-                            fecha: row[mapping.fecha],
-                            importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
-                            descripcion: row[mapping.descripcion] || "Sin descripción",
-                            referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
-                        })).filter(r => r.fecha && !isNaN(r.importe))
+                        const mapped = json.map(row => {
+                            const fechaRaw = row[mapping.fecha]
+                            const fechaFormatted = formatForSupabase(fechaRaw)
+
+                            return {
+                                fecha: fechaFormatted,
+                                importe: parseFloat(String(row[mapping.importe]).replace(',', '.')),
+                                descripcion: row[mapping.descripcion] || "Sin descripción",
+                                referencia: mapping.referencia && mapping.referencia !== "unmapped" ? row[mapping.referencia] : ""
+                            }
+                        }).filter(r => r.fecha && !isNaN(r.importe)) as any[]
 
                         if (mapped.length === 0) {
                             throw new Error("No se encontraron movimientos válidos en el archivo.")

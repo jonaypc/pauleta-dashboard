@@ -11,27 +11,35 @@ export interface BankMovement {
 }
 
 export async function saveBankMovements(movements: BankMovement[]) {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    // Insertar movimientos
-    const { data, error } = await supabase
-        .from("banco_movimientos")
-        .insert(movements.map(m => ({
-            fecha: m.fecha,
-            importe: m.importe,
-            descripcion: m.descripcion,
-            referencia: m.referencia,
-            estado: 'pendiente'
-        })))
-        .select()
+        // Insertar movimientos
+        const { data, error } = await supabase
+            .from("banco_movimientos")
+            .insert(movements.map(m => ({
+                fecha: m.fecha,
+                importe: m.importe,
+                descripcion: m.descripcion,
+                referencia: m.referencia,
+                estado: 'pendiente'
+            })))
+            .select()
 
-    if (error) {
-        console.error("Error saving movements", error)
-        throw new Error(error.message)
+        if (error) {
+            console.error("Error saving movements in Supabase:", error)
+            throw new Error(`Error de base de datos: ${error.message}`)
+        }
+
+        revalidatePath("/tesoreria")
+        return {
+            success: true,
+            count: data?.length || 0
+        }
+    } catch (error: any) {
+        console.error("Critical error in saveBankMovements:", error)
+        throw new Error(error.message || "Error desconocido al guardar movimientos")
     }
-
-    revalidatePath("/tesoreria")
-    return { success: true, count: data.length }
 }
 
 export async function getPendingBankMovements() {
