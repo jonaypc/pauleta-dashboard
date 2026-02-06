@@ -54,8 +54,9 @@ export async function getPendingBankMovements() {
     return data
 }
 
-export async function reconcileMovement(movementId: string, matchType: 'gasto' | 'factura', matchId: string) {
+export async function reconcileMovement(movementId: string, matchType: 'gasto' | 'factura', matchIds: string | string[]) {
     const supabase = await createClient()
+    const ids = Array.isArray(matchIds) ? matchIds : [matchIds]
 
     // 1. Actualizar el movimiento de banco
     const { error: moveError } = await supabase
@@ -63,40 +64,57 @@ export async function reconcileMovement(movementId: string, matchType: 'gasto' |
         .update({
             estado: 'conciliado',
             match_type: matchType,
-            match_id: matchId
+            match_id: ids[0] // Guardamos el primero para compatibilidad básica
         })
         .eq("id", movementId)
 
     if (moveError) throw new Error(moveError.message)
 
-    // 2. Realizar acción según tipo
-    if (matchType === 'gasto') {
-        const { error: gastoError } = await supabase
-            .from("gastos")
-            .update({ estado: 'pagado' })
-            .eq("id", matchId)
+    // 2. Realizar acción según tipo para cada ID
+    for (const matchId of ids) {
+        if (matchType === 'gasto') {
+            const { error: gastoError } = await supabase
+                .from("gastos")
+                .update({ estado: 'pagado' })
+                .eq("id", matchId)
 
-        if (gastoError) throw new Error(gastoError.message)
-    } else if (matchType === 'factura') {
-        // Para facturas (ventas), creamos un registro de cobro
-        const { data: movement } = await supabase
-            .from("banco_movimientos")
-            .select("importe, fecha, descripcion")
-            .eq("id", movementId)
-            .single()
+            if (gastoError) throw new Error(gastoError.message)
+        } else if (matchType === 'factura') {
+            // Para facturas (ventas), creamos un registro de cobro
+            const { data: movement } = await supabase
+                .from("banco_movimientos")
+                .select("importe, fecha, descripcion")
+                .eq("id", movementId)
+                .single()
 
-        if (movement) {
-            const { error: cobroError } = await supabase
-                .from("cobros")
-                .insert({
-                    factura_id: matchId,
-                    importe: movement.importe,
-                    fecha: movement.fecha,
-                    metodo: 'transferencia',
-                    notas: `Conciliado: ${movement.descripcion}`
-                })
+            if (movement) {
+                // Necesitamos el total de la factura para saber cuánto cobrar si es pago total
+                const { data: factura } = await supabase
+                    .from("facturas")
+                    .select("total")
+                    .eq("id", matchId)
+                    .single()
 
-            if (cobroError) throw new Error(cobroError.message)
+                const { error: cobroError } = await supabase
+                    .from("cobros")
+                    .insert({
+                        factura_id: matchId,
+                        importe: factura?.total || 0, // Asumimos pago total si se concilia así
+                        fecha: movement.fecha,
+                        metodo: 'transferencia',
+                        notas: `Conciliado: ${movement.descripcion}${ids.length > 1 ? ' (Múltiple)' : ''}`
+                    })
+
+                if (cobroError) throw new Error(cobroError.message)
+
+                // IMPORTANTE: Actualizar el estado de la factura a 'cobrada'
+                const { error: invoiceStatusError } = await supabase
+                    .from("facturas")
+                    .update({ estado: 'cobrada' })
+                    .eq("id", matchId)
+
+                if (invoiceStatusError) throw new Error(invoiceStatusError.message)
+            }
         }
     }
 
@@ -176,6 +194,31 @@ export async function getReconciliationSuggestions(movementId: string) {
             reference: f.numero || "",
             matchScore: Math.abs(f.total - absAmount) < 0.01 ? 100 : 80
         }))
+
+        // Si es un ingreso, mostrar también facturas pendientes recientes como sugerencia "genérica"
+        // Esto permite la conciliación manual aunque no coincida el importe total exacto
+        const { data: recentPending } = await supabase
+            .from("facturas")
+            .select("*, cliente:clientes(nombre)")
+            .neq("estado", "cobrada")
+            .neq("estado", "anulada")
+            .order("fecha", { ascending: false })
+            .limit(10)
+
+        const currentIds = new Set(suggestions.map(s => s.id))
+        const extras = (recentPending || [])
+            .filter(f => !currentIds.has(f.id))
+            .map(f => ({
+                id: f.id,
+                type: 'factura',
+                date: f.fecha,
+                amount: f.total,
+                entity: f.cliente?.nombre || "Sin cliente",
+                reference: f.numero || "",
+                matchScore: 10 // Valor bajo para ordenarlas al final
+            }))
+
+        suggestions = [...suggestions, ...extras]
     }
 
     return { movement, suggestions }
