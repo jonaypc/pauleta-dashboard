@@ -11,7 +11,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
 interface QueuedExpense extends ExtractedExpenseData {
-    id: string
+    queueId: string
     saved: boolean
 }
 
@@ -63,7 +63,7 @@ export default function NuevoGastoPage() {
         if (expenseQueue.length > 0) {
             const newItem: QueuedExpense = {
                 ...dataWithMatch,
-                id: `exp-${Date.now()}`,
+                queueId: `exp-${Date.now()}`,
                 saved: false
             }
             setExpenseQueue(prev => [...prev, newItem])
@@ -78,7 +78,7 @@ export default function NuevoGastoPage() {
             return {
                 ...data,
                 pago_fijo_id: matchId || data.pago_fijo_id, // Usar match o mantener lo que venga (generalmente null)
-                id: `exp-${Date.now()}-${idx}`,
+                queueId: `exp-${Date.now()}-${idx}`,
                 saved: false
             }
         })
@@ -177,7 +177,7 @@ export default function NuevoGastoPage() {
                         <div className="flex gap-2 overflow-x-auto pb-2">
                             {expenseQueue.map((item, idx) => (
                                 <button
-                                    key={item.id}
+                                    key={item.queueId}
                                     onClick={() => selectFromQueue(idx)}
                                     disabled={item.saved}
                                     className={`flex-shrink-0 p-3 rounded-lg border transition-all min-w-[140px] text-left ${idx === currentIndex
