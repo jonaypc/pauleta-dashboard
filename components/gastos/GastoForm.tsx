@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -20,10 +20,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
-import { Loader2, Save, Calculator, Link as LinkIcon } from "lucide-react"
+import { Loader2, Save, Calculator, Link as LinkIcon, Plus, Trash2 } from "lucide-react"
 import { CATEGORIAS_GASTOS } from "./constants"
 
 // Definición local flexible para aceptar datos de BD o de Extracción
+export interface GastoLineaData {
+    id?: string
+    descripcion?: string
+    base_imponible: number
+    tipo_impuesto: number
+    importe_impuesto: number
+    subtotal: number
+}
+
 export interface GastoFormData {
     id?: string
     numero?: string | null
@@ -42,6 +51,7 @@ export interface GastoFormData {
     impuestos?: number | string | null
     tipo_impuesto?: number | string | null
     pago_fijo_id?: string | null
+    lineas?: GastoLineaData[]
 }
 
 const formSchema = z.object({
@@ -54,10 +64,18 @@ const formSchema = z.object({
     metodo_pago: z.string().optional(),
     notas: z.string().optional(),
     // Fiscalidad
-    base_imponible: z.coerce.number().optional(),
-    impuestos: z.coerce.number().optional(),
+    base_imponible: z.coerce.number().optional().default(0),
+    impuestos: z.coerce.number().optional().default(0),
     tipo_impuesto: z.coerce.number().default(7.00),
-    pago_fijo_id: z.string().optional().nullable()
+    pago_fijo_id: z.string().optional().nullable(),
+    lineas: z.array(z.object({
+        id: z.string().optional(),
+        descripcion: z.string().optional(),
+        base_imponible: z.coerce.number(),
+        tipo_impuesto: z.coerce.number(),
+        importe_impuesto: z.coerce.number(),
+        subtotal: z.coerce.number()
+    })).default([])
 })
 
 interface PagoFijoOption {
@@ -88,15 +106,60 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
             categoria: "",
             metodo_pago: "transferencia",
             notas: "",
-            base_imponible: initialData?.base_imponible ? Number(initialData.base_imponible) : undefined,
-            impuestos: initialData?.impuestos ? Number(initialData.impuestos) : undefined,
+            base_imponible: initialData?.base_imponible ? Number(initialData.base_imponible) : 0,
+            impuestos: initialData?.impuestos ? Number(initialData.impuestos) : 0,
             tipo_impuesto: initialData?.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
-            pago_fijo_id: initialData?.pago_fijo_id || "none" // "none" para controlar el select
+            pago_fijo_id: initialData?.pago_fijo_id || "none",
+            lineas: initialData?.lineas || []
         },
+    })
+
+    const { fields, append, remove, replace } = useFieldArray({
+        control: form.control,
+        name: "lineas"
     })
 
     // Track previous ID to detect if we are switching context or just refining
     const lastIdRef = useRef<string | undefined>(initialData?.id)
+
+    // Autocalculadora de Impuestos Bidireccional
+    const handleTotalChange = useCallback((totalValue: number) => {
+        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
+        if (!isNaN(totalValue)) {
+            const base = totalValue / (1 + (taxRate / 100))
+            const taxAmount = totalValue - base
+            form.setValue("base_imponible", parseFloat(base.toFixed(2)))
+            form.setValue("impuestos", parseFloat(taxAmount.toFixed(2)))
+        }
+    }, [form])
+
+    const handleBaseChange = useCallback((baseValue: number) => {
+        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
+        if (!isNaN(baseValue)) {
+            const taxAmount = baseValue * (taxRate / 100)
+            const total = baseValue + taxAmount
+            form.setValue("importe", parseFloat(total.toFixed(2)))
+            form.setValue("impuestos", parseFloat(taxAmount.toFixed(2)))
+        }
+    }, [form])
+
+    const handleTaxRateChange = useCallback((taxRate: number) => {
+        const total = form.getValues("importe")
+        if (total && !isNaN(total)) {
+            handleTotalChange(total)
+        }
+    }, [form, handleTotalChange])
+
+    const updateTotalsFromLines = useCallback(() => {
+        const currentLineas = form.getValues("lineas") || []
+        const totalBase = currentLineas.reduce((acc, l) => acc + (l.base_imponible || 0), 0)
+        const totalTax = currentLineas.reduce((acc, l) => acc + (l.importe_impuesto || 0), 0)
+        const totalAmount = currentLineas.reduce((acc, l) => acc + (l.subtotal || 0), 0)
+
+        form.setValue("base_imponible", parseFloat(totalBase.toFixed(2)))
+        form.setValue("impuestos", parseFloat(totalTax.toFixed(2)))
+        form.setValue("importe", parseFloat(totalAmount.toFixed(2)))
+    }, [form])
 
     // Resetear o fusionar formulario cuando cambia initialData
     useEffect(() => {
@@ -112,10 +175,11 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     categoria: initialData.categoria || "",
                     metodo_pago: initialData.metodo_pago || "transferencia",
                     notas: initialData.notas || "",
-                    base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : undefined,
-                    impuestos: initialData.impuestos ? Number(initialData.impuestos) : undefined,
+                    base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : 0,
+                    impuestos: initialData.impuestos ? Number(initialData.impuestos) : 0,
                     tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
-                    pago_fijo_id: initialData.pago_fijo_id || "none"
+                    pago_fijo_id: initialData.pago_fijo_id || "none",
+                    lineas: (initialData.lineas || []).map(l => ({ ...l, descripcion: l.descripcion || "" }))
                 })
                 lastIdRef.current = initialData.id
             } else {
@@ -134,6 +198,16 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     return incomingVal || defaultVal
                 }
 
+                // Sync lineas from AI breakdown if available
+                let syncedLineas = currentValues.lineas || []
+                if (initialData.lineas && initialData.lineas.length > 0) {
+                    // Convert null descriptions to empty strings to satisfy types
+                    syncedLineas = initialData.lineas.map(l => ({
+                        ...l,
+                        descripcion: l.descripcion || ""
+                    }))
+                }
+
                 form.reset({
                     numero: getMergedValue("numero", initialData.numero),
                     fecha: getMergedValue("fecha", initialData.fecha, new Date().toISOString().split('T')[0]),
@@ -146,29 +220,17 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : currentValues.base_imponible,
                     impuestos: initialData.impuestos ? Number(initialData.impuestos) : currentValues.impuestos,
                     tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : (currentValues.tipo_impuesto || 7.00),
-                    pago_fijo_id: initialData.pago_fijo_id || currentValues.pago_fijo_id || "none"
+                    pago_fijo_id: initialData.pago_fijo_id || currentValues.pago_fijo_id || "none",
+                    lineas: syncedLineas
                 })
             }
         }
-    }, [initialData, form])
 
-    // Autocalculadora de Impuestos
-    const calculateTaxes = () => {
-        const total = parseFloat(form.getValues("importe").toString())
-        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
-
-        if (total && !isNaN(total)) {
-            // Asumiendo que Total = Base + (Base * Rate / 100)
-            // Total = Base * (1 + Rate / 100)
-            // Base = Total / (1 + Rate / 100)
-            const base = total / (1 + (taxRate / 100))
-            const taxAmount = total - base
-
-            form.setValue("base_imponible", parseFloat(base.toFixed(2)))
-            form.setValue("impuestos", parseFloat(taxAmount.toFixed(2)))
-            toast({ title: "Cálculo Fiscal", description: "Base e impuestos recalculados desde el total." })
+        // Disparar cálculo inicial si hay importe total
+        if (initialData?.importe) {
+            handleTotalChange(Number(initialData.importe))
         }
-    }
+    }, [initialData, form, handleTotalChange])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
@@ -253,17 +315,52 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     .eq('id', initialData.id)
 
                 if (updateError) throw updateError
+
+                // Actualizar líneas
+                await supabase.from("lineas_gasto").delete().eq("gasto_id", initialData.id)
+                if (values.lineas.length > 0) {
+                    const { error: linesError } = await supabase
+                        .from("lineas_gasto")
+                        .insert(values.lineas.map(l => ({
+                            gasto_id: initialData.id,
+                            descripcion: l.descripcion,
+                            base_imponible: l.base_imponible,
+                            tipo_impuesto: l.tipo_impuesto,
+                            importe_impuesto: l.importe_impuesto,
+                            subtotal: l.subtotal
+                        })))
+                    if (linesError) throw linesError
+                }
+
                 toast({ description: "Gasto actualizado correctamente." })
             } else {
                 // Modo Crear
-                const { error: insertError } = await supabase
+                const { data: newGasto, error: insertError } = await supabase
                     .from("gastos")
                     .insert({
                         ...expenseData,
                         archivo_url: archivoUrl || null
                     })
+                    .select("id")
+                    .single()
 
                 if (insertError) throw insertError
+
+                // Insertar líneas
+                if (values.lineas.length > 0) {
+                    const { error: linesError } = await supabase
+                        .from("lineas_gasto")
+                        .insert(values.lineas.map(l => ({
+                            gasto_id: newGasto.id,
+                            descripcion: l.descripcion,
+                            base_imponible: l.base_imponible,
+                            tipo_impuesto: l.tipo_impuesto,
+                            importe_impuesto: l.importe_impuesto,
+                            subtotal: l.subtotal
+                        })))
+                    if (linesError) throw linesError
+                }
+
                 toast({ description: "Gasto registrado correctamente." })
             }
 
@@ -362,85 +459,232 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     />
                 </div>
 
-                {/* Section: Fiscalidad */}
+                {/* Section: Fiscalidad / Desglose IGIC */}
                 <div className="bg-muted/30 p-4 rounded-lg border border-dashed border-blue-200">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-800">
                             <Calculator className="h-4 w-4" /> Desglose Fiscal (IGIC/IVA)
                         </h3>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-7"
-                            onClick={calculateTaxes}
-                        >
-                            Calcular desde Total
-                        </Button>
+                        {fields.length === 0 && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7 gap-1"
+                                onClick={() => {
+                                    const currentBase = form.getValues("base_imponible") || 0
+                                    const currentTax = form.getValues("tipo_impuesto") || 7.00
+                                    const currentTaxAmount = form.getValues("impuestos") || 0
+                                    const currentTotal = form.getValues("importe") || 0
+                                    append({
+                                        descripcion: "General",
+                                        base_imponible: currentBase,
+                                        tipo_impuesto: currentTax,
+                                        importe_impuesto: currentTaxAmount,
+                                        subtotal: currentTotal
+                                    })
+                                }}
+                            >
+                                <Plus className="h-3 w-3" /> Añadir Desglose (Makro)
+                            </Button>
+                        )}
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {/* Importe Total */}
-                        <FormField
-                            control={form.control}
-                            name="importe"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="font-bold">Total Factura (€)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="0.01" className="font-bold" placeholder="0.00" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Base Imponible */}
-                        <FormField
-                            control={form.control}
-                            name="base_imponible"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Base Imponible (€)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="flex gap-2">
-                            {/* % Impuesto */}
-                            <FormField
-                                control={form.control}
-                                name="tipo_impuesto"
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel>% Imp.</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" step="0.01" placeholder="7.00" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            {/* Importe Impuesto */}
-                            <FormField
-                                control={form.control}
-                                name="impuestos"
-                                render={({ field }) => (
-                                    <FormItem className="flex-[1.5]">
-                                        <FormLabel>Cuota IGIC (€)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                    {fields.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-muted-foreground px-1">
+                                <div className="col-span-4">Descripción</div>
+                                <div className="col-span-2 text-right">Base (€)</div>
+                                <div className="col-span-2 text-right">% IGIC</div>
+                                <div className="col-span-2 text-right">Cuota (€)</div>
+                                <div className="col-span-1 text-right">Total</div>
+                                <div className="col-span-1"></div>
+                            </div>
+                            {fields.map((field, index) => (
+                                <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
+                                    <div className="col-span-4">
+                                        <Input
+                                            placeholder="ej: Alimentos 3%"
+                                            size={1}
+                                            className="h-8 text-xs"
+                                            {...form.register(`lineas.${index}.descripcion` as const)}
+                                        />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            className="h-8 text-xs text-right"
+                                            {...form.register(`lineas.${index}.base_imponible` as const, {
+                                                valueAsNumber: true,
+                                                onChange: (e) => {
+                                                    const base = parseFloat(e.target.value) || 0
+                                                    const rate = form.getValues(`lineas.${index}.tipo_impuesto`) || 0
+                                                    const tax = base * (rate / 100)
+                                                    form.setValue(`lineas.${index}.importe_impuesto`, parseFloat(tax.toFixed(2)))
+                                                    form.setValue(`lineas.${index}.subtotal`, parseFloat((base + tax).toFixed(2)))
+                                                    updateTotalsFromLines()
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            className="h-8 text-xs text-right"
+                                            {...form.register(`lineas.${index}.tipo_impuesto` as const, {
+                                                valueAsNumber: true,
+                                                onChange: (e) => {
+                                                    const rate = parseFloat(e.target.value) || 0
+                                                    const base = form.getValues(`lineas.${index}.base_imponible`) || 0
+                                                    const tax = base * (rate / 100)
+                                                    form.setValue(`lineas.${index}.importe_impuesto`, parseFloat(tax.toFixed(2)))
+                                                    form.setValue(`lineas.${index}.subtotal`, parseFloat((base + tax).toFixed(2)))
+                                                    updateTotalsFromLines()
+                                                }
+                                            })}
+                                        />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            className="h-8 text-xs text-right bg-muted/50"
+                                            readOnly
+                                            {...form.register(`lineas.${index}.importe_impuesto` as const, { valueAsNumber: true })}
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            readOnly
+                                            className="h-8 text-xs text-right bg-muted/50 p-1"
+                                            {...form.register(`lineas.${index}.subtotal` as const, { valueAsNumber: true })}
+                                        />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive"
+                                            onClick={() => {
+                                                remove(index)
+                                                updateTotalsFromLines()
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full h-8 border border-dashed text-xs text-muted-foreground hover:text-primary"
+                                onClick={() => append({ descripcion: "", base_imponible: 0, tipo_impuesto: 7, importe_impuesto: 0, subtotal: 0 })}
+                            >
+                                <Plus className="h-3 w-3 mr-1" /> Añadir otra línea de IGIC
+                            </Button>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-3">
+                            {/* Importe Total */}
+                            <FormField
+                                control={form.control}
+                                name="importe"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="font-bold text-primary">Total Recibo (con IGIC) €</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                className="font-bold border-primary/50"
+                                                placeholder="0.00"
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0
+                                                    field.onChange(val)
+                                                    handleTotalChange(val)
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Base Imponible */}
+                            <FormField
+                                control={form.control}
+                                name="base_imponible"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Base Imponible (Sin IGIC) €</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0
+                                                    field.onChange(val)
+                                                    handleBaseChange(val)
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="flex gap-2">
+                                {/* % Impuesto */}
+                                <FormField
+                                    control={form.control}
+                                    name="tipo_impuesto"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel>% Imp.</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="7.00"
+                                                    {...field}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0
+                                                        field.onChange(val)
+                                                        handleTaxRateChange(val)
+                                                    }}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {/* Importe Impuesto */}
+                                <FormField
+                                    control={form.control}
+                                    name="impuestos"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-[1.5]">
+                                            <FormLabel>Cuota IGIC (€)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Section: Vinculaciones y Categoría */}

@@ -29,6 +29,7 @@ export interface ExtractedExpenseData {
     raw_text?: string
     base_imponible?: number | null
     iva?: number | null
+    desglose_impuestos?: { base: number, porcentaje: number, cuota: number }[]
     concepto?: string | null
     confidence?: number
     isDuplicate?: boolean
@@ -179,6 +180,7 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
                 raw_text: result.parsed.raw_text,
                 base_imponible: result.parsed.base_imponible,
                 iva: result.parsed.iva,
+                desglose_impuestos: result.parsed.desglose_impuestos || [],
                 concepto: result.parsed.concepto,
                 confidence: result.parsed.confidence,
                 isDuplicate

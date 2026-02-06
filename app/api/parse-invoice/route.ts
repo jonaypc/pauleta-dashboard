@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 
+export interface TaxBreakdown {
+    base: number
+    porcentaje: number
+    cuota: number
+}
+
 export interface ParsedInvoiceData {
     fecha: string | null
     importe: number | null
@@ -10,6 +16,7 @@ export interface ParsedInvoiceData {
     base_imponible: number | null
     iva: number | null
     iva_porcentaje: number | null
+    desglose_impuestos?: TaxBreakdown[]
     concepto: string | null
     direccion_proveedor: string | null
     raw_text: string
@@ -156,11 +163,17 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
     "numero": "número de factura completo",
     "concepto": "descripción breve de los productos/servicios facturados",
     "base_imponible": número decimal (sin símbolo €),
-    "iva_porcentaje": número del porcentaje de IVA aplicado (ej: 21),
-    "iva": número decimal del importe del IVA,
+    "iva_porcentaje": número del porcentaje de IVA/IGIC principal aplicado (ej: 7),
+    "iva": número decimal del importe total de IVA/IGIC,
     "importe": número decimal del total a pagar,
+    "desglose_impuestos": [
+        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 },
+        { "base": 50.0, "porcentaje": 3, "cuota": 1.5 }
+    ],
     "confidence": número de 0 a 100 indicando tu confianza en la extracción
-}`
+}
+
+NOTA: Muchas facturas de Makro tienen varios porcentajes de IGIC (3%, 7%, 0%, etc.). Por favor, extrae el desglose completo si está disponible.`
 
     try {
         const response = await getOpenAI().chat.completions.create({
@@ -195,6 +208,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
             base_imponible: typeof parsed.base_imponible === 'number' ? parsed.base_imponible : parseFloat(parsed.base_imponible) || null,
             iva: typeof parsed.iva === 'number' ? parsed.iva : parseFloat(parsed.iva) || null,
             iva_porcentaje: parsed.iva_porcentaje || null,
+            desglose_impuestos: parsed.desglose_impuestos || [],
             concepto: parsed.concepto || null,
             direccion_proveedor: parsed.direccion_proveedor || null,
             raw_text: text,
@@ -223,8 +237,14 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
     "iva_porcentaje": número del porcentaje de impuesto aplicado (IVA o IGIC) (ej: 7, 21),
     "iva": número decimal del importe del impuesto (IVA/IGIC),
     "importe": número decimal del total a pagar,
+    "desglose_impuestos": [
+        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 },
+        { "base": 50.0, "porcentaje": 3, "cuota": 1.5 }
+    ],
     "confidence": número de 0 a 100 indicando tu confianza en la extracción
-}`
+}
+
+NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos.`
 
     try {
         const response = await getOpenAI().chat.completions.create({
@@ -271,6 +291,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
             base_imponible: typeof parsed.base_imponible === 'number' ? parsed.base_imponible : parseFloat(parsed.base_imponible) || null,
             iva: typeof parsed.iva === 'number' ? parsed.iva : parseFloat(parsed.iva) || null,
             iva_porcentaje: parsed.iva_porcentaje || null,
+            desglose_impuestos: parsed.desglose_impuestos || [],
             concepto: parsed.concepto || null,
             direccion_proveedor: parsed.direccion_proveedor || null,
             raw_text: "[Imagen analizada con GPT-4 Vision]",
