@@ -20,6 +20,10 @@ export default function ImportarGastosPage() {
     const router = useRouter()
     const supabase = createClient()
 
+    // Lista de borradores
+    const [drafts, setDrafts] = useState<ExtractedExpenseData[]>([])
+    const [isSaving, setIsSaving] = useState(false)
+
     // Cargar borradores desde BD (Emails pendientes)
     useEffect(() => {
         const loadPendingEmails = async () => {
