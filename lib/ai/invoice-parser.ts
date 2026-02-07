@@ -18,7 +18,14 @@ export interface ParsedInvoiceData {
     iva_porcentaje: number | null
     desglose_impuestos?: TaxBreakdown[]
     concepto: string | null
+    // Provider Details
     direccion_proveedor: string | null
+    codigo_postal_proveedor: string | null
+    ciudad_proveedor: string | null
+    provincia_proveedor: string | null
+    telefono_proveedor: string | null
+    email_proveedor: string | null
+    web_proveedor: string | null
     raw_text?: string
     confidence: number
 }
@@ -52,22 +59,27 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
 {
     "nombre_proveedor": "nombre completo de la empresa que emite la factura",
     "cif_proveedor": "CIF/NIF del proveedor (formato español, ej: B12345678)",
-    "direccion_proveedor": "dirección completa del proveedor",
+    "direccion_proveedor": "solo la calle y número",
+    "codigo_postal_proveedor": "Código Postal (5 dígitos)",
+    "ciudad_proveedor": "Municipio/Localidad",
+    "provincia_proveedor": "Provincia",
+    "telefono_proveedor": "Teléfono de contacto si aparece",
+    "email_proveedor": "Email de contacto si aparece",
+    "web_proveedor": "Página web si aparece",
     "fecha": "fecha de emisión en formato YYYY-MM-DD",
     "numero": "número de factura completo",
     "concepto": "descripción breve de los productos/servicios facturados",
-    "base_imponible": número decimal (sin símbolo €),
-    "iva_porcentaje": número del porcentaje de IVA/IGIC principal aplicado (ej: 7),
-    "iva": número decimal del importe total de IVA/IGIC,
-    "importe": número decimal del total a pagar,
+    "base_imponible": número decimal,
+    "iva_porcentaje": número del porcentaje principal (ej: 7),
+    "iva": número decimal del impuesto,
+    "importe": número decimal del total,
     "desglose_impuestos": [
-        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 },
-        { "base": 50.0, "porcentaje": 3, "cuota": 1.5 }
+        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 }
     ],
-    "confidence": número de 0 a 100 indicando tu confianza en la extracción
+    "confidence": número de 0 a 100
 }
 
-NOTA: Muchas facturas de Makro tienen varios porcentajes de IGIC (3%, 7%, 0%, etc.). Por favor, extrae el desglose completo si está disponible.`
+NOTA: Si es factura de Makro, extrae detalladamente el desglose de IGIC.`
 
     try {
         const response = await getOpenAI().chat.completions.create({
@@ -75,7 +87,7 @@ NOTA: Muchas facturas de Makro tienen varios porcentajes de IGIC (3%, 7%, 0%, et
             messages: [
                 {
                     role: "system",
-                    content: "Eres un experto en análisis de facturas españolas. Extraes información con máxima precisión. Los importes deben ser números decimales sin símbolos de moneda. Si es un ABONO o FACTURA RECTIFICATIVA, devuelve los importes en NEGATIVO. Las fechas en formato YYYY-MM-DD."
+                    content: "Eres un experto en análisis de facturas españolas. Extraes información con máxima precisión. Los importes deben ser números decimales. Si es ABONO, devuelve importes negativos. Las fechas en YYYY-MM-DD."
                 },
                 {
                     role: "user",
@@ -101,7 +113,15 @@ NOTA: Muchas facturas de Makro tienen varios porcentajes de IGIC (3%, 7%, 0%, et
             iva_porcentaje: parsed.iva_porcentaje || null,
             desglose_impuestos: parsed.desglose_impuestos || [],
             concepto: parsed.concepto || null,
+            // New fields
             direccion_proveedor: parsed.direccion_proveedor || null,
+            codigo_postal_proveedor: parsed.codigo_postal_proveedor || null,
+            ciudad_proveedor: parsed.ciudad_proveedor || null,
+            provincia_proveedor: parsed.provincia_proveedor || null,
+            telefono_proveedor: parsed.telefono_proveedor || null,
+            email_proveedor: parsed.email_proveedor || null,
+            web_proveedor: parsed.web_proveedor || null,
+
             raw_text: text,
             confidence: parsed.confidence || 0
         }
@@ -115,27 +135,29 @@ export async function analyzeImageWithGPT(imageBase64: string, mimeType: string)
     const prompt = `Analiza esta imagen de una factura española y extrae toda la información relevante.
 
 Extrae la siguiente información en formato JSON. Si no encuentras algún dato, usa null.
-Responde SOLO con el JSON, sin explicaciones adicionales.
+Responde SOLO con el JSON.
 
 {
-    "nombre_proveedor": "nombre completo de la empresa que emite la factura",
-    "cif_proveedor": "CIF/NIF del proveedor (formato español, ej: B12345678)",
-    "direccion_proveedor": "dirección completa del proveedor",
-    "fecha": "fecha de emisión en formato YYYY-MM-DD",
-    "numero": "número de factura completo",
-    "concepto": "descripción breve de los productos/servicios facturados",
-    "base_imponible": número decimal (sin símbolo €),
-    "iva_porcentaje": número del porcentaje de impuesto aplicado (IVA o IGIC) (ej: 7, 21),
-    "iva": número decimal del importe del impuesto (IVA/IGIC),
-    "importe": número decimal del total a pagar,
+    "nombre_proveedor": "nombre completo de la empresa",
+    "cif_proveedor": "CIF/NIF",
+    "direccion_proveedor": "solo calle y número",
+    "codigo_postal_proveedor": "CP",
+    "ciudad_proveedor": "Ciudad",
+    "provincia_proveedor": "Provincia",
+    "telefono_proveedor": "Teléfono",
+    "email_proveedor": "Email",
+    "fecha": "YYYY-MM-DD",
+    "numero": "Nº Factura",
+    "concepto": "descripción breve",
+    "base_imponible": número,
+    "iva_porcentaje": número (ej: 7),
+    "iva": número,
+    "importe": número total,
     "desglose_impuestos": [
-        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 },
-        { "base": 50.0, "porcentaje": 3, "cuota": 1.5 }
+        { "base": 0.0, "porcentaje": 0, "cuota": 0.0 }
     ],
-    "confidence": número de 0 a 100 indicando tu confianza en la extracción
-}
-
-NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos. Si es un ABONO, los importes deben ser negativos.`
+    "confidence": 0-100
+}`
 
     try {
         const response = await getOpenAI().chat.completions.create({
@@ -143,7 +165,7 @@ NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos. Si e
             messages: [
                 {
                     role: "system",
-                    content: "Eres un experto en análisis de facturas españolas, con especial atención al régimen fiscal de Canarias (IGIC). Extraes información con máxima precisión de imágenes de facturas, tickets y recibos. Los importes deben ser números decimales sin símbolos de moneda. Si es un ABONO o FACTURA RECTIFICATIVA, devuelve los importes en NEGATIVO. Las fechas en formato YYYY-MM-DD. Detecta correctamente si es IVA o IGIC."
+                    content: "Eres un experto en análisis de facturas españolas (IGIC). Extraes datos de imágenes. Importes negativos si es ABONO."
                 },
                 {
                     role: "user",
@@ -178,7 +200,15 @@ NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos. Si e
             iva_porcentaje: parsed.iva_porcentaje || null,
             desglose_impuestos: parsed.desglose_impuestos || [],
             concepto: parsed.concepto || null,
+            // New fields
             direccion_proveedor: parsed.direccion_proveedor || null,
+            codigo_postal_proveedor: parsed.codigo_postal_proveedor || null,
+            ciudad_proveedor: parsed.ciudad_proveedor || null,
+            provincia_proveedor: parsed.provincia_proveedor || null,
+            telefono_proveedor: parsed.telefono_proveedor || null,
+            email_proveedor: parsed.email_proveedor || null,
+            web_proveedor: parsed.web_proveedor || null,
+
             raw_text: "[Imagen analizada con GPT-4 Vision]",
             confidence: parsed.confidence || 0
         }

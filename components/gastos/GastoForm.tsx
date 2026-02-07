@@ -53,7 +53,14 @@ export interface GastoFormData {
     tipo_impuesto?: number | string | null
     pago_fijo_id?: string | null
     lineas?: GastoLineaData[]
-    isDuplicate?: boolean
+    // Provider Address Data
+    direccion_proveedor?: string | null
+    codigo_postal_proveedor?: string | null
+    ciudad_proveedor?: string | null
+    provincia_proveedor?: string | null
+    telefono_proveedor?: string | null
+    email_proveedor?: string | null
+    web_proveedor?: string | null
 }
 
 const formSchema = z.object({
@@ -252,19 +259,40 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
 
             const { data: existingProvider } = await supabase
                 .from("proveedores")
-                .select("id")
+                .select("id, direccion, cif")
                 .ilike("nombre", values.proveedor)
                 .maybeSingle()
 
             if (existingProvider) {
                 proveedorId = existingProvider.id
+                // Opcional: Actualizar si faltan datos y los tenemos ahora
+                if ((!existingProvider.direccion && initialData?.direccion_proveedor) || (!existingProvider.cif && initialData?.cif_proveedor)) {
+                    await supabase.from("proveedores").update({
+                        direccion: existingProvider.direccion || initialData?.direccion_proveedor,
+                        cif: existingProvider.cif || initialData?.cif_proveedor,
+                        codigo_postal: initialData?.codigo_postal_proveedor,
+                        ciudad: initialData?.ciudad_proveedor,
+                        provincia: initialData?.provincia_proveedor,
+                        telefono: initialData?.telefono_proveedor,
+                        email: initialData?.email_proveedor,
+                        web: initialData?.web_proveedor
+                    }).eq("id", proveedorId)
+                }
+
             } else {
-                // Crear nuevo proveedor
+                // Crear nuevo proveedor con todos los datos disponibles
                 const { data: newProvider, error: providerError } = await supabase
                     .from("proveedores")
                     .insert({
                         nombre: values.proveedor,
-                        cif: initialData?.cif_proveedor // Usar CIF extraído si está disponible
+                        cif: initialData?.cif_proveedor,
+                        direccion: initialData?.direccion_proveedor,
+                        codigo_postal: initialData?.codigo_postal_proveedor,
+                        ciudad: initialData?.ciudad_proveedor,
+                        provincia: initialData?.provincia_proveedor,
+                        telefono: initialData?.telefono_proveedor,
+                        email: initialData?.email_proveedor,
+                        web: initialData?.web_proveedor
                     })
                     .select("id")
                     .single()

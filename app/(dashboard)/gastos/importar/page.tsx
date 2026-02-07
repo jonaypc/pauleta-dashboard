@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { GastoFormData, GastoForm } from "@/components/gastos/GastoForm"
+import { Eye } from "lucide-react"
 
 export default function ImportarGastosPage() {
     const { toast } = useToast()
@@ -33,6 +35,7 @@ export default function ImportarGastosPage() {
     // Lista de borradores
     const [drafts, setDrafts] = useState<ExtractedExpenseData[]>([])
     const [isSaving, setIsSaving] = useState(false)
+    const [pagosFijos, setPagosFijos] = useState<any[]>([])
 
     // Cargar borradores desde BD (Emails pendientes)
     useEffect(() => {
@@ -71,6 +74,12 @@ export default function ImportarGastosPage() {
         }
         loadPendingEmails()
         loadPendingEmails()
+
+        const loadPagosFijos = async () => {
+            const { data } = await supabase.from('pagos_fijos').select('id, concepto').eq('activo', true)
+            if (data) setPagosFijos(data)
+        }
+        loadPagosFijos()
     }, [supabase])
 
     const handleMultipleExtracted = (data: ExtractedExpenseData[]) => {
@@ -195,8 +204,26 @@ export default function ImportarGastosPage() {
         }
     }
 
+    // Estado para el diálogo de revisión individual
+    const [selectedDraftIndex, setSelectedDraftIndex] = useState<number | null>(null)
+    const [isReviewOpen, setIsReviewOpen] = useState(false)
+
+    const handleSelectDraft = (index: number) => {
+        setSelectedDraftIndex(index)
+        setIsReviewOpen(true)
+    }
+
+    const handleSingleSaveSuccess = () => {
+        if (selectedDraftIndex !== null) {
+            removeDraft(selectedDraftIndex)
+            setIsReviewOpen(false)
+            setSelectedDraftIndex(null)
+            toast({ title: "Gasto guardado correctamente" })
+        }
+    }
+
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-20">
+        <div className="space-y-6 max-w-7xl mx-auto pb-20">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href="/gastos">
@@ -287,16 +314,6 @@ export default function ImportarGastosPage() {
                                 <CardTitle className="text-lg">Borradores ({drafts.length})</CardTitle>
                                 <CardDescription>Revisa los datos antes de confirmar.</CardDescription>
                             </div>
-                            {drafts.length > 0 && (
-                                <Button onClick={handleSaveAll} disabled={isSaving} className="gap-2">
-                                    {isSaving ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Save className="h-4 w-4" />
-                                    )}
-                                    Guardar Todo ({drafts.length})
-                                </Button>
-                            )}
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">Logs de Conexión</Button>
@@ -321,82 +338,12 @@ export default function ImportarGastosPage() {
                             ) : (
                                 <div className="space-y-4">
                                     {drafts.map((draft, index) => (
-                                        <div key={index} className="flex flex-col gap-3 p-4 border rounded-lg bg-card shadow-sm group hover:border-primary/50 transition-colors">
-                                            {/* Cabecera del item */}
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                                    {/* Proveedor */}
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Proveedor</Label>
-                                                        <Input
-                                                            value={draft.nombre_proveedor || ""}
-                                                            onChange={(e) => updateDraft(index, "nombre_proveedor", e.target.value)}
-                                                            className="h-8 text-sm font-medium"
-                                                            placeholder="Nombre..."
-                                                        />
-                                                    </div>
-
-                                                    {/* Importe */}
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Total (€)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={draft.importe || ""}
-                                                            onChange={(e) => updateDraft(index, "importe", parseFloat(e.target.value))}
-                                                            className="h-8 text-sm font-bold text-right"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                                                    onClick={() => removeDraft(index)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-
-                                            <Separator />
-
-                                            {/* Detalles secundarios */}
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Fecha</Label>
-                                                    <Input
-                                                        type="date"
-                                                        value={draft.fecha || ""}
-                                                        onChange={(e) => updateDraft(index, "fecha", e.target.value)}
-                                                        className="h-7 text-xs"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Nº Factura</Label>
-                                                    <Input
-                                                        value={draft.numero || ""}
-                                                        onChange={(e) => updateDraft(index, "numero", e.target.value)}
-                                                        className="h-7 text-xs"
-                                                        placeholder="F-..."
-                                                    />
-                                                </div>
-                                                {draft.isDuplicate && (
-                                                    <div className="flex items-center justify-center">
-                                                        <Badge variant="destructive" className="text-[10px] gap-1 px-2 h-7 w-full justify-center">
-                                                            <AlertCircle className="h-3 w-3" /> Duplicado
-                                                        </Badge>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Previsualización de archivo */}
-                                            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                                                <span className="truncate max-w-[200px] bg-muted px-2 py-0.5 rounded">
-                                                    {draft.archivo_file?.name}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <DraftItem
+                                            key={index}
+                                            draft={draft}
+                                            onRemove={() => removeDraft(index)}
+                                            onReview={() => handleSelectDraft(index)}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -404,6 +351,159 @@ export default function ImportarGastosPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Modal de Revisión Split View */}
+            <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
+                <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
+                    <div className="flex-1 grid md:grid-cols-2 h-full overflow-hidden">
+                        {/* Columna Izquierda: Previsualización */}
+                        <div className="h-full bg-slate-100 border-r p-4 flex flex-col relative overflow-hidden">
+                            <div className="absolute top-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                                Documento Original
+                            </div>
+                            {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
+                                <DocumentPreview
+                                    file={drafts[selectedDraftIndex].archivo_file}
+                                    url={(drafts[selectedDraftIndex] as any).archivo_url}
+                                />
+                            )}
+                        </div>
+
+                        {/* Columna Derecha: Formulario */}
+                        <div className="h-full overflow-y-auto p-6 bg-white">
+                            <DialogHeader className="mb-6">
+                                <DialogTitle>Confirmar Datos del Gasto</DialogTitle>
+                                <DialogDescription>
+                                    Verifica que la información extraída coincide con el documento.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
+                                <GastoForm
+                                    initialData={convertToFormData(drafts[selectedDraftIndex])}
+                                    onSaveSuccess={handleSingleSaveSuccess}
+                                    pagosFijos={pagosFijos}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    )
+}
+
+// Componente para visualizar el borrador en la lista principal
+function DraftItem({ draft, onRemove, onReview }: { draft: ExtractedExpenseData, onRemove: () => void, onReview: () => void }) {
+    return (
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-card shadow-sm hover:border-primary/50 transition-colors">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="h-10 w-10 shrink-0 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                    {draft.nombre_proveedor ? draft.nombre_proveedor.substring(0, 1).toUpperCase() : "?"}
+                </div>
+                <div className="min-w-0">
+                    <p className="font-medium truncate">{draft.nombre_proveedor || "Proveedor Desconocido"}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-mono">{draft.fecha || "Sin fecha"}</span>
+                        <span>•</span>
+                        <span className="font-semibold text-foreground">{draft.importe ? `${Number(draft.importe).toFixed(2)} €` : "0.00 €"}</span>
+                        {draft.isDuplicate && (
+                            <Badge variant="destructive" className="ml-2 text-[10px] h-5">Duplicado</Badge>
+                        )}
+                        {draft.archivo_file && (
+                            <Badge variant="outline" className="ml-1 text-[10px] h-5 bg-muted">
+                                {draft.archivo_file.name}
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-2 ml-4">
+                <Button onClick={onReview} size="sm" className="gap-2">
+                    <Eye size={14} />
+                    Revisar
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onRemove} className="text-muted-foreground hover:text-destructive">
+                    <Trash2 size={16} />
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// Convertir datos del borrador al formato del GastoForm
+
+function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
+    return {
+        id: (draft as any).id, // Si existe
+        queueId: Math.random().toString(), // Force reset form
+        numero: draft.numero,
+        fecha: draft.fecha,
+        nombre_proveedor: draft.nombre_proveedor,
+        cif_proveedor: draft.cif_proveedor,
+        importe: draft.importe,
+        // ... otros campos
+        base_imponible: draft.base_imponible,
+        impuestos: draft.iva, // Mapping simple
+        tipo_impuesto: draft.iva_porcentaje || 7.00,
+        estado: 'pendiente',
+        metodo_pago: 'transferencia',
+        notas: draft.concepto || "",
+        archivo_file: draft.archivo_file,
+        archivo_url: (draft as any).archivo_url,
+        isDuplicate: draft.isDuplicate,
+        lineas: draft.desglose_impuestos?.map(gw => ({
+            descripcion: "General",
+            base_imponible: gw.base,
+            tipo_impuesto: gw.porcentaje,
+            importe_impuesto: gw.cuota,
+            subtotal: gw.base + gw.cuota
+        })) || []
+    }
+}
+
+// Componente para visualizar documento (PDF o Imagen)
+function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
+    const objectUrl = useMemo(() => {
+        if (file) return URL.createObjectURL(file)
+        if (url) return url
+        return null
+    }, [file, url])
+
+    // Limpiar URL object
+    useEffect(() => {
+        return () => {
+            if (file && objectUrl && objectUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(objectUrl)
+            }
+        }
+    }, [file, objectUrl])
+
+    if (!objectUrl) {
+        return <div className="flex items-center justify-center h-full text-muted-foreground">Sin documento</div>
+    }
+
+    const isPdf = file?.type === 'application/pdf' || url?.toLowerCase().endsWith('.pdf')
+
+    if (isPdf) {
+        return (
+            <iframe
+                src={`${objectUrl}#toolbar=0&navpanes=0`}
+                className="w-full h-full border-none rounded bg-white shadow-sm"
+            />
+        )
+    }
+
+    // Imagen
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+        <div className="flex items-center justify-center h-full overflow-auto">
+            <img
+                src={objectUrl}
+                alt="Documento"
+                className="max-w-full max-h-full object-contain shadow-sm rounded"
+            />
         </div>
     )
 }
