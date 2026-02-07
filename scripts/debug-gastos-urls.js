@@ -25,23 +25,13 @@ async function main() {
     }
 
     console.log(`Found ${expenses.length} recent expenses:`)
-    for (const e of expenses) {
+    expenses.forEach(e => {
         console.log(`ID: ${e.id}`)
         console.log(`Created: ${e.created_at}`)
         console.log(`URL: ${e.archivo_url}`)
-
-        if (e.archivo_url) {
-            try {
-                const res = await fetch(e.archivo_url, { method: 'HEAD' })
-                console.log(`[HTTP CHECK] Status: ${res.status} ${res.statusText}`)
-            } catch (err) {
-                console.log(`[HTTP CHECK] Error: ${err.message}`)
-            }
-        }
-
         console.log(`Notes (snippet): ${e.notas?.substring(0, 50)}...`)
         console.log('---')
-    }
+    })
 
     // Check bucket public status if possible (indirectly via getPublicUrl)
     const { data } = supabase.storage.from('gastos').getPublicUrl('test.txt')

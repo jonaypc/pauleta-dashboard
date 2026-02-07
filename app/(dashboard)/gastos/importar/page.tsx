@@ -334,35 +334,59 @@ export default function ImportarGastosPage() {
                 <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
                     <div className="flex-1 grid md:grid-cols-2 h-full overflow-hidden">
                         {/* Columna Izquierda: Previsualización */}
-                        <div className="h-full bg-slate-100 border-r p-4 flex flex-col relative overflow-hidden">
-                            <div className="absolute top-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded text-xs">
-                                Documento Original
+                        <div className="h-full bg-slate-100 border-r p-4 flex flex-col relative min-h-0 overflow-hidden">
+                            <div className="absolute top-2 left-2 z-10 flex gap-2">
+                                <Badge variant="secondary" className="bg-black/50 text-white hover:bg-black/60 border-none">
+                                    Documento Original
+                                </Badge>
+                                {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (drafts[selectedDraftIndex].archivo_url || drafts[selectedDraftIndex].archivo_file) && (
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-6 w-6 bg-white/80"
+                                        asChild
+                                        title="Abrir en pestaña nueva"
+                                    >
+                                        <a
+                                            href={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file ? URL.createObjectURL(drafts[selectedDraftIndex].archivo_file) : '#')}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            <Eye className="h-3 w-3" />
+                                        </a>
+                                    </Button>
+                                )}
                             </div>
-                            {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
-                                <DocumentPreview
-                                    file={drafts[selectedDraftIndex].archivo_file}
-                                    url={drafts[selectedDraftIndex].archivo_url || undefined}
-                                    key={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file?.name ?? 'preview')}
-                                />
-                            )}
+
+                            <div className="flex-1 min-h-0 w-full mt-8">
+                                {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
+                                    <DocumentPreview
+                                        file={drafts[selectedDraftIndex].archivo_file}
+                                        url={drafts[selectedDraftIndex].archivo_url || undefined}
+                                        key={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file?.name ?? 'preview')}
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         {/* Columna Derecha: Formulario */}
-                        <div className="h-full overflow-y-auto p-6 bg-white">
-                            <DialogHeader className="mb-6">
+                        <div className="h-full overflow-y-auto p-6 bg-white flex flex-col min-h-0">
+                            <DialogHeader className="mb-6 shrink-0">
                                 <DialogTitle>Confirmar Datos del Gasto</DialogTitle>
                                 <DialogDescription>
                                     Verifica que la información extraída coincide con el documento.
                                 </DialogDescription>
                             </DialogHeader>
 
-                            {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
-                                <GastoForm
-                                    initialData={convertToFormData(drafts[selectedDraftIndex])}
-                                    onSaveSuccess={handleSingleSaveSuccess}
-                                    pagosFijos={pagosFijos}
-                                />
-                            )}
+                            <div className="flex-1">
+                                {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
+                                    <GastoForm
+                                        initialData={convertToFormData(drafts[selectedDraftIndex])}
+                                        onSaveSuccess={handleSingleSaveSuccess}
+                                        pagosFijos={pagosFijos}
+                                    />
+                                )}
+                            </div>
                         </div>
                     </div>
                 </DialogContent>
@@ -411,7 +435,6 @@ function DraftItem({ draft, onRemove, onReview }: { draft: ExtractedExpenseData,
 }
 
 // Convertir datos del borrador al formato del GastoForm
-
 function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
     return {
         id: (draft as any).id, // Si existe
@@ -459,29 +482,42 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     }, [file, objectUrl])
 
     if (!objectUrl) {
-        return <div className="flex items-center justify-center h-full text-muted-foreground">Sin documento</div>
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded bg-slate-50/50">
+                <AlertCircle className="h-8 w-8 mb-2 opacity-20" />
+                <p>Sin documento</p>
+            </div>
+        )
     }
 
-    const isPdf = file?.type === 'application/pdf' || url?.toLowerCase().endsWith('.pdf') || (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp)$/i))
+    const isPdf = file?.type === 'application/pdf' ||
+        url?.toLowerCase().endsWith('.pdf') ||
+        (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
 
     if (isPdf) {
         return (
-            <iframe
-                src={`${objectUrl}#toolbar=0&navpanes=0`}
-                className="w-full h-full border-none rounded bg-white shadow-sm"
-                title="Vista previa del documento"
-            />
+            <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden border">
+                <iframe
+                    src={`${objectUrl}#view=FitH&toolbar=0`}
+                    className="w-full h-full border-none"
+                    title="Vista previa del documento"
+                />
+            </div>
         )
     }
 
     // Imagen
     /* eslint-disable @next/next/no-img-element */
     return (
-        <div className="flex items-center justify-center h-full overflow-auto bg-slate-200/50 rounded">
+        <div className="flex items-center justify-center h-full w-full overflow-auto bg-slate-200/30 rounded border p-2">
             <img
                 src={objectUrl}
                 alt="Documento"
-                className="max-w-full max-h-full object-contain shadow-sm rounded"
+                className="max-w-full max-h-full object-contain shadow-md rounded"
+                onError={(e) => {
+                    console.error("Error loading preview image");
+                    // Opcionalmente mostrar fallback
+                }}
             />
         </div>
     )
