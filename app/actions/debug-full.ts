@@ -35,7 +35,7 @@ export async function runFullDebugAction() {
             estado: 'pendiente',
             proveedor_id: null,
             base_imponible: 0.10,
-            iva: 0,
+            impuestos: 0,
             // NOTA: Usamos notas para concepto tambien
             notas: `Debug Full Test.\nConcepto: Test de Storage + DB.\nURL: ${publicUrl}`,
             archivo_url: publicUrl
