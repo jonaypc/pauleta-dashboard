@@ -131,43 +131,40 @@ export async function POST(request: NextRequest) {
                     throw new Error("Storage upload failed: " + uploadError.message)
                 }
 
-                // B. Analizar con IA
-                let parsedData = null
-
-                const isImage = file.type.startsWith("image/")
-                const isPdf = file.type === "application/pdf"
+                let debugInfo = { type: 'unknown', text_len: 0, text_preview: '' }
 
                 if (isImage) {
                     const base64 = buffer.toString('base64')
                     parsedData = await analyzeImageWithGPT(base64, file.type)
+                    debugInfo = { type: 'image', text_len: 0, text_preview: 'GPT Vision' }
                 } else if (isPdf) {
                     // Lazy load pdf-parse
                     // @ts-ignore
                     const pdfParser = require("pdf-parse");
                     const pdfData = await pdfParser(buffer)
                     const text = pdfData.text.trim()
-                    // Si hay texto, usar GPT texto. Si es escaneo, fallará (o podríamos implementar PDF->Img->GPT Vision aqui también)
-                    // Por simplicidad en webhook, si falla texto, lo marcamos como revisión manual
+
+                    debugInfo = {
+                        type: 'pdf',
+                        text_len: text.length,
+                        text_preview: text.substring(0, 100)
+                    }
+
+                    // Si hay texto, usar GPT texto.
                     if (text.length > 50) {
                         parsedData = await analyzeTextWithGPT(text)
                     } else {
                         // Fallback simple si no hay texto (escan)
                         parsedData = {
-                            concepto: "PDF Escaneado (Sin OCR)",
+                            concepto: "PDF Escaneado (Requiere revisión manual)",
                             confidence: 0,
-                            // resto null
+                            nombre_proveedor: "Desconocido (Documento Escaneado)",
+                            importe: 0
                         }
                     }
                 }
 
-                // C. Insertar en BD como "Pendiente / Borrador"
-                // Usamos la tabla 'gastos' pero con estado 'borrador' si existe ese estado?
-                // El usuario quiere "Inbox".
-                // Estado actual: 'pendiente' significa pendiente de PAGO.
-                // Podríamos usar un flag `is_draft` o estado `revision`.
-                // Dado que no tenemos columna `is_draft` aun, vamos a usar `estado: 'pendiente'` 
-                // PERO con nota "IMPORTADO POR EMAIL - REVISAR"
-
+                // C. Insertar en BD
                 // Gestionar proveedor (intentar buscar)
                 let proveedor_id = null
                 if (parsedData?.nombre_proveedor) {
@@ -183,8 +180,8 @@ export async function POST(request: NextRequest) {
                     importe: parsedData?.importe || 0,
                     numero: parsedData?.numero || `EMAIL-${Date.now()}`,
                     proveedor_id,
-                    estado: 'pendiente', // Pendiente de pago
-                    notas: `Importado automáticamente desde email de: ${from}. \nConcepto: ${parsedData?.concepto || subject}\nTexto extraído: ${parsedData ? 'SI' : 'NO'}. \nConfianza IA: ${parsedData?.confidence || 0}%`,
+                    estado: 'pendiente',
+                    notas: `Importado desde Email.\nConcepto: ${parsedData?.concepto || subject}\nDebug: ${debugInfo.type} (${debugInfo.text_len} chars).`,
                     archivo_url: publicUrl,
                     base_imponible: parsedData?.base_imponible,
                     impuestos: parsedData?.iva
@@ -192,9 +189,19 @@ export async function POST(request: NextRequest) {
 
                 if (insertError) {
                     console.error("DB Insert Error:", insertError)
-                    results.push({ file: file.name, status: "error_db", error: insertError.message })
+                    results.push({
+                        file: file.name,
+                        status: "error_db",
+                        error: insertError.message,
+                        debug: debugInfo
+                    })
                 } else {
-                    results.push({ file: file.name, status: "success" })
+                    results.push({
+                        file: file.name,
+                        status: "success",
+                        parsed: parsedData,
+                        debug: debugInfo
+                    })
                 }
 
             } catch (err: any) {
