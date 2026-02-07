@@ -144,6 +144,19 @@ export async function POST(request: NextRequest) {
                     parsedData = await analyzeImageWithGPT(base64, file.type)
                     debugInfo = { type: 'image', text_len: 0, text_preview: 'GPT Vision' }
                 } else if (isPdf) {
+                    // Polyfill simple para DOMMatrix (necesario para algunos PDFs en entorno Node)
+                    if (!global.DOMMatrix) {
+                        // @ts-ignore
+                        global.DOMMatrix = class DOMMatrix {
+                            constructor() {
+                                // @ts-ignore
+                                this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+                            }
+                            translate() { return this; }
+                            scale() { return this; }
+                        }
+                    }
+
                     // Lazy load pdf-parse
                     // @ts-ignore
                     const pdfParser = require("pdf-parse");
