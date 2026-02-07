@@ -496,7 +496,7 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     }
 
     // Imagen
-    // eslint-disable-next-line @next/next/no-img-element
+    /* eslint-disable @next/next/no-img-element */
     return (
         <div className="flex items-center justify-center h-full overflow-auto">
             <img

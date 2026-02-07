@@ -61,6 +61,7 @@ export interface GastoFormData {
     telefono_proveedor?: string | null
     email_proveedor?: string | null
     web_proveedor?: string | null
+    isDuplicate?: boolean
 }
 
 const formSchema = z.object({
