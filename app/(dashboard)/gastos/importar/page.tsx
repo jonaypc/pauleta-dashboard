@@ -467,8 +467,15 @@ function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
 // Componente para visualizar documento (PDF o Imagen)
 function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     const objectUrl = useMemo(() => {
-        if (file) return URL.createObjectURL(file)
-        if (url) return url
+        if (file) {
+            const b = URL.createObjectURL(file)
+            console.log("DocumentPreview: Created blob URL", b)
+            return b
+        }
+        if (url) {
+            console.log("DocumentPreview: Using provided URL", url)
+            return url
+        }
         return null
     }, [file, url])
 
@@ -476,6 +483,7 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     useEffect(() => {
         return () => {
             if (file && objectUrl && objectUrl.startsWith('blob:')) {
+                console.log("DocumentPreview: Revoking blob URL", objectUrl)
                 URL.revokeObjectURL(objectUrl)
             }
         }
@@ -486,6 +494,7 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded bg-slate-50/50">
                 <AlertCircle className="h-8 w-8 mb-2 opacity-20" />
                 <p>Sin documento</p>
+                <p className="text-[10px] mt-2 opacity-50">No hay archivo ni URL disponible</p>
             </div>
         )
     }
@@ -496,12 +505,23 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
 
     if (isPdf) {
         return (
-            <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden border">
-                <iframe
-                    src={`${objectUrl}#view=FitH&toolbar=0`}
-                    className="w-full h-full border-none"
-                    title="Vista previa del documento"
-                />
+            <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden border flex flex-col">
+                <div className="flex-1 min-h-0 relative">
+                    <iframe
+                        src={`${objectUrl}${objectUrl.includes('#') ? '' : '#view=FitH&toolbar=0'}`}
+                        className="w-full h-full border-none"
+                        title="Vista previa del PDF"
+                        onLoad={() => console.log("Iframe loaded successfully")}
+                        onError={(e) => console.error("Iframe load error", e)}
+                    />
+                </div>
+                <div className="p-2 border-t bg-muted/20 flex justify-center gap-2">
+                    <Button variant="outline" size="sm" asChild className="h-7 text-xs">
+                        <a href={objectUrl} target="_blank" rel="noopener noreferrer">
+                            Ver PDF pantalla completa
+                        </a>
+                    </Button>
+                </div>
             </div>
         )
     }
@@ -509,16 +529,34 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     // Imagen
     /* eslint-disable @next/next/no-img-element */
     return (
-        <div className="flex items-center justify-center h-full w-full overflow-auto bg-slate-200/30 rounded border p-2">
-            <img
-                src={objectUrl}
-                alt="Documento"
-                className="max-w-full max-h-full object-contain shadow-md rounded"
-                onError={(e) => {
-                    console.error("Error loading preview image");
-                    // Opcionalmente mostrar fallback
-                }}
-            />
+        <div className="flex flex-col h-full w-full bg-slate-200/30 rounded border overflow-hidden">
+            <div className="flex-1 flex items-center justify-center overflow-auto p-2">
+                <img
+                    src={objectUrl}
+                    alt="Documento"
+                    className="max-w-full max-h-full object-contain shadow-md rounded"
+                    onError={(e) => {
+                        console.error("Error loading preview image", objectUrl);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        // Mostrar error visual
+                        const parent = target.parentElement;
+                        if (parent) {
+                            const errorMsg = document.createElement('div');
+                            errorMsg.className = "text-center text-xs text-destructive p-4";
+                            errorMsg.innerHTML = "Error al cargar imagen. Prueba a abrirla en pestaña nueva.";
+                            parent.appendChild(errorMsg);
+                        }
+                    }}
+                />
+            </div>
+            <div className="p-2 border-t bg-muted/20 flex justify-center gap-2">
+                <Button variant="outline" size="sm" asChild className="h-7 text-xs">
+                    <a href={objectUrl} target="_blank" rel="noopener noreferrer">
+                        Ver imagen pantalla completa
+                    </a>
+                </Button>
+            </div>
         </div>
     )
 }
