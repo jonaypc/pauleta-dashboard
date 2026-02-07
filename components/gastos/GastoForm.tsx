@@ -60,7 +60,7 @@ const formSchema = z.object({
     proveedor: z.string().min(2, "El nombre del proveedor es requerido"),
     numero: z.string().optional(),
     fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
-    importe: z.coerce.number().min(0.01, "El importe debe ser mayor a 0"),
+    importe: z.coerce.number().refine(val => val !== 0, "El importe no puede ser 0"),
     estado: z.string(),
     categoria: z.string().optional(),
     metodo_pago: z.string().optional(),
