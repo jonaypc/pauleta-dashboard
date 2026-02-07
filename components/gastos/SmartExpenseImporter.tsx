@@ -42,6 +42,7 @@ export interface ExtractedExpenseData {
     telefono_proveedor?: string | null
     email_proveedor?: string | null
     web_proveedor?: string | null
+    archivo_url?: string | null
 }
 
 interface ProcessedFile {
