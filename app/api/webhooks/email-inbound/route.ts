@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
                     notas: `Importado automáticamente desde email de: ${from}. \nConcepto: ${parsedData?.concepto || subject}\nTexto extraído: ${parsedData ? 'SI' : 'NO'}. \nConfianza IA: ${parsedData?.confidence || 0}%`,
                     archivo_url: publicUrl,
                     base_imponible: parsedData?.base_imponible,
-                    iva: parsedData?.iva
+                    impuestos: parsedData?.iva
                 })
 
                 if (insertError) {

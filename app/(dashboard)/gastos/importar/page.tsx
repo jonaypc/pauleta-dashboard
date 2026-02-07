@@ -47,7 +47,7 @@ export default function ImportarGastosPage() {
                     archivo_url: g.archivo_url, // Necesitamos extender la interfaz ExtractedExpenseData para admitir URL ya existente
                     concepto: g.notas, // Usamos notas como concepto visual
                     base_imponible: g.base_imponible,
-                    iva: g.iva,
+                    iva: g.impuestos, // Mappeamos la columna de DB 'impuestos' al campo 'iva' del frontend
                     // ID para poder eliminarlo de la BD si se descarta o actualizarlo
                     id: g.id
                 }))
@@ -161,7 +161,7 @@ export default function ImportarGastosPage() {
                         // MEJOR: Llamar a una action `approveEmailExpense(id, data)`
                         estado: 'aprobado',
                         base_imponible: up.base_imponible,
-                        iva: up.iva
+                        impuestos: up.iva
                         // Falta vincular proveedor_id real...
                     }).eq('id', up.id)
                 }
