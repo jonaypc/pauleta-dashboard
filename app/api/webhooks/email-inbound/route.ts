@@ -50,17 +50,36 @@ export async function POST(request: NextRequest) {
         // Vamos a iterar sobre todas las entries buscando Files
         const files: File[] = []
         const entries = Array.from(formData.entries())
+        const debugEntries: any[] = []
+
         for (const [key, value] of entries) {
-            if (value instanceof File) {
+            const entryType = typeof value
+            const constructor = value?.constructor?.name
+            // @ts-ignore
+            const mime = value?.type
+            // @ts-ignore
+            const size = value?.size
+
+            debugEntries.push({ key, type: entryType, constructor, mime, size })
+
+            if (value instanceof File || value instanceof Blob) {
                 // Filtrar solo PDFs e Imágenes
-                if (value.type === "application/pdf" || value.type.startsWith("image/")) {
-                    files.push(value)
+                // A veces el tipo puede venir genérico, o CloudMailin usa 'application/x-pdf' etc.
+                if (mime === "application/pdf" || mime?.startsWith("image/")) {
+                    files.push(value as File)
                 }
             }
         }
 
         if (files.length === 0) {
-            if (logId) await supabase.from('webhook_logs').update({ status: 'no_attachments', error: 'No PDF/Image found' }).eq('id', logId)
+            if (logId) await supabase.from('webhook_logs').update({
+                status: 'no_attachments',
+                error: 'No PDF/Image found',
+                metadata: {
+                    ...logEntry?.metadata,
+                    debug_entries: debugEntries // Guardamos info de qué llegó para depurar
+                }
+            }).eq('id', logId)
             return NextResponse.json({ message: "No attachments found to process" }, { status: 200 })
         }
 
