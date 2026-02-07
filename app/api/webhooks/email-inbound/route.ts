@@ -131,7 +131,13 @@ export async function POST(request: NextRequest) {
                     throw new Error("Storage upload failed: " + uploadError.message)
                 }
 
+                let parsedData: any = null
+
                 let debugInfo = { type: 'unknown', text_len: 0, text_preview: '' }
+
+                const isImage = file.type.startsWith("image/")
+                // Make pdf detection more robust based on previous relaxed checks
+                const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
 
                 if (isImage) {
                     const base64 = buffer.toString('base64')
