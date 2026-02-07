@@ -8,30 +8,39 @@ export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
     try {
-        // 1. Validar API Key (Seguridad básica)
-        const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
-        if (apiKey !== process.env.EMAIL_INBOUND_API_KEY) {
-            console.error(`[Webhook Auth Error] Received: '${apiKey}', Expected: '${process.env.EMAIL_INBOUND_API_KEY}'`)
-            console.log("Headers:", Object.fromEntries(request.headers.entries()))
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        // 0. Parsear body & Logging (Para debug total)
+        let formData: FormData | null = null
+        try {
+            formData = await request.formData()
+        } catch (e) {
+            console.error("Error parsing form data:", e)
         }
 
-        // 2. Parsear el body (Asumimos formato multipart/form-data típico de CloudMailin/Mailgun)
-        const formData = await request.formData()
-
-        // LOGGING START
         const supabase = await createAdminClient()
         const { data: logEntry, error: logError } = await supabase.from('webhook_logs').insert({
             source: 'email-inbound',
             status: 'received',
             metadata: {
                 headers: Object.fromEntries(request.headers.entries()),
-                form_keys: Array.from(formData.keys())
+                url: request.url,
+                form_keys: formData ? Array.from(formData.keys()) : []
             }
         }).select().single()
 
         const logId = logEntry?.id
-        // LOGGING END
+
+        // 1. Validar API Key (Seguridad básica)
+        const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
+        if (apiKey !== process.env.EMAIL_INBOUND_API_KEY) {
+            console.error(`[Webhook Auth Error] Received: '${apiKey}'`)
+            if (logId) await supabase.from('webhook_logs').update({ status: 'error', error: 'Unauthorized: Invalid API Key' }).eq('id', logId)
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        if (!formData) {
+            if (logId) await supabase.from('webhook_logs').update({ status: 'error', error: 'No Form Data' }).eq('id', logId)
+            return NextResponse.json({ error: "No Form Data" }, { status: 400 })
+        }
 
         const subject = formData.get("subject") as string || "Sin asunto"
         const from = formData.get("from") as string || "Desconocido"
