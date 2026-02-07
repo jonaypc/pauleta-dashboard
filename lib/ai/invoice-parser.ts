@@ -75,7 +75,7 @@ NOTA: Muchas facturas de Makro tienen varios porcentajes de IGIC (3%, 7%, 0%, et
             messages: [
                 {
                     role: "system",
-                    content: "Eres un experto en análisis de facturas españolas. Extraes información con máxima precisión. Los importes deben ser números decimales sin símbolos de moneda. Las fechas en formato YYYY-MM-DD."
+                    content: "Eres un experto en análisis de facturas españolas. Extraes información con máxima precisión. Los importes deben ser números decimales sin símbolos de moneda. Si es un ABONO o FACTURA RECTIFICATIVA, devuelve los importes en NEGATIVO. Las fechas en formato YYYY-MM-DD."
                 },
                 {
                     role: "user",
@@ -135,7 +135,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
     "confidence": número de 0 a 100 indicando tu confianza en la extracción
 }
 
-NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos.`
+NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos. Si es un ABONO, los importes deben ser negativos.`
 
     try {
         const response = await getOpenAI().chat.completions.create({
@@ -143,7 +143,7 @@ NOTA: Extrae el desglose de impuestos si la factura tiene múltiples tipos.`
             messages: [
                 {
                     role: "system",
-                    content: "Eres un experto en análisis de facturas españolas, con especial atención al régimen fiscal de Canarias (IGIC). Extraes información con máxima precisión de imágenes de facturas, tickets y recibos. Los importes deben ser números decimales sin símbolos de moneda. Las fechas en formato YYYY-MM-DD. Detecta correctamente si es IVA o IGIC."
+                    content: "Eres un experto en análisis de facturas españolas, con especial atención al régimen fiscal de Canarias (IGIC). Extraes información con máxima precisión de imágenes de facturas, tickets y recibos. Los importes deben ser números decimales sin símbolos de moneda. Si es un ABONO o FACTURA RECTIFICATIVA, devuelve los importes en NEGATIVO. Las fechas en formato YYYY-MM-DD. Detecta correctamente si es IVA o IGIC."
                 },
                 {
                     role: "user",
