@@ -63,10 +63,26 @@ export async function POST(request: NextRequest) {
             debugEntries.push({ key, type: entryType, constructor, mime, size })
 
             if (value instanceof File || value instanceof Blob) {
-                // Filtrar solo PDFs e Imágenes
-                // A veces el tipo puede venir genérico, o CloudMailin usa 'application/x-pdf' etc.
-                if (mime === "application/pdf" || mime?.startsWith("image/")) {
-                    files.push(value as File)
+                const file = value as File
+                // Relaxed Check:
+                // 1. Explicit MIME types for PDF/Image
+                // 2. Generic MIME (octet-stream) but correct extension in name
+                // 3. Key explicitly mentions 'attachment' and has size > 100 bytes
+
+                const isPdfMime = mime === "application/pdf" || mime === "application/x-pdf"
+                const isImageMime = mime?.startsWith("image/")
+                const hasPdfExt = file.name?.toLowerCase().endsWith(".pdf")
+                const hasImageExt = file.name?.match(/\.(jpg|jpeg|png|heic)$/i)
+                const isAttachmentKey = key.includes("attachment")
+                const hasContent = size > 100
+
+                if (isPdfMime || isImageMime || (hasPdfExt && hasContent) || (hasImageExt && hasContent) || (isAttachmentKey && hasContent)) {
+                    // Force type if missing but extension is known
+                    if (!file.type && hasPdfExt) {
+                        Object.defineProperty(file, 'type', { value: 'application/pdf' });
+                    }
+                    console.log(`[Webhook] Accepted file: ${key} (${mime}) size=${size}`)
+                    files.push(file)
                 }
             }
         }
