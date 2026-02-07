@@ -16,7 +16,7 @@ import * as pdfjs from 'pdfjs-dist'
 // Configurar worker de PDF.js
 if (typeof window !== 'undefined') {
     // Usar la versión específica de unpkg que coincide con la instalada o una fija estable
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
 }
 
 export interface ExtractedExpenseData {
