@@ -201,6 +201,19 @@ export default function ImportarGastosPage() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20">
+            <div className="bg-red-600 text-white p-4 rounded-lg shadow-xl animate-bounce flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                    <AlertCircle className="h-8 w-8" />
+                    <div>
+                        <h2 className="text-xl font-bold uppercase">⚠️ TEST DE VERSIÓN ACTIVA (07/02 - 23:15)</h2>
+                        <p className="text-sm opacity-90">Si ves este banner rojo, el código se ha actualizado correctamente.</p>
+                    </div>
+                </div>
+                <Button variant="outline" className="bg-white text-red-600 hover:bg-red-50 border-white" onClick={() => window.location.reload()}>
+                    FORZAR RECARGA
+                </Button>
+            </div>
+
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href="/gastos">
