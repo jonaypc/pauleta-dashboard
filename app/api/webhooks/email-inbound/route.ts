@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
                     parsedData = await analyzeImageWithGPT(base64, file.type)
                     debugInfo = { type: 'image', text_len: 0, text_preview: 'GPT Vision' }
                 } else if (isPdf) {
-                    // Polyfill simple para DOMMatrix (necesario para algunos PDFs en entorno Node)
+                    // Polyfill simple para DOMMatrix (necesario para pdfjs-dist en entorno Node)
                     if (!global.DOMMatrix) {
                         // @ts-ignore
                         global.DOMMatrix = class DOMMatrix {
@@ -157,11 +157,31 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
-                    // Lazy load pdf-parse
+                    // Direct usage of pdfjs-dist (Legacy build for Node)
                     // @ts-ignore
-                    const pdfParser = require("pdf-parse");
-                    const pdfData = await pdfParser(buffer)
-                    const text = pdfData.text.trim()
+                    const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+
+                    const uint8Array = new Uint8Array(buffer);
+                    const loadingTask = pdfjsLib.getDocument({
+                        data: uint8Array,
+                        // Disable worker for simple text extraction in Node
+                        disableFontFace: true,
+                        verbosity: 0
+                    });
+
+                    const pdfDocument = await loadingTask.promise
+                    let text = ""
+
+                    // Extract text from first 5 pages max to save time
+                    const maxPages = Math.min(pdfDocument.numPages, 5)
+                    for (let i = 1; i <= maxPages; i++) {
+                        const page = await pdfDocument.getPage(i)
+                        const content = await page.getTextContent()
+                        const strings = content.items.map((item: any) => item.str)
+                        text += strings.join(" ") + "\n"
+                    }
+
+                    text = text.trim()
 
                     debugInfo = {
                         type: 'pdf',
