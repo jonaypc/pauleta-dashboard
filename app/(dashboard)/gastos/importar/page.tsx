@@ -15,17 +15,13 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { createBulkGastos } from "@/lib/actions/gastos"
 import { testDbLog } from "@/app/actions/test-log"
-import { getWebhookLogs } from "@/app/actions/get-logs"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, Save, ArrowLeft, CheckCircle, AlertCircle, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft, CheckCircle, AlertCircle, Trash2, Eye } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { GastoFormData, GastoForm } from "@/components/gastos/GastoForm"
-import { Eye } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function ImportarGastosPage() {
     const { toast } = useToast()
@@ -56,7 +52,7 @@ export default function ImportarGastosPage() {
                     nombre_proveedor: (g.notas && g.notas.includes("Importado automáticamente")) ? "Revisar Proveedor" : "Proveedor Desconocido",
                     // Intentar recuperar el nombre del proveedor si tenemos ID, pero es complejo aqui sin join
                     archivo_file: null, // No tenemos File object, pero tenemos URL
-                    archivo_url: g.archivo_url, // Necesitamos extender la interfaz ExtractedExpenseData para admitir URL ya existente
+                    archivo_url: g.archivo_url,
                     concepto: g.notas, // Usamos notas como concepto visual
                     base_imponible: g.base_imponible,
                     iva: g.impuestos, // Mappeamos la columna de DB 'impuestos' al campo 'iva' del frontend
@@ -72,7 +68,6 @@ export default function ImportarGastosPage() {
                 })
             }
         }
-        loadPendingEmails()
         loadPendingEmails()
 
         const loadPagosFijos = async () => {
@@ -103,10 +98,6 @@ export default function ImportarGastosPage() {
         setDrafts(prev => prev.filter((_, i) => i !== index))
     }
 
-    const updateDraft = (index: number, field: keyof ExtractedExpenseData, value: any) => {
-        setDrafts(prev => prev.map((d, i) => i === index ? { ...d, [field]: value } : d))
-    }
-
     const handleSaveAll = async () => {
         if (drafts.length === 0) return
         setIsSaving(true)
@@ -114,7 +105,7 @@ export default function ImportarGastosPage() {
         try {
             // 1. Subir archivos y preparar datos
             const gastosToSave = await Promise.all(drafts.map(async (draft) => {
-                let archivoUrl = (draft as any).archivo_url // Ya podría venir de BD
+                let archivoUrl = draft.archivo_url // Ya podría venir de BD
 
                 // Si hay archivo físico NUEVO, subirlo
                 if (draft.archivo_file) {
@@ -149,12 +140,6 @@ export default function ImportarGastosPage() {
             }))
 
             // 2. Guardar en BD (o actualizar)
-            // createBulkGastos hace inserts. Si ya existe ID, ¿duplicará?
-            // createBulkGastos no maneja updates. 
-            // Si el origen es BD (email), deberiamos hacer UPDATE estado='aprobado'.
-            // Si es local, INSERT.
-
-            // Refactor rápido: separar updates de inserts
             const updates = gastosToSave.filter(g => g.id)
             const inserts = gastosToSave.filter(g => !g.id)
 
@@ -164,23 +149,15 @@ export default function ImportarGastosPage() {
 
             if (updates.length > 0) {
                 for (const up of updates) {
-                    // Actualizar uno a uno (podriamos hacer bulk update pero action no lo soporta aun)
-                    // Buscamos proveedor si hace falta
-                    // Por simplicidad, llamamos a update directamente en cliente o creamos action
-                    let proveedor_id = null
-                    // ... logica proveedor ...
-                    // Supabase Client update
+                    // Actualizar uno a uno 
                     await supabase.from('gastos').update({
                         importe: up.importe,
                         fecha: up.fecha,
                         numero: up.numero,
-                        nombre_proveedor: up.nombre_proveedor, // Ops esto no existe en tabla gastos, es relacion.
-                        // Se complica el update desde aqui sin la logica de server action.
-                        // MEJOR: Llamar a una action `approveEmailExpense(id, data)`
+                        // nombre_proveedor: up.nombre_proveedor, // Ops esto no existe en tabla gastos, es relacion.
                         estado: 'aprobado',
                         base_imponible: up.base_imponible,
                         impuestos: up.iva
-                        // Falta vincular proveedor_id real...
                     }).eq('id', up.id)
                 }
             }
@@ -364,7 +341,8 @@ export default function ImportarGastosPage() {
                             {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
                                 <DocumentPreview
                                     file={drafts[selectedDraftIndex].archivo_file}
-                                    url={(drafts[selectedDraftIndex] as any).archivo_url}
+                                    url={drafts[selectedDraftIndex].archivo_url || undefined}
+                                    key={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file?.name ?? 'preview')}
                                 />
                             )}
                         </div>
@@ -451,7 +429,7 @@ function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
         metodo_pago: 'transferencia',
         notas: draft.concepto || "",
         archivo_file: draft.archivo_file,
-        archivo_url: (draft as any).archivo_url,
+        archivo_url: draft.archivo_url,
         isDuplicate: draft.isDuplicate,
         lineas: draft.desglose_impuestos?.map(gw => ({
             descripcion: `IGIC ${gw.porcentaje}%`,
@@ -484,13 +462,14 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
         return <div className="flex items-center justify-center h-full text-muted-foreground">Sin documento</div>
     }
 
-    const isPdf = file?.type === 'application/pdf' || url?.toLowerCase().endsWith('.pdf')
+    const isPdf = file?.type === 'application/pdf' || url?.toLowerCase().endsWith('.pdf') || (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp)$/i))
 
     if (isPdf) {
         return (
             <iframe
                 src={`${objectUrl}#toolbar=0&navpanes=0`}
                 className="w-full h-full border-none rounded bg-white shadow-sm"
+                title="Vista previa del documento"
             />
         )
     }
@@ -498,7 +477,7 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     // Imagen
     /* eslint-disable @next/next/no-img-element */
     return (
-        <div className="flex items-center justify-center h-full overflow-auto">
+        <div className="flex items-center justify-center h-full overflow-auto bg-slate-200/50 rounded">
             <img
                 src={objectUrl}
                 alt="Documento"
