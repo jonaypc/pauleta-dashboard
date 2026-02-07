@@ -29,11 +29,19 @@ export interface ExtractedExpenseData {
     raw_text?: string
     base_imponible?: number | null
     iva?: number | null
+    iva_porcentaje?: number | null
     desglose_impuestos?: { base: number, porcentaje: number, cuota: number }[]
     concepto?: string | null
     confidence?: number
     isDuplicate?: boolean
     pago_fijo_id?: string | null
+    direccion_proveedor?: string | null
+    codigo_postal_proveedor?: string | null
+    ciudad_proveedor?: string | null
+    provincia_proveedor?: string | null
+    telefono_proveedor?: string | null
+    email_proveedor?: string | null
+    web_proveedor?: string | null
 }
 
 interface ProcessedFile {
@@ -183,7 +191,15 @@ export function SmartExpenseImporter({ onDataExtracted, onMultipleExtracted, all
                 desglose_impuestos: result.parsed.desglose_impuestos || [],
                 concepto: result.parsed.concepto,
                 confidence: result.parsed.confidence,
-                isDuplicate
+                isDuplicate,
+                // Provider Address
+                direccion_proveedor: result.parsed.direccion_proveedor,
+                codigo_postal_proveedor: result.parsed.codigo_postal_proveedor,
+                ciudad_proveedor: result.parsed.ciudad_proveedor,
+                provincia_proveedor: result.parsed.provincia_proveedor,
+                telefono_proveedor: result.parsed.telefono_proveedor,
+                email_proveedor: result.parsed.email_proveedor,
+                web_proveedor: result.parsed.web_proveedor
             }
 
             setProcessedFiles(prev => prev.map((pf, i) =>
