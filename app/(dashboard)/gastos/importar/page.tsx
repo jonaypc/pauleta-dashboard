@@ -332,9 +332,9 @@ export default function ImportarGastosPage() {
             {/* Modal de Revisión Split View */}
             <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
                 <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
-                    <div className="flex-1 grid md:grid-cols-2 h-full overflow-hidden">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 h-full overflow-y-auto md:overflow-hidden">
                         {/* Columna Izquierda: Previsualización */}
-                        <div className="h-full bg-slate-100 border-r p-4 flex flex-col relative min-h-0 overflow-hidden">
+                        <div className="h-[50vh] md:h-full bg-slate-100 border-b md:border-b-0 md:border-r p-4 flex flex-col relative min-h-0">
                             <div className="absolute top-2 left-2 z-10 flex gap-2">
                                 <Badge variant="secondary" className="bg-black/50 text-white hover:bg-black/60 border-none">
                                     Documento Original
@@ -343,7 +343,7 @@ export default function ImportarGastosPage() {
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="h-6 w-6 bg-white/80"
+                                        className="h-6 w-6 bg-white shadow-sm"
                                         asChild
                                         title="Abrir en pestaña nueva"
                                     >
@@ -363,7 +363,6 @@ export default function ImportarGastosPage() {
                                     <DocumentPreview
                                         file={drafts[selectedDraftIndex].archivo_file}
                                         url={drafts[selectedDraftIndex].archivo_url || undefined}
-                                        key={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file?.name ?? 'preview')}
                                     />
                                 )}
                             </div>
@@ -397,6 +396,8 @@ export default function ImportarGastosPage() {
 
 // Componente para visualizar el borrador en la lista principal
 function DraftItem({ draft, onRemove, onReview }: { draft: ExtractedExpenseData, onRemove: () => void, onReview: () => void }) {
+    const fileUrl = draft.archivo_url || (draft.archivo_file ? URL.createObjectURL(draft.archivo_file) : null)
+
     return (
         <div className="flex items-center justify-between p-4 border rounded-lg bg-card shadow-sm hover:border-primary/50 transition-colors">
             <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -422,8 +423,14 @@ function DraftItem({ draft, onRemove, onReview }: { draft: ExtractedExpenseData,
             </div>
 
             <div className="flex items-center gap-2 ml-4">
+                {fileUrl && (
+                    <Button variant="outline" size="icon" asChild className="h-8 w-8 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-700" title="Ver archivo original">
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Eye size={16} />
+                        </a>
+                    </Button>
+                )}
                 <Button onClick={onReview} size="sm" className="gap-2">
-                    <Eye size={14} />
                     Revisar
                 </Button>
                 <Button variant="ghost" size="icon" onClick={onRemove} className="text-muted-foreground hover:text-destructive">
@@ -491,10 +498,13 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
 
     if (!objectUrl) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded bg-slate-50/50">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded bg-slate-50/50 p-4 text-center">
                 <AlertCircle className="h-8 w-8 mb-2 opacity-20" />
-                <p>Sin documento</p>
-                <p className="text-[10px] mt-2 opacity-50">No hay archivo ni URL disponible</p>
+                <p className="font-semibold">Documento No Encontrado</p>
+                <p className="text-xs mt-1 opacity-70">No se ha podido generar una URL para este archivo.</p>
+                <div className="mt-4 p-2 bg-slate-200 rounded text-[9px] font-mono break-all w-full">
+                    DEBUG: file={file ? 'YES' : 'NO'}, url={url || 'NONE'}
+                </div>
             </div>
         )
     }
@@ -503,59 +513,51 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
         url?.toLowerCase().endsWith('.pdf') ||
         (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
 
-    if (isPdf) {
-        return (
-            <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden border flex flex-col">
-                <div className="flex-1 min-h-0 relative">
+    return (
+        <div className="w-full h-full flex flex-col gap-2">
+            {/* Cabecera Debug Visible para el usuario */}
+            <div className="bg-slate-800 text-white text-[9px] p-1 px-2 rounded flex justify-between items-center font-mono">
+                <span className="truncate max-w-[200px]">{objectUrl.substring(0, 60)}...</span>
+                <Badge variant="outline" className="text-[8px] h-4 border-slate-500 text-slate-300">
+                    {isPdf ? 'PDF' : 'IMAGE'}
+                </Badge>
+            </div>
+
+            <div className="flex-1 min-h-0 w-full overflow-hidden border rounded shadow-inner bg-white relative">
+                {isPdf ? (
                     <iframe
                         src={`${objectUrl}${objectUrl.includes('#') ? '' : '#view=FitH&toolbar=0'}`}
                         className="w-full h-full border-none"
                         title="Vista previa del PDF"
                         onLoad={() => console.log("Iframe loaded successfully")}
-                        onError={(e) => console.error("Iframe load error", e)}
                     />
-                </div>
-                <div className="p-2 border-t bg-muted/20 flex justify-center gap-2">
-                    <Button variant="outline" size="sm" asChild className="h-7 text-xs">
-                        <a href={objectUrl} target="_blank" rel="noopener noreferrer">
-                            Ver PDF pantalla completa
-                        </a>
-                    </Button>
-                </div>
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2 bg-slate-100">
+                        <img
+                            src={objectUrl}
+                            alt="Preview"
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                                console.error("Img error");
+                                const target = e.target as HTMLImageElement;
+                                target.parentElement!.innerHTML = `<p class="text-xs text-red-500 p-4">Error al cargar imagen. Usa el botón de abajo.</p>`;
+                            }}
+                        />
+                    </div>
+                )}
             </div>
-        )
-    }
 
-    // Imagen
-    /* eslint-disable @next/next/no-img-element */
-    return (
-        <div className="flex flex-col h-full w-full bg-slate-200/30 rounded border overflow-hidden">
-            <div className="flex-1 flex items-center justify-center overflow-auto p-2">
-                <img
-                    src={objectUrl}
-                    alt="Documento"
-                    className="max-w-full max-h-full object-contain shadow-md rounded"
-                    onError={(e) => {
-                        console.error("Error loading preview image", objectUrl);
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        // Mostrar error visual
-                        const parent = target.parentElement;
-                        if (parent) {
-                            const errorMsg = document.createElement('div');
-                            errorMsg.className = "text-center text-xs text-destructive p-4";
-                            errorMsg.innerHTML = "Error al cargar imagen. Prueba a abrirla en pestaña nueva.";
-                            parent.appendChild(errorMsg);
-                        }
-                    }}
-                />
-            </div>
-            <div className="p-2 border-t bg-muted/20 flex justify-center gap-2">
-                <Button variant="outline" size="sm" asChild className="h-7 text-xs">
-                    <a href={objectUrl} target="_blank" rel="noopener noreferrer">
-                        Ver imagen pantalla completa
+            <div className="flex justify-center gap-2 pb-2">
+                <Button variant="default" size="sm" asChild className="h-8 shadow-md">
+                    <a href={objectUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" /> Ver en Pantalla Completa
                     </a>
                 </Button>
+                {file && (
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-8">
+                        Recargar página
+                    </Button>
+                )}
             </div>
         </div>
     )
