@@ -74,12 +74,15 @@ Responde SOLO con el JSON, sin explicaciones adicionales.
     "iva": número decimal del impuesto,
     "importe": número decimal del total,
     "desglose_impuestos": [
-        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 }
+        { "base": 100.0, "porcentaje": 7, "cuota": 7.0 },
+        { "base": 50.0, "porcentaje": 3, "cuota": 1.5 }
     ],
-    "confidence": número de 0 a 100
+    "confidence": número de 0 a 100 indicando tu confianza en la extracción
 }
 
-NOTA: Si es factura de Makro, extrae detalladamente el desglose de IGIC.`
+NOTA IMPORTANTE: Busca explícitamente tablas de desglose de impuestos (Bases | % | Cuota).
+Si encuentras varios tipos de IGIC/IVA (ej: 0%, 3%, 7%), DEBES incluirlos todos en "desglose_impuestos".
+Para facturas de Makro/CashDiplo, el desglose suele estar al pie.`
 
     try {
         const response = await getOpenAI().chat.completions.create({

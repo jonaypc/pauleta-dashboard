@@ -454,7 +454,7 @@ function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
         archivo_url: (draft as any).archivo_url,
         isDuplicate: draft.isDuplicate,
         lineas: draft.desglose_impuestos?.map(gw => ({
-            descripcion: "General",
+            descripcion: `IGIC ${gw.porcentaje}%`,
             base_imponible: gw.base,
             tipo_impuesto: gw.porcentaje,
             importe_impuesto: gw.cuota,
