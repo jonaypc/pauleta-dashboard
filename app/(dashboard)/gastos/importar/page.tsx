@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { createBulkGastos } from "@/lib/actions/gastos"
 import { testDbLog } from "@/app/actions/test-log"
+import { getWebhookLogs } from "@/app/actions/get-logs"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Save, ArrowLeft, CheckCircle, AlertCircle, Trash2 } from "lucide-react"
 import Link from "next/link"
