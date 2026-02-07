@@ -266,8 +266,14 @@ export default function ImportarGastosPage() {
                                 4b8939c0c3268388@cloudmailin.net
                             </div>
 
-                            <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200">
-                                <strong>💡 Truco:</strong> Crea un email como <span className="font-semibold text-slate-900">facturas@pauletacanaria.com</span> y configura un <u>reenvío automático</u> a la dirección de arriba.
+                            <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200 space-y-2">
+                                <p><strong>Cómo configurar tu correo corporativo:</strong></p>
+                                <ol className="list-decimal list-inside space-y-1 ml-1 text-slate-700">
+                                    <li>Accede a tu panel de hosting (donde tengas <em>pauletacanaria.es</em>).</li>
+                                    <li>Busca la sección <strong>Reenvíos</strong> o <strong>Redirecciones de Correo</strong>.</li>
+                                    <li>Crea un reenvío desde <span className="font-semibold text-slate-900">facturas@pauletacanaria.es</span> hacia la dirección rara de arriba (4b89...).</li>
+                                    <li>Ahora, cuando recibas una factura en <em>contacto@</em>, solo tienes que reenviarla a <em>facturas@</em> y aparecerá aquí.</li>
+                                </ol>
                             </div>
                         </CardContent>
                     </Card>
