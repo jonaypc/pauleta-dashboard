@@ -161,12 +161,20 @@ export async function POST(request: NextRequest) {
                     // @ts-ignore
                     const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
+                    // Force bundling of worker
+                    // @ts-ignore
+                    try { require("pdfjs-dist/legacy/build/pdf.worker.js"); } catch (e) { }
+
                     const uint8Array = new Uint8Array(buffer);
                     const loadingTask = pdfjsLib.getDocument({
                         data: uint8Array,
-                        // Disable worker for simple text extraction in Node
+                        // Contexto Node: fonts deshabilitadas y factoria dummy
                         disableFontFace: true,
-                        verbosity: 0
+                        verbosity: 0,
+                        // @ts-ignore
+                        StandardFontDataFactory: class StandardFontDataFactory {
+                            fetch() { return null; }
+                        }
                     });
 
                     const pdfDocument = await loadingTask.promise
