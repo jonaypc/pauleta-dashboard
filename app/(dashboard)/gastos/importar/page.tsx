@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { SmartExpenseImporter, ExtractedExpenseData } from "@/components/gastos/SmartExpenseImporter"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator"
 export default function ImportarGastosPage() {
     const { toast } = useToast()
     const router = useRouter()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
 
     // Lista de borradores
     const [drafts, setDrafts] = useState<ExtractedExpenseData[]>([])
@@ -70,7 +70,7 @@ export default function ImportarGastosPage() {
         }
         loadPendingEmails()
         loadPendingEmails()
-    }, [])
+    }, [supabase])
 
     const handleMultipleExtracted = (data: ExtractedExpenseData[]) => {
         setDrafts(prev => [...prev, ...data])
@@ -377,7 +377,7 @@ export default function ImportarGastosPage() {
 }
 
 function WebhookLogsViewer() {
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
     const [logs, setLogs] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -431,7 +431,7 @@ function WebhookLogsViewer() {
             {error && (
                 <div className="p-3 bg-red-50 text-red-600 rounded-md border border-red-200 text-sm">
                     <strong>Error de Base de Datos:</strong> {error}
-                    <p className="text-xs mt-1">Es posible que la tabla 'webhook_logs' no exista. Ejecuta las migraciones.</p>
+                    <p className="text-xs mt-1">Es posible que la tabla &apos;webhook_logs&apos; no exista. Ejecuta las migraciones.</p>
                 </div>
             )}
 
