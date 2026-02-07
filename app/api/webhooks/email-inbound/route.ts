@@ -17,8 +17,21 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. Parsear el body (Asumimos formato multipart/form-data típico de CloudMailin/Mailgun)
-        // Ojo: CloudMailin envía fields: plain, html, reply_plain, etc. y attachments[x]
         const formData = await request.formData()
+
+        // LOGGING START
+        const supabase = await createAdminClient()
+        const { data: logEntry, error: logError } = await supabase.from('webhook_logs').insert({
+            source: 'email-inbound',
+            status: 'received',
+            metadata: {
+                headers: Object.fromEntries(request.headers.entries()),
+                form_keys: Array.from(formData.keys())
+            }
+        }).select().single()
+
+        const logId = logEntry?.id
+        // LOGGING END
 
         const subject = formData.get("subject") as string || "Sin asunto"
         const from = formData.get("from") as string || "Desconocido"
@@ -38,10 +51,11 @@ export async function POST(request: NextRequest) {
         }
 
         if (files.length === 0) {
+            if (logId) await supabase.from('webhook_logs').update({ status: 'no_attachments', error: 'No PDF/Image found' }).eq('id', logId)
             return NextResponse.json({ message: "No attachments found to process" }, { status: 200 })
         }
 
-        const supabase = await createAdminClient()
+        // const supabase = await createAdminClient() // Already created above
         const results = []
 
         // 3. Procesar cada archivo
@@ -69,6 +83,7 @@ export async function POST(request: NextRequest) {
                     publicUrl = data.publicUrl
                 } else {
                     console.error("Storage Error:", uploadError)
+                    throw new Error("Storage upload failed: " + uploadError.message)
                 }
 
                 // B. Analizar con IA
@@ -90,6 +105,13 @@ export async function POST(request: NextRequest) {
                     // Por simplicidad en webhook, si falla texto, lo marcamos como revisión manual
                     if (text.length > 50) {
                         parsedData = await analyzeTextWithGPT(text)
+                    } else {
+                        // Fallback simple si no hay texto (escan)
+                        parsedData = {
+                            concepto: "PDF Escaneado (Sin OCR)",
+                            confidence: 0,
+                            // resto null
+                        }
                     }
                 }
 
@@ -136,11 +158,25 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        if (logId) await supabase.from('webhook_logs').update({ status: 'success', metadata: { results } }).eq('id', logId)
+
         console.log(`[Webhook Success] Processed ${results.length} files successfully.`)
         return NextResponse.json({ success: true, results })
 
     } catch (error: any) {
         console.error("Webhook Error:", error)
+        // Try to log error to DB if possible
+        try {
+            const supabase = await createAdminClient()
+            // We might not have logId here easily if it failed before, but let's try to insert a new error log
+            await supabase.from('webhook_logs').insert({
+                source: 'email-inbound',
+                status: 'error',
+                error: error.message,
+                metadata: { stage: 'catch-all' }
+            })
+        } catch (e) { }
+
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }

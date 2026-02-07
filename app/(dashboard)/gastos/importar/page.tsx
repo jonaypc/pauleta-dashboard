@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback } from "react"
 import { SmartExpenseImporter, ExtractedExpenseData } from "@/components/gastos/SmartExpenseImporter"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { createBulkGastos } from "@/lib/actions/gastos"
 import { createClient } from "@/lib/supabase/client"
@@ -256,6 +264,20 @@ export default function ImportarGastosPage() {
                                     Guardar Todo ({drafts.length})
                                 </Button>
                             )}
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">Logs de Conexión</Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Logs del Webhook</DialogTitle>
+                                        <DialogDescription>
+                                            Historial de intentos de conexión desde el proveedor de correo.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <WebhookLogsViewer />
+                                </DialogContent>
+                            </Dialog>
                         </CardHeader>
                         <CardContent className="pt-6">
                             {drafts.length === 0 ? (
@@ -349,6 +371,47 @@ export default function ImportarGastosPage() {
                     </Card>
                 </div>
             </div>
+        </div>
+    )
+}
+
+function WebhookLogsViewer() {
+    const supabase = createClient()
+    const [logs, setLogs] = useState<any[]>([])
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        setLoading(true)
+        supabase.from('webhook_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20)
+            .then(({ data }) => {
+                setLogs(data || [])
+                setLoading(false)
+            })
+    }, [])
+
+    if (loading) return <div className="text-center py-4"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+    if (logs.length === 0) return <div className="text-center py-4 text-muted-foreground">No hay logs registrados.</div>
+
+    return (
+        <div className="space-y-4">
+            {logs.map((log) => (
+                <div key={log.id} className="text-sm border p-3 rounded-md">
+                    <div className="flex justify-between font-bold">
+                        <span>{new Date(log.created_at).toLocaleString()}</span>
+                        <Badge variant={log.status === 'success' ? 'default' : 'destructive'}>{log.status}</Badge>
+                    </div>
+                    {log.error && <p className="text-red-500 mt-1">{log.error}</p>}
+                    <details className="mt-2 text-xs text-muted-foreground">
+                        <summary className="cursor-pointer">Ver Detalles</summary>
+                        <pre className="mt-2 overflow-x-auto p-2 bg-slate-100 rounded">
+                            {JSON.stringify(log.metadata, null, 2)}
+                        </pre>
+                    </details>
+                </div>
+            ))}
         </div>
     )
 }
