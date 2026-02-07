@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
 
             debugEntries.push({ key, type: entryType, constructor, mime, size })
 
-            if (value instanceof File || value instanceof Blob) {
+            // @ts-ignore
+            if ((value as any) instanceof File || (value as any) instanceof Blob) {
                 const file = value as File
                 // Relaxed Check:
                 // 1. Explicit MIME types for PDF/Image
