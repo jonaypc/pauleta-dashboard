@@ -246,6 +246,31 @@ export default function ImportarGastosPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    <Card className="bg-slate-50 border-slate-200">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                <span className="text-xl">📧</span> Importación por Email
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
+                            <p className="text-muted-foreground">
+                                Envía tus facturas a:
+                            </p>
+                            <div className="bg-white p-2 rounded border font-mono text-xs break-all select-all cursor-copy hover:border-blue-400 transition-colors"
+                                title="Click para copiar dirección real"
+                                onClick={() => {
+                                    navigator.clipboard.writeText("4b8939c0c3268388@cloudmailin.net")
+                                    toast({ title: "Email copiado", description: "Configura el reenvío a esta dirección." })
+                                }}>
+                                4b8939c0c3268388@cloudmailin.net
+                            </div>
+
+                            <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200">
+                                <strong>💡 Truco:</strong> Crea un email como <span className="font-semibold text-slate-900">facturas@pauletacanaria.com</span> y configura un <u>reenvío automático</u> a la dirección de arriba.
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Panel Derecho: Lista de Revisión */}
