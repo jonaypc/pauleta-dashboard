@@ -45,20 +45,54 @@ export async function POST(request: NextRequest) {
                 method: "vision-analysis"
             })
         } else if (isPdf) {
-            console.log("Processing PDF file with pdf-parse (SERVER SIDE)...")
+            console.log("Processing PDF file with pdfjs-dist (SERVER SIDE)...")
             try {
-                // Lazy load pdf-parse to avoid initialization errors if not needed
-                // @ts-ignore
-                const pdfParser = require("pdf-parse");
-
-                const pdfData = await pdfParser(buffer)
-
-                // Extra defensive check for result
-                if (!pdfData || typeof pdfData.text !== 'string') {
-                    throw new Error("Invalid PDF data returned from parser")
+                // Polyfill simple para DOMMatrix (necesario para pdfjs-dist en entorno Node)
+                if (!global.DOMMatrix) {
+                    // @ts-ignore
+                    global.DOMMatrix = class DOMMatrix {
+                        constructor() {
+                            // @ts-ignore
+                            this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+                        }
+                        translate() { return this; }
+                        scale() { return this; }
+                    }
                 }
 
-                const text = pdfData.text.trim()
+                // Direct usage of pdfjs-dist (Legacy build for Node)
+                // @ts-ignore
+                const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+
+                // Force bundling of worker
+                // @ts-ignore
+                try { require("pdfjs-dist/legacy/build/pdf.worker.js"); } catch (e) { }
+
+                const uint8Array = new Uint8Array(buffer);
+                const loadingTask = pdfjsLib.getDocument({
+                    data: uint8Array,
+                    // Contexto Node: fonts deshabilitadas y factoria dummy
+                    disableFontFace: true,
+                    verbosity: 0,
+                    // @ts-ignore
+                    StandardFontDataFactory: class StandardFontDataFactory {
+                        fetch() { return null; }
+                    }
+                });
+
+                const pdfDocument = await loadingTask.promise
+                let text = ""
+
+                // Extract text from first 5 pages max
+                const maxPages = Math.min(pdfDocument.numPages, 5)
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdfDocument.getPage(i)
+                    const content = await page.getTextContent()
+                    const strings = content.items.map((item: any) => item.str)
+                    text += strings.join(" ") + "\n"
+                }
+
+                text = text.trim()
                 console.log(`PDF Text extracted length: ${text.length} chars`)
 
                 // Si hay muy poco texto, probablemente sea una imagen escaneada
