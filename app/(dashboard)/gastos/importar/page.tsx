@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { createBulkGastos } from "@/lib/actions/gastos"
+import { testDbLog } from "@/app/actions/test-log"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Save, ArrowLeft, CheckCircle, AlertCircle, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -379,29 +380,70 @@ function WebhookLogsViewer() {
     const supabase = createClient()
     const [logs, setLogs] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const { toast } = useToast()
 
-    useEffect(() => {
+    const fetchLogs = useCallback(() => {
         setLoading(true)
+        setError(null)
         supabase.from('webhook_logs')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(20)
-            .then(({ data }) => {
-                setLogs(data || [])
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error("Error fetching logs:", error)
+                    setError(error.message)
+                } else {
+                    setLogs(data || [])
+                }
                 setLoading(false)
             })
-    }, [])
+    }, [supabase])
+
+    useEffect(() => {
+        fetchLogs()
+    }, [fetchLogs])
+
+    const handleTestWrite = async () => {
+        const res = await testDbLog()
+        if (res.success) {
+            toast({ title: "Prueba Exitosa", description: "Se ha escrito un log de prueba en la BD." })
+            fetchLogs()
+        } else {
+            toast({ title: "Error en Prueba", description: res.error, variant: "destructive" })
+        }
+    }
 
     if (loading) return <div className="text-center py-4"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-    if (logs.length === 0) return <div className="text-center py-4 text-muted-foreground">No hay logs registrados.</div>
 
     return (
         <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <Button size="sm" variant="secondary" onClick={handleTestWrite}>
+                    Generar Log de Prueba
+                </Button>
+                <Button size="sm" variant="ghost" onClick={fetchLogs}>
+                    Refrescar
+                </Button>
+            </div>
+
+            {error && (
+                <div className="p-3 bg-red-50 text-red-600 rounded-md border border-red-200 text-sm">
+                    <strong>Error de Base de Datos:</strong> {error}
+                    <p className="text-xs mt-1">Es posible que la tabla 'webhook_logs' no exista. Ejecuta las migraciones.</p>
+                </div>
+            )}
+
+            {!error && logs.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">No hay logs registrados.</div>
+            )}
+
             {logs.map((log) => (
                 <div key={log.id} className="text-sm border p-3 rounded-md">
                     <div className="flex justify-between font-bold">
                         <span>{new Date(log.created_at).toLocaleString()}</span>
-                        <Badge variant={log.status === 'success' ? 'default' : 'destructive'}>{log.status}</Badge>
+                        <Badge variant={log.status === 'success' ? 'default' : log.status === 'test' ? 'secondary' : 'destructive'}>{log.status}</Badge>
                     </div>
                     {log.error && <p className="text-red-500 mt-1">{log.error}</p>}
                     <details className="mt-2 text-xs text-muted-foreground">
