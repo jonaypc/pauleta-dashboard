@@ -1,13 +1,10 @@
 import { getPendingBankMovements } from "@/lib/actions/tesoreria"
 import { createClient } from "@/lib/supabase/server"
 import { BankStatementImporter } from "@/components/tesoreria/BankStatementImporter"
+import { MovementsList } from "@/components/tesoreria/MovementsList"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency, formatDate } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { CreditCard, ArrowUpRight, ArrowDownLeft, Link as LinkIcon } from "lucide-react"
-import Link from "next/link"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatCurrency } from "@/lib/utils"
 
 export default async function TesoreriaPage() {
     let movements: any[] = []
@@ -61,53 +58,7 @@ export default async function TesoreriaPage() {
                 </TabsList>
 
                 <TabsContent value="movimientos" className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Movimientos Bancarios Pendientes</CardTitle>
-                            <CardDescription>Facturas encontradas con el mismo importe aparecerán aquí.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {movements.length === 0 ? (
-                                    <div className="py-12 text-center">
-                                        <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
-                                        <p className="text-muted-foreground">No hay movimientos pendientes de conciliación.</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Importa un extracto para comenzar.</p>
-                                    </div>
-                                ) : (
-                                    movements.map((move: any) => (
-                                        <div key={move.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors gap-4">
-                                            <div className="flex gap-4 items-center">
-                                                <div className={`p-2 rounded-full ${move.importe > 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                                                    {move.importe > 0 ? <ArrowUpRight className="h-4 w-4 text-green-600" /> : <ArrowDownLeft className="h-4 w-4 text-red-600" />}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-sm leading-none mb-1">{move.descripcion}</p>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-muted-foreground">{formatDate(move.fecha)}</span>
-                                                        {move.referencia && <Badge variant="outline" className="text-[10px] py-0">{move.referencia}</Badge>}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-6">
-                                                <div className="text-right">
-                                                    <p className={`font-bold tabular-nums ${move.importe > 0 ? 'text-green-600' : 'text-slate-900'}`}>
-                                                        {formatCurrency(move.importe)}
-                                                    </p>
-                                                </div>
-                                                <Button size="sm" variant="outline" className="gap-2" asChild>
-                                                    <Link href={`/tesoreria/conciliar/${move.id}`}>
-                                                        <LinkIcon className="h-3 w-3" /> Conciliar
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <MovementsList initialMovements={movements} />
                 </TabsContent>
 
                 <TabsContent value="importar" className="mt-6">
