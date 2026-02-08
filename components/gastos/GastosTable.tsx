@@ -73,10 +73,15 @@ export function GastosTable({ gastos }: GastosTableProps) {
             setIsDeleting(id)
             try {
                 await deleteGasto(id)
-                toast.success("Gasto eliminado correctamente")
+                toast({
+                    description: "Gasto eliminado correctamente"
+                })
                 router.refresh()
             } catch (error) {
-                toast.error("No se pudo eliminar el gasto")
+                toast({
+                    variant: "destructive",
+                    description: "No se pudo eliminar el gasto"
+                })
             } finally {
                 setIsDeleting(null)
             }
@@ -88,10 +93,15 @@ export function GastosTable({ gastos }: GastosTableProps) {
         try {
             await updateGastoStatus(id, newStatus)
             router.refresh()
-            toast.success("Estado actualizado")
+            toast({
+                description: "Estado actualizado"
+            })
         } catch (error) {
             console.error("Error updating status", error)
-            toast.error("Error al actualizar estado")
+            toast({
+                variant: "destructive",
+                description: "Error al actualizar estado"
+            })
         } finally {
             setIsUpdatingStatus(null)
         }
