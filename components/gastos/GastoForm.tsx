@@ -119,7 +119,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
             notas: "",
             base_imponible: initialData?.base_imponible ? Number(initialData.base_imponible) : 0,
             impuestos: initialData?.impuestos ? Number(initialData.impuestos) : 0,
-            tipo_impuesto: initialData?.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
+            tipo_impuesto: (initialData?.tipo_impuesto !== undefined && initialData?.tipo_impuesto !== null) ? Number(initialData.tipo_impuesto) : 7.00,
             pago_fijo_id: initialData?.pago_fijo_id || "none",
             lineas: initialData?.lineas || []
         },
@@ -135,7 +135,9 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
 
     // Autocalculadora de Impuestos Bidireccional
     const handleTotalChange = useCallback((totalValue: number) => {
-        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
+        const val = parseFloat(form.getValues("tipo_impuesto").toString())
+        const taxRate = !isNaN(val) ? val : 7.00
+
         if (!isNaN(totalValue)) {
             const base = totalValue / (1 + (taxRate / 100))
             const taxAmount = totalValue - base
@@ -145,7 +147,9 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
     }, [form])
 
     const handleBaseChange = useCallback((baseValue: number) => {
-        const taxRate = parseFloat(form.getValues("tipo_impuesto").toString()) || 7.00
+        const val = parseFloat(form.getValues("tipo_impuesto").toString())
+        const taxRate = !isNaN(val) ? val : 7.00
+
         if (!isNaN(baseValue)) {
             const taxAmount = baseValue * (taxRate / 100)
             const total = baseValue + taxAmount
@@ -191,7 +195,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     notas: initialData.notas || "",
                     base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : 0,
                     impuestos: initialData.impuestos ? Number(initialData.impuestos) : 0,
-                    tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : 7.00,
+                    tipo_impuesto: (initialData.tipo_impuesto !== undefined && initialData.tipo_impuesto !== null) ? Number(initialData.tipo_impuesto) : 7.00,
                     pago_fijo_id: initialData.pago_fijo_id || "none",
                     lineas: (initialData.lineas || []).map(l => ({ ...l, descripcion: l.descripcion || "" }))
                 })
@@ -205,8 +209,8 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     const currentVal = currentValues[key]
                     // Si el usuario ya escribió algo (y no es el valor por defecto/vacío), lo respetamos
                     // NOTA: Para strings, chequeamos que no sea el defaultVal o vacío
-                    // Para números, chequeamos que no sea 0 o undefined
-                    if (currentVal !== undefined && currentVal !== null && currentVal !== "" && currentVal !== 0 && currentVal !== "7.00" && currentVal !== "none") {
+                    // Para números, permitimos 0 (importante para IGIC 0%)
+                    if (currentVal !== undefined && currentVal !== null && currentVal !== "" && currentVal !== "7.00" && currentVal !== "none") {
                         return currentVal
                     }
                     return incomingVal || defaultVal
@@ -233,7 +237,7 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                     notas: getMergedValue("notas", initialData.notas),
                     base_imponible: initialData.base_imponible ? Number(initialData.base_imponible) : currentValues.base_imponible,
                     impuestos: initialData.impuestos ? Number(initialData.impuestos) : currentValues.impuestos,
-                    tipo_impuesto: initialData.tipo_impuesto ? Number(initialData.tipo_impuesto) : (currentValues.tipo_impuesto || 7.00),
+                    tipo_impuesto: (initialData.tipo_impuesto !== undefined && initialData.tipo_impuesto !== null) ? Number(initialData.tipo_impuesto) : (currentValues.tipo_impuesto ?? 7.00),
                     pago_fijo_id: initialData.pago_fijo_id || currentValues.pago_fijo_id || "none",
                     lineas: syncedLineas
                 })

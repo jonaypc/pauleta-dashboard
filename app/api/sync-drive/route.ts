@@ -145,6 +145,46 @@ export async function GET(request: NextRequest) {
                     }
                 }
 
+                // Check for duplicate invoice (same provider + same number)
+                let existingGastoId = null
+                if (proveedorId && parsedData.numero) {
+                    const { data: duplicateGasto } = await supabase
+                        .from('gastos')
+                        .select('id')
+                        .eq('proveedor_id', proveedorId)
+                        .eq('numero', parsedData.numero)
+                        .maybeSingle()
+
+                    if (duplicateGasto) {
+                        existingGastoId = duplicateGasto.id
+                        console.log(`[SYNC] Duplicate detected for ${file.name} (Gasto ID: ${existingGastoId})`)
+                    }
+                }
+
+                if (existingGastoId) {
+                    // Log duplicate find but do not insert
+                    await supabase.from('drive_sync_log').insert({
+                        drive_file_id: file.id,
+                        file_name: file.name,
+                        file_path: `${year}/${month}/${file.name}`,
+                        year,
+                        month,
+                        gasto_id: existingGastoId,
+                        status: 'duplicate',
+                        error_message: 'Factura ya existe en base de datos',
+                    })
+
+                    results.processed.push({
+                        file: file.name,
+                        path: `${year}/${month}`,
+                        gasto_id: existingGastoId,
+                        status: 'duplicate'
+                    })
+
+                    // Skip to next iteration
+                    continue
+                }
+
                 // Crear gasto con todos los datos extraídos
                 const { data: gasto, error: gastoError } = await supabase
                     .from('gastos')
@@ -155,7 +195,7 @@ export async function GET(request: NextRequest) {
                         importe: parsedData.importe || parsedData.total || 0,
                         base_imponible: parsedData.base_imponible || 0,
                         impuestos: parsedData.iva || parsedData.impuestos || 0,
-                        tipo_impuesto: parsedData.tipo_impuesto || 7,
+                        tipo_impuesto: parsedData.tipo_impuesto ?? 7, // Allow 0, default 7 only if undefined
                         estado: 'pendiente',
                         archivo_url: archivoUrl,
                         notas: `Importado desde Drive: ${year}/${month}/${file.name}`,
