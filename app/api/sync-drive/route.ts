@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
         }
 
         // Escanear todos los archivos en la estructura año/mes
-        const allFiles = await scanAllInvoices(config.folder_id)
+        const scanResult = await scanAllInvoices(config.folder_id)
+        const allFiles = scanResult.files
+        const scanLogs = scanResult.logs
 
         // Obtener archivos ya procesados
         const { data: processedFiles } = await supabase
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
         const processedIds = new Set((processedFiles || []).map(f => f.drive_file_id))
 
         // Filtrar solo archivos nuevos
-        const newFiles = allFiles.filter(f => !processedIds.has(f.file.id))
+        const newFiles = (allFiles as any[]).filter(f => !processedIds.has(f.file.id))
 
         // Limitar cantidad por ejecución
         const filesToProcess = newFiles.slice(0, MAX_FILES_PER_RUN)
@@ -53,11 +55,12 @@ export async function GET(request: NextRequest) {
         const remaining = newFiles.length - filesToProcess.length
 
         const results = {
-            total_scanned: allFiles.length,
+            total_scanned: (allFiles as any[]).length,
             already_processed: processedIds.size,
             new_files: newFiles.length,
             processing_now: filesToProcess.length,
             remaining,
+            logs: scanLogs,
             processed: [] as any[],
             errors: [] as any[],
         }

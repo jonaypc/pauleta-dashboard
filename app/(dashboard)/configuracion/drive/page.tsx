@@ -224,23 +224,40 @@ export default function DriveConfigPage() {
                                     {syncResult.success ? '✅ Sincronización exitosa' : '❌ Error en sincronización'}
                                 </p>
                                 {syncResult.success && (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                        <div>
-                                            <span className="text-muted-foreground">Escaneados:</span>
-                                            <span className="ml-1 font-medium">{syncResult.total_scanned}</span>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                            <div>
+                                                <span className="text-muted-foreground">Escaneados:</span>
+                                                <span className="ml-1 font-medium">{syncResult.total_scanned}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">Nuevos:</span>
+                                                <span className="ml-1 font-medium">{syncResult.new_files}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">Procesados:</span>
+                                                <span className="ml-1 font-medium">{syncResult.processed?.length || 0}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">Pendientes:</span>
+                                                <span className="ml-1 font-medium">{syncResult.remaining}</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Nuevos:</span>
-                                            <span className="ml-1 font-medium">{syncResult.new_files}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Procesados:</span>
-                                            <span className="ml-1 font-medium">{syncResult.processed?.length || 0}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Pendientes:</span>
-                                            <span className="ml-1 font-medium">{syncResult.remaining}</span>
-                                        </div>
+
+                                        {syncResult.logs && syncResult.logs.length > 0 && (
+                                            <details className="text-xs">
+                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium mb-1">
+                                                    Ver logs de escaneo
+                                                </summary>
+                                                <div className="bg-white/50 p-2 rounded border border-black/5 font-mono max-h-40 overflow-y-auto whitespace-pre-wrap">
+                                                    {syncResult.logs.map((log: string, i: number) => (
+                                                        <div key={i} className="py-0.5 border-b border-black/5 last:border-0">
+                                                            {log}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        )}
                                     </div>
                                 )}
                                 {!syncResult.success && (
