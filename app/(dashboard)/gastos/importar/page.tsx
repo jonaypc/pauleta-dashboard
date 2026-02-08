@@ -366,7 +366,7 @@ export default function ImportarGastosPage() {
 
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 h-full overflow-hidden">
                         {/* Columna Izquierda: Previsualización del Documento */}
-                        <div className="h-[40vh] lg:h-full bg-slate-900 border-b lg:border-b-0 lg:border-r flex flex-col relative min-h-0">
+                        <div className="h-[50vh] lg:h-full bg-slate-900 border-b lg:border-b-0 lg:border-r flex flex-col relative overflow-hidden">
                             <div className="absolute top-3 left-3 z-10 flex gap-2">
                                 <Badge className="bg-white/90 text-slate-800 hover:bg-white shadow-md">
                                     📄 Documento Original
@@ -550,14 +550,34 @@ function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
 
 // Componente para visualizar documento (PDF o Imagen)
 function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
+    const [debugInfo, setDebugInfo] = useState<string>('')
+
     const objectUrl = useMemo(() => {
+        let result = null
+        let info = ''
+
         if (file) {
-            return URL.createObjectURL(file)
+            result = URL.createObjectURL(file)
+            info = `Archivo: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(1)}KB)`
+        } else if (url) {
+            result = url
+            info = `URL: ${url.substring(0, 50)}...`
+        } else {
+            info = 'Sin archivo ni URL'
         }
-        if (url) {
-            return url
+
+        console.log('DocumentPreview:', info, result)
+        return result
+    }, [file, url])
+
+    useEffect(() => {
+        if (file) {
+            setDebugInfo(`${file.name} (${file.type})`)
+        } else if (url) {
+            setDebugInfo(url.split('/').pop() || url)
+        } else {
+            setDebugInfo('Sin documento')
         }
-        return null
     }, [file, url])
 
     // Limpiar URL object
@@ -579,18 +599,31 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
         )
     }
 
+    // Mejorar detección de PDF: verificar file.type primero, luego extensión, luego URL
     const isPdf = file?.type === 'application/pdf' ||
+        file?.name?.toLowerCase().endsWith('.pdf') ||
         url?.toLowerCase().endsWith('.pdf') ||
         (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
 
+    console.log('DocumentPreview isPdf:', isPdf, 'file?.type:', file?.type, 'file?.name:', file?.name)
+
     return (
         <div className="w-full h-full flex flex-col">
-            <div className="flex-1 min-h-0 w-full overflow-hidden rounded-lg shadow-2xl bg-white">
+            {/* Debug bar - quitar en producción */}
+            <div className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded-t-lg flex justify-between items-center">
+                <span className="truncate">{debugInfo}</span>
+                <Badge variant="outline" className="text-[9px] h-4 border-slate-500">
+                    {isPdf ? 'PDF' : 'IMAGEN'}
+                </Badge>
+            </div>
+
+            <div className="flex-1 min-h-[300px] w-full overflow-hidden rounded-b-lg shadow-2xl bg-white">
                 {isPdf ? (
                     <iframe
-                        src={`${objectUrl}#view=FitH&toolbar=1&navpanes=0`}
+                        src={objectUrl}
                         className="w-full h-full border-none"
                         title="Vista previa del PDF"
+                        style={{ minHeight: '400px' }}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center p-4 bg-slate-100">
@@ -612,6 +645,15 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
                     </div>
                 )}
             </div>
+
+            {/* Botón para abrir en nueva pestaña */}
+            <div className="mt-2 flex justify-center">
+                <Button variant="secondary" size="sm" asChild className="shadow-md">
+                    <a href={objectUrl} target="_blank" rel="noopener noreferrer">
+                        <Eye className="h-4 w-4 mr-2" /> Abrir en nueva pestaña
+                    </a>
+                </Button>
+            </div>
         </div>
     )
 }
@@ -625,8 +667,8 @@ function ExtractedDataBadge({ label, value, icon, highlight = false }: {
 }) {
     return (
         <div className={`p-2 rounded-lg border ${highlight
-                ? 'bg-green-100 border-green-300'
-                : 'bg-white border-slate-200'
+            ? 'bg-green-100 border-green-300'
+            : 'bg-white border-slate-200'
             }`}>
             <div className="flex items-center gap-1.5">
                 <span className="text-sm">{icon}</span>
