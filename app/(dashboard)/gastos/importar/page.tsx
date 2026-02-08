@@ -390,11 +390,26 @@ export default function ImportarGastosPage() {
                             </div>
 
                             <div className="flex-1 min-h-0 w-full p-4 pt-12">
-                                {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
-                                    <DocumentPreview
-                                        file={drafts[selectedDraftIndex].archivo_file}
-                                        url={drafts[selectedDraftIndex].archivo_url || undefined}
-                                    />
+                                {selectedDraftIndex !== null && drafts[selectedDraftIndex] ? (
+                                    <>
+                                        {/* DEBUG BOX - VISIBLE */}
+                                        <div className="bg-red-500 text-white p-4 rounded-lg mb-4 text-sm">
+                                            <p className="font-bold text-lg mb-2">🔍 DEBUG INFO (v2026-02-08 18:10)</p>
+                                            <p>📁 archivo_file: {drafts[selectedDraftIndex].archivo_file ? `SI - ${drafts[selectedDraftIndex].archivo_file.name}` : 'NO (null)'}</p>
+                                            <p>🔗 archivo_url: {drafts[selectedDraftIndex].archivo_url || 'NO (null)'}</p>
+                                            <p>📊 Hay datos: {drafts[selectedDraftIndex] ? 'SI' : 'NO'}</p>
+                                        </div>
+                                        <DocumentPreview
+                                            file={drafts[selectedDraftIndex].archivo_file}
+                                            url={drafts[selectedDraftIndex].archivo_url || undefined}
+                                        />
+                                    </>
+                                ) : (
+                                    <div className="bg-orange-500 text-white p-4 rounded-lg">
+                                        <p className="font-bold">⚠️ No hay draft seleccionado</p>
+                                        <p>selectedDraftIndex: {selectedDraftIndex}</p>
+                                        <p>drafts.length: {drafts.length}</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
