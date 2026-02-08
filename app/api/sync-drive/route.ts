@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
                         base_imponible: parsedData.base_imponible || 0,
                         impuestos: parsedData.iva || parsedData.impuestos || 0,
                         tipo_impuesto: parsedData.tipo_impuesto || 7,
-                        estado: 'pagado',
+                        estado: 'pendiente',
                         archivo_url: archivoUrl,
                         notas: `Importado desde Drive: ${year}/${month}/${file.name}`,
                     })
