@@ -103,7 +103,10 @@ export default async function FinancialReportsPage({ searchParams }: PageProps) 
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <DateRangeFilter />
+                    <DateRangeFilter defaultDate={{
+                        from: startOfYear(now),
+                        to: now
+                    }} className="w-full sm:w-auto" />
                     <Button variant="outline" size="icon">
                         <Download className="h-4 w-4" />
                     </Button>

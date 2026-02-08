@@ -6,11 +6,19 @@ import { DateRange } from "react-day-picker"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { startOfYear, endOfDay } from "date-fns"
 
-export function DateRangeFilter() {
+export function DateRangeFilter({
+    className,
+    align = "end",
+    defaultDate
+}: {
+    className?: string
+    align?: "start" | "center" | "end"
+    defaultDate?: DateRange
+}) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    const [date, setDate] = useState<DateRange | undefined>()
+    const [date, setDate] = useState<DateRange | undefined>(defaultDate)
 
     // Sync state with URL params on mount
     useEffect(() => {
@@ -22,14 +30,10 @@ export function DateRangeFilter() {
                 from: new Date(fromParam),
                 to: new Date(toParam)
             })
-        } else {
-            // Default: This Year
-            setDate({
-                from: startOfYear(new Date()),
-                to: new Date()
-            })
+        } else if (defaultDate) {
+            setDate(defaultDate)
         }
-    }, [searchParams])
+    }, [searchParams, defaultDate])
 
     const handleDateChange = (newDate: DateRange | undefined) => {
         setDate(newDate)
@@ -52,7 +56,7 @@ export function DateRangeFilter() {
         <DatePickerWithRange
             date={date}
             onDateChange={handleDateChange}
-            className="w-full sm:w-auto"
+            className={className}
         />
     )
 }

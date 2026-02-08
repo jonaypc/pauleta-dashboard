@@ -153,7 +153,10 @@ export default async function InformesPage({
                         </Link>
                     </Button>
                     <Suspense fallback={<div className="w-[300px] h-10 bg-muted animate-pulse rounded-md" />}>
-                        <DateRangeFilter />
+                        <DateRangeFilter defaultDate={{
+                            from: new Date(now.getFullYear(), now.getMonth(), 1),
+                            to: now
+                        }} className="w-full sm:w-auto" />
                     </Suspense>
                     <ExportButton data={data.rawFacturas} />
                 </div>
