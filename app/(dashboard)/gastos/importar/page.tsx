@@ -201,18 +201,6 @@ export default function ImportarGastosPage() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-20">
-            <div className="bg-red-600 text-white p-4 rounded-lg shadow-xl animate-bounce flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                    <AlertCircle className="h-8 w-8" />
-                    <div>
-                        <h2 className="text-xl font-bold uppercase">⚠️ TEST DE VERSIÓN ACTIVA (07/02 - 23:15)</h2>
-                        <p className="text-sm opacity-90">Si ves este banner rojo, el código se ha actualizado correctamente.</p>
-                    </div>
-                </div>
-                <Button variant="outline" className="bg-white text-red-600 hover:bg-red-50 border-white" onClick={() => window.location.reload()}>
-                    FORZAR RECARGA
-                </Button>
-            </div>
 
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
@@ -344,34 +332,64 @@ export default function ImportarGastosPage() {
 
             {/* Modal de Revisión Split View */}
             <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 h-full overflow-y-auto md:overflow-hidden">
-                        {/* Columna Izquierda: Previsualización */}
-                        <div className="h-[50vh] md:h-full bg-slate-100 border-b md:border-b-0 md:border-r p-4 flex flex-col relative min-h-0">
-                            <div className="absolute top-2 left-2 z-10 flex gap-2">
-                                <Badge variant="secondary" className="bg-black/50 text-white hover:bg-black/60 border-none">
-                                    Documento Original
+                <DialogContent className="max-w-[98vw] w-full h-[95vh] flex flex-col p-0 gap-0">
+                    {/* Header del Modal */}
+                    <div className="flex items-center justify-between px-6 py-3 border-b bg-slate-50">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                                {selectedDraftIndex !== null && drafts[selectedDraftIndex]?.nombre_proveedor
+                                    ? drafts[selectedDraftIndex].nombre_proveedor.substring(0, 1).toUpperCase()
+                                    : "?"}
+                            </div>
+                            <div>
+                                <h2 className="font-semibold text-lg">
+                                    Revisar Factura {selectedDraftIndex !== null ? `(${selectedDraftIndex + 1} de ${drafts.length})` : ''}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Compara el documento original con los datos extraídos
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {selectedDraftIndex !== null && selectedDraftIndex > 0 && (
+                                <Button variant="outline" size="sm" onClick={() => setSelectedDraftIndex(selectedDraftIndex - 1)}>
+                                    ← Anterior
+                                </Button>
+                            )}
+                            {selectedDraftIndex !== null && selectedDraftIndex < drafts.length - 1 && (
+                                <Button variant="outline" size="sm" onClick={() => setSelectedDraftIndex(selectedDraftIndex + 1)}>
+                                    Siguiente →
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 h-full overflow-hidden">
+                        {/* Columna Izquierda: Previsualización del Documento */}
+                        <div className="h-[40vh] lg:h-full bg-slate-900 border-b lg:border-b-0 lg:border-r flex flex-col relative min-h-0">
+                            <div className="absolute top-3 left-3 z-10 flex gap-2">
+                                <Badge className="bg-white/90 text-slate-800 hover:bg-white shadow-md">
+                                    📄 Documento Original
                                 </Badge>
                                 {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (drafts[selectedDraftIndex].archivo_url || drafts[selectedDraftIndex].archivo_file) && (
                                     <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-6 w-6 bg-white shadow-sm"
+                                        variant="secondary"
+                                        size="sm"
+                                        className="h-7 shadow-md"
                                         asChild
-                                        title="Abrir en pestaña nueva"
                                     >
                                         <a
                                             href={drafts[selectedDraftIndex].archivo_url || (drafts[selectedDraftIndex].archivo_file ? URL.createObjectURL(drafts[selectedDraftIndex].archivo_file) : '#')}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
-                                            <Eye className="h-3 w-3" />
+                                            <Eye className="h-3 w-3 mr-1" /> Abrir Original
                                         </a>
                                     </Button>
                                 )}
                             </div>
 
-                            <div className="flex-1 min-h-0 w-full mt-8">
+                            <div className="flex-1 min-h-0 w-full p-4 pt-12">
                                 {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
                                     <DocumentPreview
                                         file={drafts[selectedDraftIndex].archivo_file}
@@ -381,16 +399,62 @@ export default function ImportarGastosPage() {
                             </div>
                         </div>
 
-                        {/* Columna Derecha: Formulario */}
-                        <div className="h-full overflow-y-auto p-6 bg-white flex flex-col min-h-0">
-                            <DialogHeader className="mb-6 shrink-0">
-                                <DialogTitle>Confirmar Datos del Gasto</DialogTitle>
-                                <DialogDescription>
-                                    Verifica que la información extraída coincide con el documento.
-                                </DialogDescription>
-                            </DialogHeader>
+                        {/* Columna Derecha: Datos Extraídos + Formulario */}
+                        <div className="h-full overflow-y-auto bg-white flex flex-col min-h-0">
+                            {/* Resumen de datos extraídos */}
+                            {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
+                                <div className="bg-gradient-to-r from-blue-50 to-green-50 border-b px-6 py-4">
+                                    <h3 className="font-semibold text-sm text-slate-600 mb-3 flex items-center gap-2">
+                                        ✨ Datos Reconocidos Automáticamente
+                                    </h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <ExtractedDataBadge
+                                            label="Proveedor"
+                                            value={drafts[selectedDraftIndex].nombre_proveedor}
+                                            icon="🏢"
+                                        />
+                                        <ExtractedDataBadge
+                                            label="Importe Total"
+                                            value={drafts[selectedDraftIndex].importe ? `${Number(drafts[selectedDraftIndex].importe).toFixed(2)} €` : null}
+                                            icon="💰"
+                                            highlight
+                                        />
+                                        <ExtractedDataBadge
+                                            label="Fecha"
+                                            value={drafts[selectedDraftIndex].fecha}
+                                            icon="📅"
+                                        />
+                                        <ExtractedDataBadge
+                                            label="Nº Factura"
+                                            value={drafts[selectedDraftIndex].numero}
+                                            icon="#️⃣"
+                                        />
+                                        <ExtractedDataBadge
+                                            label="Base Imponible"
+                                            value={drafts[selectedDraftIndex].base_imponible ? `${Number(drafts[selectedDraftIndex].base_imponible).toFixed(2)} €` : null}
+                                            icon="📊"
+                                        />
+                                        <ExtractedDataBadge
+                                            label="Impuestos"
+                                            value={drafts[selectedDraftIndex].iva ? `${Number(drafts[selectedDraftIndex].iva).toFixed(2)} €` : null}
+                                            icon="📈"
+                                        />
+                                    </div>
+                                    {drafts[selectedDraftIndex].isDuplicate && (
+                                        <div className="mt-3 p-2 bg-red-100 border border-red-200 rounded-md flex items-center gap-2 text-red-700 text-sm">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <span className="font-medium">⚠️ Posible factura duplicada detectada</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                            <div className="flex-1">
+                            {/* Formulario de edición */}
+                            <div className="flex-1 p-6 overflow-y-auto">
+                                <h3 className="font-semibold text-sm text-slate-600 mb-4 flex items-center gap-2">
+                                    ✏️ Editar y Confirmar Datos
+                                    <span className="text-xs font-normal text-muted-foreground">(modifica si es necesario)</span>
+                                </h3>
                                 {selectedDraftIndex !== null && drafts[selectedDraftIndex] && (
                                     <GastoForm
                                         initialData={convertToFormData(drafts[selectedDraftIndex])}
@@ -488,12 +552,9 @@ function convertToFormData(draft: ExtractedExpenseData): GastoFormData {
 function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     const objectUrl = useMemo(() => {
         if (file) {
-            const b = URL.createObjectURL(file)
-            console.log("DocumentPreview: Created blob URL", b)
-            return b
+            return URL.createObjectURL(file)
         }
         if (url) {
-            console.log("DocumentPreview: Using provided URL", url)
             return url
         }
         return null
@@ -503,7 +564,6 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
     useEffect(() => {
         return () => {
             if (file && objectUrl && objectUrl.startsWith('blob:')) {
-                console.log("DocumentPreview: Revoking blob URL", objectUrl)
                 URL.revokeObjectURL(objectUrl)
             }
         }
@@ -511,13 +571,10 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
 
     if (!objectUrl) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded bg-slate-50/50 p-4 text-center">
-                <AlertCircle className="h-8 w-8 mb-2 opacity-20" />
-                <p className="font-semibold">Documento No Encontrado</p>
-                <p className="text-xs mt-1 opacity-70">No se ha podido generar una URL para este archivo.</p>
-                <div className="mt-4 p-2 bg-slate-200 rounded text-[9px] font-mono break-all w-full">
-                    DEBUG: file={file ? 'YES' : 'NO'}, url={url || 'NONE'}
-                </div>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 border-2 border-dashed border-slate-600 rounded-lg bg-slate-800/50 p-6 text-center">
+                <AlertCircle className="h-12 w-12 mb-3 opacity-40" />
+                <p className="font-semibold text-white">Sin documento adjunto</p>
+                <p className="text-sm mt-1 opacity-70">Este gasto no tiene una factura asociada.</p>
             </div>
         )
     }
@@ -527,51 +584,58 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
         (url?.includes('facturas_gastos') && !url?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
 
     return (
-        <div className="w-full h-full flex flex-col gap-2">
-            {/* Cabecera Debug Visible para el usuario */}
-            <div className="bg-slate-800 text-white text-[9px] p-1 px-2 rounded flex justify-between items-center font-mono">
-                <span className="truncate max-w-[200px]">{objectUrl.substring(0, 60)}...</span>
-                <Badge variant="outline" className="text-[8px] h-4 border-slate-500 text-slate-300">
-                    {isPdf ? 'PDF' : 'IMAGE'}
-                </Badge>
-            </div>
-
-            <div className="flex-1 min-h-0 w-full overflow-hidden border rounded shadow-inner bg-white relative">
+        <div className="w-full h-full flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-hidden rounded-lg shadow-2xl bg-white">
                 {isPdf ? (
                     <iframe
-                        src={`${objectUrl}${objectUrl.includes('#') ? '' : '#view=FitH&toolbar=0'}`}
+                        src={`${objectUrl}#view=FitH&toolbar=1&navpanes=0`}
                         className="w-full h-full border-none"
                         title="Vista previa del PDF"
-                        onLoad={() => console.log("Iframe loaded successfully")}
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center p-2 bg-slate-100">
+                    <div className="w-full h-full flex items-center justify-center p-4 bg-slate-100">
                         <img
                             src={objectUrl}
-                            alt="Preview"
-                            className="max-w-full max-h-full object-contain"
+                            alt="Factura"
+                            className="max-w-full max-h-full object-contain rounded shadow-lg"
                             onError={(e) => {
-                                console.error("Img error");
                                 const target = e.target as HTMLImageElement;
-                                target.parentElement!.innerHTML = `<p class="text-xs text-red-500 p-4">Error al cargar imagen. Usa el botón de abajo.</p>`;
+                                target.style.display = 'none';
+                                target.parentElement!.innerHTML = `
+                                    <div class="text-center p-6">
+                                        <p class="text-red-500 font-medium">Error al cargar imagen</p>
+                                        <p class="text-sm text-slate-500 mt-1">Usa el botón "Abrir Original" para verla</p>
+                                    </div>
+                                `;
                             }}
                         />
                     </div>
                 )}
             </div>
+        </div>
+    )
+}
 
-            <div className="flex justify-center gap-2 pb-2">
-                <Button variant="default" size="sm" asChild className="h-8 shadow-md">
-                    <a href={objectUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                        <Eye className="h-4 w-4" /> Ver en Pantalla Completa
-                    </a>
-                </Button>
-                {file && (
-                    <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-8">
-                        Recargar página
-                    </Button>
-                )}
+// Componente para mostrar datos extraídos de forma visual
+function ExtractedDataBadge({ label, value, icon, highlight = false }: {
+    label: string,
+    value: string | null | undefined,
+    icon: string,
+    highlight?: boolean
+}) {
+    return (
+        <div className={`p-2 rounded-lg border ${highlight
+                ? 'bg-green-100 border-green-300'
+                : 'bg-white border-slate-200'
+            }`}>
+            <div className="flex items-center gap-1.5">
+                <span className="text-sm">{icon}</span>
+                <span className="text-[10px] uppercase text-slate-500 font-medium">{label}</span>
             </div>
+            <p className={`text-sm font-semibold mt-0.5 truncate ${value ? 'text-slate-800' : 'text-slate-400 italic'
+                }`}>
+                {value || 'No detectado'}
+            </p>
         </div>
     )
 }
