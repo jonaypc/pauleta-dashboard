@@ -6,7 +6,7 @@
         },
         {
             "path": "/api/sync-drive",
-            "schedule": "0 * * * *"
+            "schedule": "0 6 * * *"
         }
     ]
 }
