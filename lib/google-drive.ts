@@ -1,5 +1,4 @@
 import { google } from 'googleapis'
-import { JWT } from 'google-auth-library'
 
 // Configuración del cliente de Google Drive
 function getGoogleDriveClient() {
@@ -10,9 +9,11 @@ function getGoogleDriveClient() {
         throw new Error('Missing Google service account credentials')
     }
 
-    const auth = new JWT({
-        email,
-        key,
+    const auth = new google.auth.GoogleAuth({
+        credentials: {
+            client_email: email,
+            private_key: key,
+        },
         scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     })
 
