@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,12 +40,7 @@ export default function DriveConfigPage() {
     const [recentLogs, setRecentLogs] = useState<SyncLog[]>([])
     const [syncResult, setSyncResult] = useState<any>(null)
 
-    useEffect(() => {
-        loadConfig()
-        loadRecentLogs()
-    }, [])
-
-    const loadConfig = async () => {
+    const loadConfig = useCallback(async () => {
         const { data } = await supabase
             .from('drive_config')
             .select('*')
@@ -58,9 +53,9 @@ export default function DriveConfigPage() {
             setFolderName(data.folder_name || "")
         }
         setIsLoading(false)
-    }
+    }, [supabase])
 
-    const loadRecentLogs = async () => {
+    const loadRecentLogs = useCallback(async () => {
         const { data } = await supabase
             .from('drive_sync_log')
             .select('*')
@@ -68,7 +63,12 @@ export default function DriveConfigPage() {
             .limit(10)
 
         if (data) setRecentLogs(data)
-    }
+    }, [supabase])
+
+    useEffect(() => {
+        loadConfig()
+        loadRecentLogs()
+    }, [loadConfig, loadRecentLogs])
 
     const saveConfig = async () => {
         setIsSaving(true)

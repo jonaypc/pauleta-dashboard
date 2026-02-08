@@ -73,7 +73,7 @@ export function ProviderSelect({ value, onSelect, error }: ProviderSelectProps) 
                                         setOpen(false)
                                     }}
                                 >
-                                    Crear "{search}"
+                                    Crear &quot;{search}&quot;
                                 </Button>
                             </div>
                         </CommandEmpty>

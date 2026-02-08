@@ -642,6 +642,7 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center p-4 bg-slate-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={objectUrl}
                             alt="Factura"
