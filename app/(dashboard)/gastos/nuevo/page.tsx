@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { SmartExpenseImporter, ExtractedExpenseData } from "@/components/gastos/SmartExpenseImporter"
 import { GastoForm } from "@/components/gastos/GastoForm"
 import { Button } from "@/components/ui/button"
@@ -269,25 +269,49 @@ export default function NuevoGastoPage() {
                     )}
                 </div>
             ) : (
-                <div className="bg-card p-6 rounded-lg border shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Columna Izquierda: Preview del documento */}
+                    <div className="bg-slate-900 rounded-lg overflow-hidden min-h-[500px] flex flex-col">
+                        <div className="bg-slate-800 px-4 py-2 flex items-center justify-between">
+                            <span className="text-white text-sm font-medium flex items-center gap-2">
+                                📄 Documento Original
+                            </span>
                             {extractedData.archivo_file && (
-                                <Badge variant="outline" className="font-normal">
-                                    <FileText className="h-3 w-3 mr-1" />
+                                <Badge variant="secondary" className="text-xs">
                                     {extractedData.archivo_file.name}
                                 </Badge>
                             )}
                         </div>
-                        <Button variant="outline" size="sm" onClick={resetAll}>
-                            {expenseQueue.length > 1 ? "Cancelar todo" : "Subir otro archivo"}
-                        </Button>
+
+                        <div className="flex-1 p-4">
+                            {extractedData.archivo_file || extractedData.archivo_url ? (
+                                <DocumentPreview
+                                    file={extractedData.archivo_file}
+                                    url={extractedData.archivo_url}
+                                />
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-slate-500">
+                                    <div className="text-center">
+                                        <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                        <p>Sin documento adjunto</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Indicador de calidad de extracción */}
-                    {extractedData && (
+                    {/* Columna Derecha: Formulario */}
+                    <div className="bg-card p-6 rounded-lg border shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-semibold">Datos del Gasto</h3>
+                            <Button variant="outline" size="sm" onClick={resetAll}>
+                                {expenseQueue.length > 1 ? "Cancelar todo" : "Subir otro archivo"}
+                            </Button>
+                        </div>
+
+                        {/* Indicador de calidad de extracción */}
                         <div className="mb-4 p-3 rounded-lg bg-muted/50">
-                            <p className="text-sm font-medium mb-2">Datos detectados automáticamente:</p>
+                            <p className="text-sm font-medium mb-2">✨ Datos detectados automáticamente:</p>
                             <div className="flex flex-wrap gap-2">
                                 <Badge variant={extractedData.nombre_proveedor ? "default" : "outline"}>
                                     Proveedor: {extractedData.nombre_proveedor || "No detectado"}
@@ -308,16 +332,85 @@ export default function NuevoGastoPage() {
                                 )}
                             </div>
                         </div>
-                    )}
 
-                    {/* Formulario pre-llenado */}
-                    <GastoForm
-                        initialData={extractedData}
-                        onSaveSuccess={expenseQueue.length > 1 ? handleGastoSaved : undefined}
-                        pagosFijos={pagosFijos}
-                    />
+                        {/* Formulario pre-llenado */}
+                        <GastoForm
+                            initialData={extractedData}
+                            onSaveSuccess={expenseQueue.length > 1 ? handleGastoSaved : undefined}
+                            pagosFijos={pagosFijos}
+                        />
+                    </div>
                 </div>
             )}
+        </div>
+    )
+}
+
+// Componente para visualizar documento (PDF o Imagen)
+function DocumentPreview({ file, url }: { file: File | null | undefined, url?: string | null }) {
+    const objectUrl = useMemo(() => {
+        if (file) {
+            return URL.createObjectURL(file)
+        }
+        if (url) {
+            return url
+        }
+        return null
+    }, [file, url])
+
+    // Limpiar URL object
+    useEffect(() => {
+        return () => {
+            if (file && objectUrl && objectUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(objectUrl)
+            }
+        }
+    }, [file, objectUrl])
+
+    if (!objectUrl) {
+        return (
+            <div className="h-full flex items-center justify-center text-slate-400">
+                <div className="text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Sin documento</p>
+                </div>
+            </div>
+        )
+    }
+
+    const isPdf = file?.type === 'application/pdf' ||
+        file?.name?.toLowerCase().endsWith('.pdf') ||
+        url?.toLowerCase().endsWith('.pdf')
+
+    return (
+        <div className="w-full h-full flex flex-col">
+            <div className="flex-1 min-h-[400px] w-full overflow-hidden rounded-lg bg-white">
+                {isPdf ? (
+                    <iframe
+                        src={objectUrl}
+                        className="w-full h-full border-none"
+                        title="Vista previa del PDF"
+                        style={{ minHeight: '400px' }}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center p-4 bg-slate-100">
+                        <img
+                            src={objectUrl}
+                            alt="Factura"
+                            className="max-w-full max-h-full object-contain rounded shadow-lg"
+                        />
+                    </div>
+                )}
+            </div>
+
+            {/* Botón para abrir en nueva pestaña */}
+            <div className="mt-3 flex justify-center">
+                <Button variant="secondary" size="sm" asChild>
+                    <a href={objectUrl} target="_blank" rel="noopener noreferrer">
+                        Abrir en nueva pestaña
+                    </a>
+                </Button>
+            </div>
         </div>
     )
 }
