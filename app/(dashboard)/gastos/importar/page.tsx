@@ -609,11 +609,11 @@ function DocumentPreview({ file, url }: { file: File | null, url?: string }) {
 
     return (
         <div className="w-full h-full flex flex-col">
-            {/* Debug bar - quitar en producción */}
-            <div className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded-t-lg flex justify-between items-center">
-                <span className="truncate">{debugInfo}</span>
-                <Badge variant="outline" className="text-[9px] h-4 border-slate-500">
-                    {isPdf ? 'PDF' : 'IMAGEN'}
+            {/* Debug bar - VERSION 2026-02-08 18:00 */}
+            <div className="bg-yellow-500 text-black text-[10px] px-2 py-1 rounded-t-lg flex justify-between items-center font-bold">
+                <span className="truncate">📄 {debugInfo}</span>
+                <Badge variant="outline" className="text-[9px] h-4 border-yellow-700 bg-yellow-300 text-black">
+                    {isPdf ? '📑 PDF' : '🖼️ IMG'}
                 </Badge>
             </div>
 
