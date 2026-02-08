@@ -69,7 +69,10 @@ export function ExpensePaymentModal({ open, onOpenChange, gasto, onPaymentSucces
 
     async function onSubmit(values: z.infer<typeof paymentSchema>) {
         if (values.importe > pendiente + 0.01) { // Pequeño margen por redondeo
-            toast.error(`El importe no puede superar lo pendiente (${formatCurrency(pendiente)})`)
+            toast({
+                variant: "destructive",
+                description: `El importe no puede superar lo pendiente (${formatCurrency(pendiente)})`
+            })
             return
         }
 
@@ -87,13 +90,18 @@ export function ExpensePaymentModal({ open, onOpenChange, gasto, onPaymentSucces
 
             if (error) throw error
 
-            toast.success("Pago registrado correctamente")
+            toast({
+                description: "Pago registrado correctamente"
+            })
             onOpenChange(false)
             onPaymentSuccess()
             form.reset()
         } catch (error) {
             console.error(error)
-            toast.error("Error al registrar el pago")
+            toast({
+                variant: "destructive",
+                description: "Error al registrar el pago"
+            })
         } finally {
             setLoading(false)
         }
