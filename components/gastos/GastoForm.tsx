@@ -76,7 +76,7 @@ const formSchema = z.object({
     // Fiscalidad
     base_imponible: z.coerce.number().optional().default(0),
     impuestos: z.coerce.number().optional().default(0),
-    tipo_impuesto: z.coerce.number().default(7.00),
+    tipo_impuesto: z.coerce.number().min(0).default(7.00),
     pago_fijo_id: z.string().optional().nullable(),
     lineas: z.array(z.object({
         id: z.string().optional(),
