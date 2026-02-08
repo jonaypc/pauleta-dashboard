@@ -16,7 +16,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { useState } from "react"
-import { Toaster } from "sonner"
+
 
 export default function ProveedoresPage() {
     const { proveedores, loading, deleteProveedor, fetchProveedores } = useProveedores()
