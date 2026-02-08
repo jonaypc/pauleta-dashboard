@@ -1,0 +1,185 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { scanAllInvoices, downloadFile, DriveFile } from '@/lib/google-drive'
+
+// Secret para proteger el endpoint (debe coincidir con Vercel Cron)
+const CRON_SECRET = process.env.CRON_SECRET
+
+// Máximo de archivos a procesar por ejecución (evitar timeouts)
+const MAX_FILES_PER_RUN = 20
+
+export async function GET(request: NextRequest) {
+    // Verificar autorización
+    const authHeader = request.headers.get('authorization')
+    const isManual = request.nextUrl.searchParams.get('manual') === 'true'
+
+    if (!isManual && authHeader !== `Bearer ${CRON_SECRET}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = await createClient()
+
+    try {
+        // Obtener configuración de Drive
+        const { data: config } = await supabase
+            .from('drive_config')
+            .select('*')
+            .eq('is_active', true)
+            .single()
+
+        if (!config?.folder_id) {
+            return NextResponse.json({
+                error: 'No hay carpeta de Drive configurada',
+                setup_required: true
+            }, { status: 400 })
+        }
+
+        // Escanear todos los archivos en la estructura año/mes
+        const allFiles = await scanAllInvoices(config.folder_id)
+
+        // Obtener archivos ya procesados
+        const { data: processedFiles } = await supabase
+            .from('drive_sync_log')
+            .select('drive_file_id')
+
+        const processedIds = new Set((processedFiles || []).map(f => f.drive_file_id))
+
+        // Filtrar solo archivos nuevos
+        const newFiles = allFiles.filter(f => !processedIds.has(f.file.id))
+
+        // Limitar cantidad por ejecución
+        const filesToProcess = newFiles.slice(0, MAX_FILES_PER_RUN)
+
+        const remaining = newFiles.length - filesToProcess.length
+
+        const results = {
+            total_scanned: allFiles.length,
+            already_processed: processedIds.size,
+            new_files: newFiles.length,
+            processing_now: filesToProcess.length,
+            remaining,
+            processed: [] as any[],
+            errors: [] as any[],
+        }
+
+        // Procesar cada archivo
+        for (const { file, year, month } of filesToProcess) {
+            try {
+                // Descargar archivo
+                const fileBuffer = await downloadFile(file.id)
+
+                // Crear un blob para enviar al parser
+                const formData = new FormData()
+                const uint8Array = new Uint8Array(fileBuffer)
+                const blob = new Blob([uint8Array], { type: file.mimeType })
+                formData.append('file', blob, file.name)
+
+                // Llamar al endpoint de parsing existente
+                const parseResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/parse-invoice`, {
+                    method: 'POST',
+                    body: formData,
+                })
+
+                let extractedData: any = {}
+                if (parseResponse.ok) {
+                    extractedData = await parseResponse.json()
+                }
+
+                // Subir archivo a Supabase Storage
+                const fileName = `${Date.now()}-${file.name}`
+                const filePath = `facturas_gastos/${year}/${month}/${fileName}`
+
+                const { error: uploadError } = await supabase.storage
+                    .from('gastos')
+                    .upload(filePath, new Uint8Array(fileBuffer), {
+                        contentType: file.mimeType,
+                    })
+
+                let archivoUrl = null
+                if (!uploadError) {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('gastos')
+                        .getPublicUrl(filePath)
+                    archivoUrl = publicUrl
+                }
+
+                // Determinar fecha del gasto (del OCR o del path año/mes)
+                const fechaGasto = extractedData.fecha || `${year}-${month}-01`
+
+                // Crear gasto en estado pendiente
+                const { data: gasto, error: gastoError } = await supabase
+                    .from('gastos')
+                    .insert({
+                        numero: extractedData.numero || null,
+                        fecha: fechaGasto,
+                        importe: extractedData.importe || 0,
+                        base_imponible: extractedData.base_imponible || 0,
+                        impuestos: extractedData.iva || 0,
+                        tipo_impuesto: extractedData.tipo_impuesto || 7,
+                        estado: 'pendiente',
+                        archivo_url: archivoUrl,
+                        notas: `Importado desde Drive: ${year}/${month}/${file.name}`,
+                    })
+                    .select('id')
+                    .single()
+
+                // Registrar en sync log
+                await supabase.from('drive_sync_log').insert({
+                    drive_file_id: file.id,
+                    file_name: file.name,
+                    file_path: `${year}/${month}/${file.name}`,
+                    year,
+                    month,
+                    gasto_id: gasto?.id || null,
+                    status: gastoError ? 'error' : 'processed',
+                    error_message: gastoError?.message || null,
+                })
+
+                results.processed.push({
+                    file: file.name,
+                    path: `${year}/${month}`,
+                    gasto_id: gasto?.id,
+                })
+
+            } catch (fileError: any) {
+                // Registrar error en sync log
+                await supabase.from('drive_sync_log').insert({
+                    drive_file_id: file.id,
+                    file_name: file.name,
+                    file_path: `${year}/${month}/${file.name}`,
+                    year,
+                    month,
+                    status: 'error',
+                    error_message: fileError.message,
+                })
+
+                results.errors.push({
+                    file: file.name,
+                    error: fileError.message,
+                })
+            }
+        }
+
+        // Actualizar última sincronización
+        await supabase
+            .from('drive_config')
+            .update({ last_sync_at: new Date().toISOString() })
+            .eq('id', config.id)
+
+        return NextResponse.json({
+            success: true,
+            ...results,
+            remaining: newFiles.length - filesToProcess.length,
+            message: results.remaining > 0
+                ? `Procesados ${filesToProcess.length} archivos. Quedan ${results.remaining} pendientes.`
+                : 'Sincronización completada.',
+        })
+
+    } catch (error: any) {
+        console.error('Drive sync error:', error)
+        return NextResponse.json({
+            success: false,
+            error: error.message,
+        }, { status: 500 })
+    }
+}
