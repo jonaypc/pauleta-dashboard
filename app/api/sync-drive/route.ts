@@ -80,9 +80,14 @@ export async function GET(request: NextRequest) {
                     body: formData,
                 })
 
-                let extractedData: any = {}
+                // Extraer datos parseados correctamente
+                let parsedData: any = {}
                 if (parseResponse.ok) {
-                    extractedData = await parseResponse.json()
+                    const jsonResponse = await parseResponse.json()
+                    parsedData = jsonResponse.parsed || {}
+                    console.log(`[SYNC] Parsed data for ${file.name}:`, JSON.stringify(parsedData))
+                } else {
+                    console.log(`[SYNC] Parse failed for ${file.name}, status: ${parseResponse.status}`)
                 }
 
                 // Subir archivo a Supabase Storage
@@ -104,18 +109,50 @@ export async function GET(request: NextRequest) {
                 }
 
                 // Determinar fecha del gasto (del OCR o del path año/mes)
-                const fechaGasto = extractedData.fecha || `${year}-${month}-01`
+                const fechaGasto = parsedData.fecha || `${year}-${month}-01`
 
-                // Crear gasto en estado pendiente
+                // Gestionar proveedor automáticamente
+                let proveedorId = null
+                const proveedorNombre = parsedData.nombre_proveedor || parsedData.proveedor || null
+
+                if (proveedorNombre) {
+                    // Buscar proveedor existente
+                    const { data: existingProvider } = await supabase
+                        .from('proveedores')
+                        .select('id')
+                        .ilike('nombre', proveedorNombre)
+                        .maybeSingle()
+
+                    if (existingProvider) {
+                        proveedorId = existingProvider.id
+                    } else {
+                        // Crear nuevo proveedor
+                        const { data: newProvider } = await supabase
+                            .from('proveedores')
+                            .insert({
+                                nombre: proveedorNombre,
+                                cif: parsedData.cif_proveedor || null,
+                            })
+                            .select('id')
+                            .single()
+
+                        if (newProvider) {
+                            proveedorId = newProvider.id
+                        }
+                    }
+                }
+
+                // Crear gasto con todos los datos extraídos
                 const { data: gasto, error: gastoError } = await supabase
                     .from('gastos')
                     .insert({
-                        numero: extractedData.numero || null,
+                        proveedor_id: proveedorId,
+                        numero: parsedData.numero || null,
                         fecha: fechaGasto,
-                        importe: extractedData.importe || 0,
-                        base_imponible: extractedData.base_imponible || 0,
-                        impuestos: extractedData.iva || 0,
-                        tipo_impuesto: extractedData.tipo_impuesto || 7,
+                        importe: parsedData.importe || parsedData.total || 0,
+                        base_imponible: parsedData.base_imponible || 0,
+                        impuestos: parsedData.iva || parsedData.impuestos || 0,
+                        tipo_impuesto: parsedData.tipo_impuesto || 7,
                         estado: 'pendiente',
                         archivo_url: archivoUrl,
                         notas: `Importado desde Drive: ${year}/${month}/${file.name}`,
