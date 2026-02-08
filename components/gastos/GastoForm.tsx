@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Loader2, Save, Calculator, Link as LinkIcon, Plus, Trash2, AlertTriangle } from "lucide-react"
 import { CATEGORIAS_GASTOS } from "./constants"
+import { ProviderSelect } from "@/components/proveedores/ProviderSelect"
 
 // Definición local flexible para aceptar datos de BD o de Extracción
 export interface GastoLineaData {
@@ -467,7 +468,13 @@ export function GastoForm({ initialData, onSaveSuccess, pagosFijos = [] }: Gasto
                             <FormItem>
                                 <FormLabel>Proveedor</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Nombre del proveedor (ej: Makro)" {...field} />
+                                    <ProviderSelect
+                                        value={field.value}
+                                        onSelect={(name, id) => {
+                                            field.onChange(name)
+                                        }}
+                                        error={!!form.formState.errors.proveedor}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

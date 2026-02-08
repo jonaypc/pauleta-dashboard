@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import {
     Table,
@@ -13,13 +11,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ExternalLink, FileText, Search, X, Trash2, Folder, ChevronDown, ChevronRight } from "lucide-react"
+import { ExternalLink, FileText, Search, X, Trash2, Folder, ChevronDown, ChevronRight, Euro, DollarSign, Wallet } from "lucide-react"
 import Link from "next/link"
 import { formatDate, formatCurrency } from "@/lib/utils"
 import { CATEGORIAS_GASTOS } from "./constants"
 import { deleteGasto, updateGastoStatus } from "@/lib/actions/gastos"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { ExpensePaymentModal } from "./ExpensePaymentModal"
+import { Progress } from "@/components/ui/progress"
 
 interface Gasto {
     id: string
@@ -29,6 +29,7 @@ interface Gasto {
     estado: string
     categoria: string | null
     archivo_url: string | null
+    monto_pagado: number
     proveedor: {
         nombre: string
     } | null
@@ -45,11 +46,13 @@ export function GastosTable({ gastos }: GastosTableProps) {
     const [categoryFilter, setCategoryFilter] = useState("all")
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null)
-    // Estado para controlar qué meses están expandidos. Por defecto todos cerrados o el primero abierto.
-    // Usaremos un Set o array de strings "YYYY-MM"
     const [expandedMonths, setExpandedMonths] = useState<string[]>([])
 
-    // Inicializar expandiendo el mes actual al cargar (opcional, pero buena UX)
+    // Estado para el modal de pagos
+    const [expenseToPay, setExpenseToPay] = useState<Gasto | null>(null)
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+
+    // Inicializar expandiendo el mes actual al cargar
     useState(() => {
         const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
         setExpandedMonths([currentMonth])
@@ -64,50 +67,37 @@ export function GastosTable({ gastos }: GastosTableProps) {
     }
 
     const handleDelete = async (id: string, numero: string | null) => {
-        // Optimistic UI update (could be implemented with local state if needed, but for now just non-blocking)
-        toast({
-            title: "¿Eliminar gasto?",
-            description: `Se eliminará el gasto ${numero || ''}.`,
-            action: (
-                <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={async () => {
-                        setIsDeleting(id)
-                        try {
-                            await deleteGasto(id)
-                            toast({
-                                title: "Gasto eliminado",
-                                description: "El registro se ha borrado correctamente."
-                            })
-                            router.refresh()
-                        } catch (error) {
-                            toast({
-                                title: "Error",
-                                description: "No se pudo eliminar el gasto.",
-                                variant: "destructive"
-                            })
-                        } finally {
-                            setIsDeleting(null)
-                        }
-                    }}
-                >
-                    Confirmar
-                </Button>
-            ),
-        })
+        if (confirm(`¿Estás seguro de que quieres eliminar el gasto ${numero || ''}?`)) {
+            setIsDeleting(id)
+            try {
+                await deleteGasto(id)
+                toast.success("Gasto eliminado correctamente")
+                router.refresh()
+            } catch (error) {
+                toast.error("No se pudo eliminar el gasto")
+            } finally {
+                setIsDeleting(null)
+            }
+        }
     }
 
     const handleStatusChange = async (id: string, newStatus: string) => {
         setIsUpdatingStatus(id)
         try {
             await updateGastoStatus(id, newStatus)
-            // Toast success?
+            router.refresh()
+            toast.success("Estado actualizado")
         } catch (error) {
             console.error("Error updating status", error)
+            toast.error("Error al actualizar estado")
         } finally {
             setIsUpdatingStatus(null)
         }
+    }
+
+    const openPaymentModal = (gasto: Gasto) => {
+        setExpenseToPay(gasto)
+        setIsPaymentModalOpen(true)
     }
 
     // 1. Filtrado General
@@ -124,6 +114,8 @@ export function GastosTable({ gastos }: GastosTableProps) {
     })
 
     const totalFiltered = filteredGastos.reduce((acc, curr) => acc + curr.importe, 0)
+    const totalPagadoFiltered = filteredGastos.reduce((acc, curr) => acc + (curr.monto_pagado || 0), 0)
+    const totalPendienteFiltered = totalFiltered - totalPagadoFiltered
 
     // 2. Agrupación por Mes
     const groupedGastos = filteredGastos.reduce((groups, gasto) => {
@@ -164,6 +156,24 @@ export function GastosTable({ gastos }: GastosTableProps) {
 
     return (
         <div className="space-y-6">
+            {/* Modal de Pagos */}
+            {expenseToPay && (
+                <ExpensePaymentModal
+                    open={isPaymentModalOpen}
+                    onOpenChange={setIsPaymentModalOpen}
+                    gasto={{
+                        id: expenseToPay.id,
+                        numero: expenseToPay.numero || "Sin número",
+                        proveedor_nombre: expenseToPay.proveedor?.nombre || "Proveedor",
+                        importe: expenseToPay.importe,
+                        monto_pagado: expenseToPay.monto_pagado || 0
+                    }}
+                    onPaymentSuccess={() => {
+                        router.refresh()
+                    }}
+                />
+            )}
+
             {/* Filtros */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-card p-4 rounded-lg border shadow-sm">
                 <div className="flex flex-1 items-center gap-2">
@@ -184,6 +194,7 @@ export function GastosTable({ gastos }: GastosTableProps) {
                         <SelectContent>
                             <SelectItem value="all">Todos</SelectItem>
                             <SelectItem value="pendiente">Pendiente</SelectItem>
+                            <SelectItem value="parcial">Parcial</SelectItem>
                             <SelectItem value="pagado">Pagado</SelectItem>
                         </SelectContent>
                     </Select>
@@ -216,10 +227,21 @@ export function GastosTable({ gastos }: GastosTableProps) {
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
-                    <span className="font-medium text-foreground">{filteredGastos.length}</span> resultados
-                    <span>•</span>
-                    <span>Total: <span className="font-bold text-foreground">{formatCurrency(totalFiltered)}</span></span>
+                <div className="flex items-center gap-4 text-sm bg-muted/30 px-4 py-2 rounded-md border text-muted-foreground">
+                    <div className="flex flex-col items-end leading-none">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Total Facturado</span>
+                        <span className="font-bold text-foreground text-base">{formatCurrency(totalFiltered)}</span>
+                    </div>
+                    <div className="h-8 w-px bg-border"></div>
+                    <div className="flex flex-col items-end leading-none">
+                        <span className="text-[10px] uppercase font-bold text-green-600 mb-1">Pagado</span>
+                        <span className="font-bold text-green-700 text-base">{formatCurrency(totalPagadoFiltered)}</span>
+                    </div>
+                    <div className="h-8 w-px bg-border"></div>
+                    <div className="flex flex-col items-end leading-none">
+                        <span className="text-[10px] uppercase font-bold text-destructive mb-1">Pendiente</span>
+                        <span className="font-bold text-destructive text-base">{formatCurrency(totalPendienteFiltered)}</span>
+                    </div>
                 </div>
             </div>
 
@@ -229,6 +251,7 @@ export function GastosTable({ gastos }: GastosTableProps) {
                     sortedMonths.map(monthKey => {
                         const monthGastos = groupedGastos[monthKey]
                         const monthTotal = monthGastos.reduce((acc, curr) => acc + curr.importe, 0)
+                        const monthPending = monthGastos.reduce((acc, curr) => acc + (curr.importe - (curr.monto_pagado || 0)), 0)
                         const isExpanded = expandedMonths.includes(monthKey)
 
                         return (
@@ -248,12 +271,19 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                             <Folder className="h-5 w-5 text-blue-500 fill-blue-100" />
                                             <span className="font-semibold text-lg">{getMonthLabel(monthKey)}</span>
                                             <Badge variant="secondary" className="ml-2 font-normal">
-                                                {monthGastos.length} {monthGastos.length === 1 ? 'factura' : 'facturas'}
+                                                {monthGastos.length} {monthGastos.length === 1 ? 'doc' : 'docs'}
                                             </Badge>
                                         </div>
                                     </div>
-                                    <div className="font-bold text-lg tabular-nums">
-                                        {formatCurrency(monthTotal)}
+                                    <div className="flex items-center gap-4">
+                                        {monthPending > 0 && (
+                                            <span className="text-sm font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded">
+                                                Pendiente: {formatCurrency(monthPending)}
+                                            </span>
+                                        )}
+                                        <div className="font-bold text-lg tabular-nums">
+                                            {formatCurrency(monthTotal)}
+                                        </div>
                                     </div>
                                 </button>
 
@@ -267,77 +297,108 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                                     <TableHead>Proveedor</TableHead>
                                                     <TableHead>Nº Factura</TableHead>
                                                     <TableHead>Categoría</TableHead>
-                                                    <TableHead>Estado</TableHead>
+                                                    <TableHead>Estado Pago</TableHead>
                                                     <TableHead className="text-right">Importe</TableHead>
                                                     <TableHead className="text-right">Acciones</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {monthGastos.map((gasto) => (
-                                                    <TableRow key={gasto.id}>
-                                                        <TableCell>{formatDate(gasto.fecha)}</TableCell>
-                                                        <TableCell className="font-medium">
-                                                            {gasto.proveedor?.nombre || "Sin proveedor"}
-                                                        </TableCell>
-                                                        <TableCell className="font-mono text-xs text-muted-foreground">
-                                                            {gasto.numero || "-"}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {gasto.categoria && (
-                                                                <Badge variant="outline" className="font-normal text-[10px]">
-                                                                    {gasto.categoria}
-                                                                </Badge>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell onClick={(e) => e.stopPropagation()}>
-                                                            <Select
-                                                                defaultValue={gasto.estado}
-                                                                onValueChange={(val) => handleStatusChange(gasto.id, val)}
-                                                                disabled={isUpdatingStatus === gasto.id}
-                                                            >
-                                                                <SelectTrigger className={`h-7 w-[110px] text-xs font-semibold border-0 ${gasto.estado === 'pagado'
-                                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 focus:ring-green-500'
-                                                                    : 'bg-amber-100 text-amber-700 hover:bg-amber-200 focus:ring-amber-500'
-                                                                    }`}>
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="pendiente">PENDIENTE</SelectItem>
-                                                                    <SelectItem value="pagado">PAGADO</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-bold tabular-nums">
-                                                            {formatCurrency(gasto.importe)}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-1">
-                                                                {gasto.archivo_url && (
-                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" asChild title="Ver recibo">
-                                                                        <a href={gasto.archivo_url} target="_blank" rel="noopener noreferrer">
-                                                                            <FileText className="h-4 w-4" />
-                                                                        </a>
-                                                                    </Button>
+                                                {monthGastos.map((gasto) => {
+                                                    const pagado = gasto.monto_pagado || 0
+                                                    const total = gasto.importe
+                                                    const porcentaje = total > 0 ? (pagado / total) * 100 : 0
+                                                    const isPartial = pagado > 0 && pagado < total
+
+                                                    return (
+                                                        <TableRow key={gasto.id}>
+                                                            <TableCell className="w-[100px]">{formatDate(gasto.fecha)}</TableCell>
+                                                            <TableCell className="font-medium max-w-[200px] truncate">
+                                                                {gasto.proveedor?.nombre || "Sin proveedor"}
+                                                            </TableCell>
+                                                            <TableCell className="font-mono text-xs text-muted-foreground w-[120px]">
+                                                                {gasto.numero || "-"}
+                                                            </TableCell>
+                                                            <TableCell className="w-[120px]">
+                                                                {gasto.categoria && (
+                                                                    <Badge variant="outline" className="font-normal text-[10px] truncate max-w-full">
+                                                                        {gasto.categoria}
+                                                                    </Badge>
                                                                 )}
-                                                                <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Ver detalles">
-                                                                    <Link href={`/gastos/${gasto.id}`}>
-                                                                        <ExternalLink className="h-4 w-4" />
-                                                                    </Link>
-                                                                </Button>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                    onClick={() => handleDelete(gasto.id, gasto.numero)}
-                                                                    disabled={isDeleting === gasto.id}
-                                                                    title="Eliminar"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                            </TableCell>
+                                                            <TableCell className="w-[180px]">
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Badge
+                                                                            variant={
+                                                                                gasto.estado === 'pagado' ? 'default' :
+                                                                                    gasto.estado === 'parcial' ? 'secondary' :
+                                                                                        'destructive'
+                                                                            }
+                                                                            className={
+                                                                                gasto.estado === 'pagado' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                                                                                    gasto.estado === 'parcial' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' :
+                                                                                        'bg-red-100 text-red-800 hover:bg-red-100'
+                                                                            }
+                                                                        >
+                                                                            {gasto.estado === 'pagado' ? 'PAGADO' :
+                                                                                gasto.estado === 'parcial' ? 'PARCIAL' :
+                                                                                    'PENDIENTE'}
+                                                                        </Badge>
+                                                                        {gasto.estado !== 'pagado' && (
+                                                                            <Button
+                                                                                size="icon"
+                                                                                variant="ghost"
+                                                                                className="h-6 w-6 rounded-full hover:bg-green-100 text-green-600"
+                                                                                onClick={() => openPaymentModal(gasto)}
+                                                                                title="Registrar Pago"
+                                                                            >
+                                                                                <Wallet className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                    {isPartial && (
+                                                                        <div className="w-full max-w-[140px]">
+                                                                            <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                                                                                <span>{Math.round(porcentaje)}%</span>
+                                                                                <span>Restan: {formatCurrency(total - pagado)}</span>
+                                                                            </div>
+                                                                            <Progress value={porcentaje} className="h-1.5" />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-bold tabular-nums">
+                                                                {formatCurrency(gasto.importe)}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-1">
+                                                                    {gasto.archivo_url && (
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" asChild title="Ver recibo">
+                                                                            <a href={gasto.archivo_url} target="_blank" rel="noopener noreferrer">
+                                                                                <FileText className="h-4 w-4" />
+                                                                            </a>
+                                                                        </Button>
+                                                                    )}
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Ver detalles">
+                                                                        <Link href={`/gastos/${gasto.id}`}>
+                                                                            <ExternalLink className="h-4 w-4" />
+                                                                        </Link>
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                        onClick={() => handleDelete(gasto.id, gasto.numero)}
+                                                                        disabled={isDeleting === gasto.id}
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
                                             </TableBody>
                                         </Table>
                                     </div>

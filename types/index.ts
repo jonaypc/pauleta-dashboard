@@ -147,6 +147,49 @@ export interface PagoFijo {
   created_at: string
 }
 
+export interface Proveedor {
+  id: string
+  nombre: string
+  cif: string | null
+  direccion: string | null
+  telefono: string | null
+  email: string | null
+  categoria_default: string | null
+  activo: boolean
+  created_at: string
+}
+
+export interface Gasto {
+  id: string
+  numero: string | null
+  proveedor_id: string | null
+  fecha: string
+  fecha_vencimiento: string | null
+  importe: number
+  base_imponible: number
+  impuestos: number
+  estado: 'pendiente' | 'pagado' | 'parcial'
+  metodo_pago: MetodoPago | null
+  categoria: string | null
+  archivo_url: string | null
+  notas: string | null
+  monto_pagado: number
+  created_at: string
+  // Relaciones
+  proveedor?: Proveedor
+  pagos?: PagoGasto[]
+}
+
+export interface PagoGasto {
+  id: string
+  gasto_id: string
+  fecha: string
+  importe: number
+  metodo_pago: MetodoPago | null
+  notas: string | null
+  created_at: string
+}
+
 export interface Notificacion {
   id: string
   tipo: 'pago_proximo' | 'factura_vencida' | 'factura_emitida' | 'cobro_registrado'

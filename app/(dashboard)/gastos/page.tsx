@@ -16,13 +16,13 @@ export default async function GastosPage() {
     const { data: gastos } = await supabase
         .from("gastos")
         .select(`
-            id,
             numero,
             fecha,
             importe,
             estado,
             categoria,
             archivo_url,
+            monto_pagado,
             proveedor:proveedores(nombre)
         `)
         .order("fecha", { ascending: false })
