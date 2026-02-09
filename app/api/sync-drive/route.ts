@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
             .maybeSingle()
 
         // ID de carpeta: Prioridad ENV > DB
-        const configFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || config?.folder_id
+        const configFolderId = (process.env.GOOGLE_DRIVE_FOLDER_ID || config?.folder_id)?.trim()
 
         if (!configFolderId) {
             return NextResponse.json({

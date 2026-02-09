@@ -2,8 +2,8 @@ import { google } from 'googleapis'
 
 // Configuración del cliente de Google Drive
 function getGoogleDriveClient() {
-    const email = process.env.GOOGLE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    const email = (process.env.GOOGLE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL)?.trim()
+    const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n').trim()
 
     if (!email || !key) {
         throw new Error('Missing Google service account credentials')
