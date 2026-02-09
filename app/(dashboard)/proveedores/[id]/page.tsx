@@ -1,4 +1,3 @@
-
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { ProveedorForm } from "@/components/proveedores/ProveedorForm"
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Phone, Mail, MapPin, Globe, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { MergeProveedorDialog } from "@/components/proveedores/MergeProveedorDialog"
 
 export default async function ProveedorDetallePage({ params }: { params: { id: string } }) {
     const supabase = await createClient()
@@ -60,6 +60,10 @@ export default async function ProveedorDetallePage({ params }: { params: { id: s
                         <span className="text-sm text-muted-foreground">ID: {proveedor.cif || "Sin CIF"}</span>
                     </div>
                 </div>
+                <MergeProveedorDialog
+                    sourceProveedorId={proveedor.id}
+                    sourceProveedorNombre={proveedor.nombre}
+                />
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
