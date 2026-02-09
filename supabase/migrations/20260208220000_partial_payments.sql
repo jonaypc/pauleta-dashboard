@@ -13,9 +13,11 @@ CREATE TABLE IF NOT EXISTS pagos_gastos (
 -- Enable RLS for pagos_gastos
 ALTER TABLE pagos_gastos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Pagos gastos visibles para auth" ON pagos_gastos;
 CREATE POLICY "Pagos gastos visibles para auth" ON pagos_gastos
   FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Pagos gastos editables para auth" ON pagos_gastos;
 CREATE POLICY "Pagos gastos editables para auth" ON pagos_gastos
   FOR ALL USING (auth.role() = 'authenticated');
 

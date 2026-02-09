@@ -36,7 +36,10 @@ ALTER TABLE drive_sync_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drive_config ENABLE ROW LEVEL SECURITY;
 
 -- Políticas permisivas para esta versión (puedes restringir después)
+DROP POLICY IF EXISTS "Allow all for drive_sync_log" ON drive_sync_log;
 CREATE POLICY "Allow all for drive_sync_log" ON drive_sync_log FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all for drive_config" ON drive_config;
 CREATE POLICY "Allow all for drive_config" ON drive_config FOR ALL USING (true);
 
 COMMENT ON TABLE drive_sync_log IS 'Registro de archivos de Google Drive sincronizados para evitar duplicados';
