@@ -13,6 +13,7 @@ export default function GeneratePDFPage() {
     const [status, setStatus] = useState<"loading" | "generating" | "done" | "error">("loading")
     const [factura, setFactura] = useState<any>(null)
     const [empresa, setEmpresa] = useState<any>(null)
+    const [errorMessage, setErrorMessage] = useState<string>("")
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -55,7 +56,7 @@ export default function GeneratePDFPage() {
 
         const generatePDF = async () => {
             try {
-                // Importar html2pdf dinámicamente (solo funciona en cliente)
+                // Importar html2pdf dinámicamente
                 const html2pdf = (await import("html2pdf.js")).default
 
                 const element = containerRef.current
@@ -63,7 +64,7 @@ export default function GeneratePDFPage() {
                     margin: 0,
                     filename: `${factura.numero}.pdf`,
                     image: { type: "jpeg", quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
+                    html2canvas: { scale: 2, useCORS: true, logging: true },
                     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
                 }
 
@@ -71,21 +72,34 @@ export default function GeneratePDFPage() {
                 const pdfBlob = await html2pdf().set(opt as any).from(element as HTMLElement).outputPdf("blob")
                 const file = new File([pdfBlob], `${factura.numero}.pdf`, { type: "application/pdf" })
 
-                if (action === "share" && navigator.share && navigator.canShare?.({ files: [file] })) {
-                    // Compartir directamente
-                    await navigator.share({
-                        files: [file],
-                        title: `Factura ${factura.numero}`,
-                        text: `Factura ${factura.numero} de Pauleta Canaria`,
-                    })
-                } else {
-                    // Descargar
-                    const url = URL.createObjectURL(pdfBlob)
-                    const a = document.createElement("a")
-                    a.href = url
-                    a.download = `${factura.numero}.pdf`
-                    a.click()
-                    URL.revokeObjectURL(url)
+                try {
+                    if (action === "share" && navigator.share && navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: `Factura ${factura.numero}`,
+                            text: `Factura ${factura.numero} de Pauleta Canaria`,
+                        })
+                    } else {
+                        // Descargar
+                        const url = URL.createObjectURL(pdfBlob)
+                        const a = document.createElement("a")
+                        a.href = url
+                        a.download = `${factura.numero}.pdf`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                    }
+                } catch (shareError: any) {
+                    console.log("Error sharing/downloading:", shareError)
+                    // Ignorar errores de usuario cancelando share
+                    if (shareError.name !== "AbortError") {
+                        // Si falla share, intentar descarga manual
+                        const url = URL.createObjectURL(pdfBlob)
+                        const a = document.createElement("a")
+                        a.href = url
+                        a.download = `${factura.numero}.pdf`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                    }
                 }
 
                 setStatus("done")
@@ -93,10 +107,11 @@ export default function GeneratePDFPage() {
                 // Cerrar ventana después de un momento
                 setTimeout(() => {
                     window.close()
-                }, 1500)
+                }, 3000)
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error generating PDF:", err)
+                setErrorMessage(err.message || String(err))
                 setStatus("error")
             }
         }
@@ -133,10 +148,19 @@ export default function GeneratePDFPage() {
 
     if (status === "error") {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100">
-                <div className="text-center text-red-600">
-                    <p className="text-xl font-bold">Error</p>
-                    <p>No se pudo cargar la factura</p>
+            <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+                <div className="text-center text-red-600 bg-white p-6 rounded shadow-lg max-w-md">
+                    <p className="text-xl font-bold mb-2">Error generando PDF</p>
+                    <p className="mb-4">No se pudo generar el documento.</p>
+                    <p className="text-sm bg-gray-100 p-2 rounded overflow-auto mb-4 font-mono text-left max-h-32 text-gray-800">
+                        {errorMessage || "Error desconocido"}
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Reintentar
+                    </button>
                 </div>
             </div>
         )
