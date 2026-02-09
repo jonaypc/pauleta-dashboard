@@ -68,7 +68,7 @@ export default function GeneratePDFPage() {
                 }
 
                 // Generar PDF
-                const pdfBlob = await html2pdf().set(opt).from(element).outputPdf("blob")
+                const pdfBlob = await html2pdf().set(opt as any).from(element as HTMLElement).outputPdf("blob")
                 const file = new File([pdfBlob], `${factura.numero}.pdf`, { type: "application/pdf" })
 
                 if (action === "share" && navigator.share && navigator.canShare?.({ files: [file] })) {
