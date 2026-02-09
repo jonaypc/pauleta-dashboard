@@ -191,11 +191,12 @@ export default function GeneratePDFPage() {
                 ref={containerRef}
                 style={{
                     width: "210mm",
-                    minHeight: "297mm",
+                    minHeight: "296mm", // Un poco menos de A4 para evitar página extra
                     padding: "15mm 20mm",
                     margin: "0 auto",
                     background: "white",
                     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    boxSizing: "border-box",
                 }}
             >
                 {/* HEADER */}
