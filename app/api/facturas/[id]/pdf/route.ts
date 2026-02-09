@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import chromium from "@sparticuz/chromium"
 import puppeteer from "puppeteer-core"
 
-// Configurar Chromium para Vercel
-chromium.setHeadlessMode = "shell"
-chromium.setGraphicsMode = false
+export const maxDuration = 30 // Tiempo máximo para serverless function
 
 export async function GET(
     request: NextRequest,
@@ -25,7 +23,7 @@ export async function GET(
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
             executablePath: await chromium.executablePath(),
-            headless: "shell",
+            headless: true,
         })
 
         const page = await browser.newPage()
