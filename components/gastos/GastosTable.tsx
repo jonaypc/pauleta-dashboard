@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ExternalLink, FileText, Search, X, Trash2, Folder, ChevronDown, ChevronRight, Euro, DollarSign, Wallet } from "lucide-react"
+import { ExternalLink, FileText, Search, X, Trash2, Folder, ChevronDown, ChevronRight, Euro, DollarSign, Wallet, ListChecks } from "lucide-react"
 import Link from "next/link"
 import { formatDate, formatCurrency } from "@/lib/utils"
 import { CATEGORIAS_GASTOS } from "./constants"
@@ -384,6 +384,27 @@ export function GastosTable({ gastos }: GastosTableProps) {
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex justify-end gap-1">
+                                                                    {gasto.estado !== 'pagado' && (
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                            onClick={async () => {
+                                                                                if (confirm("¿Marcar este gasto como completamente PAGADO hoy?")) {
+                                                                                    try {
+                                                                                        const { markGastoAsPaid } = await import("@/lib/actions/gastos")
+                                                                                        await markGastoAsPaid(gasto.id)
+                                                                                        toast({ description: "Gasto marcado como pagado" })
+                                                                                    } catch (e) {
+                                                                                        toast({ variant: "destructive", description: "Error al marcar como pagado" })
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            title="Marcar como PAGADO"
+                                                                        >
+                                                                            <ListChecks className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
                                                                     {gasto.archivo_url && (
                                                                         <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" asChild title="Ver recibo">
                                                                             <a href={gasto.archivo_url} target="_blank" rel="noopener noreferrer">

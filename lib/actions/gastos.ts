@@ -162,3 +162,42 @@ export async function createBulkGastos(gastos: any[]) {
     revalidatePath("/gastos")
     return { success: true, results, errors }
 }
+
+export async function markGastoAsPaid(id: string) {
+    const supabase = await createClient()
+
+    // 1. Get current expense details
+    const { data: gasto, error: fetchError } = await supabase
+        .from("gastos")
+        .select("importe, monto_pagado")
+        .eq("id", id)
+        .single()
+
+    if (fetchError || !gasto) {
+        throw new Error("Error fetching expense details")
+    }
+
+    const pendientes = gasto.importe - (gasto.monto_pagado || 0)
+
+    if (pendientes <= 0) {
+        return { success: true, message: "Expense is already paid" }
+    }
+
+    // 2. Insert payment for the full pending amount
+    const { error: insertError } = await supabase
+        .from("pagos_gastos")
+        .insert({
+            gasto_id: id,
+            fecha: new Date().toISOString(),
+            importe: pendientes,
+            metodo_pago: 'transferencia', // Default
+            notas: 'Pago rápido (1-click)'
+        })
+
+    if (insertError) {
+        throw new Error(insertError.message)
+    }
+
+    revalidatePath("/gastos")
+    return { success: true }
+}
