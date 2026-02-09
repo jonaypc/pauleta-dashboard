@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 import { Save, X, FileText, Calculator } from "lucide-react"
+import { ClienteCombobox } from "@/components/clientes/ClienteCombobox"
 import { LineasFactura } from "./LineasFactura"
 import type {
     Factura,
@@ -246,20 +247,12 @@ export function FacturaForm({
                         <Label htmlFor="cliente" required>
                             Cliente
                         </Label>
-                        <Select value={clienteId} onValueChange={setClienteId}>
-                            <SelectTrigger id="cliente">
-                                <SelectValue placeholder="Seleccionar cliente..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {clientes.map((cliente) => (
-                                    <SelectItem key={cliente.id} value={cliente.id}>
-                                        {cliente.persona_contacto
-                                            ? `${cliente.persona_contacto} (${cliente.nombre})`
-                                            : cliente.nombre}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <ClienteCombobox
+                            clientes={clientes}
+                            value={clienteId}
+                            onValueChange={setClienteId}
+                            placeholder="Buscar cliente..."
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="fecha" required>
