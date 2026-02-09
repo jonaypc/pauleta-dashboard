@@ -17,6 +17,7 @@ export default async function GastosPage() {
     const { data: gastos } = await supabase
         .from("gastos")
         .select(`
+            id,
             numero,
             fecha,
             importe,
