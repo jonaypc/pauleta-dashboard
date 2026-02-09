@@ -20,22 +20,27 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
 
     try {
-        // Obtener configuración de Drive
-        const { data: config } = await supabase
-            .from('drive_config')
-            .select('*')
-            .eq('is_active', true)
-            .single()
+        // Obtener configuración de Drive (DB o Env)
+        let configFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID
 
-        if (!config?.folder_id) {
+        if (!configFolderId) {
+            const { data: config } = await supabase
+                .from('drive_config')
+                .select('*')
+                .eq('is_active', true)
+                .single()
+            configFolderId = config?.folder_id
+        }
+
+        if (!configFolderId) {
             return NextResponse.json({
-                error: 'No hay carpeta de Drive configurada',
+                error: 'No hay carpeta de Drive configurada (Revisa .env o drive_config)',
                 setup_required: true
             }, { status: 400 })
         }
 
         // Escanear todos los archivos en la estructura año/mes
-        const scanResult = await scanAllInvoices(config.folder_id)
+        const scanResult = await scanAllInvoices(configFolderId)
         const allFiles = scanResult.files
         const scanLogs = scanResult.logs
 
