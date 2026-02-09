@@ -32,11 +32,10 @@ export default async function FacturasPage({ searchParams }: PageProps) {
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    // 1. Query de Facturas (Borradores primero, luego por fecha desc)
+    // 1. Query de Facturas
     let query = supabase
         .from("facturas")
         .select("*, cliente:clientes(nombre, persona_contacto)", { count: "exact" })
-        .order("estado", { ascending: true }) // 'borrador' va antes que 'cobrada', 'emitida'
         .order("fecha", { ascending: false })
         .order("numero", { ascending: false })
         .range(from, to)
@@ -61,7 +60,14 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         query = query.eq("cliente_id", clienteFiltro)
     }
 
-    const { data: facturas, error, count } = await query
+    const { data: facturasRaw, error, count } = await query
+
+    // Ordenar borradores primero (client-side)
+    const facturas = facturasRaw?.sort((a: any, b: any) => {
+        if (a.estado === 'borrador' && b.estado !== 'borrador') return -1
+        if (a.estado !== 'borrador' && b.estado === 'borrador') return 1
+        return 0 // Mantener orden original (por fecha) para el resto
+    }) || []
 
     // 2. Fetch de Clientes para el filtro (solo nombre y contacto)
     const { data: clientes } = await supabase
