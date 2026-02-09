@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Building2,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,11 @@ const navigation = [
     name: "Gastos",
     href: "/gastos",
     icon: Receipt,
+  },
+  {
+    name: "Proveedores",
+    href: "/proveedores",
+    icon: Building2,
   },
   {
     name: "Pagos Fijos",
