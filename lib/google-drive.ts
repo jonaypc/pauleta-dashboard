@@ -135,6 +135,23 @@ export async function getFileMetadata(fileId: string): Promise<DriveFile | null>
 }
 
 /**
+ * Verifica si se puede acceder a una carpeta
+ */
+export async function validateFolderAccess(folderId: string): Promise<boolean> {
+    const drive = getGoogleDriveClient()
+    try {
+        await drive.files.get({
+            fileId: folderId,
+            fields: 'id, name'
+        })
+        return true
+    } catch (error) {
+        console.error('Error validating folder access:', error)
+        return false
+    }
+}
+
+/**
  * Recorre toda la estructura año/mes y devuelve todos los archivos
  */
 export async function scanAllInvoices(rootFolderId: string): Promise<{
@@ -147,6 +164,12 @@ export async function scanAllInvoices(rootFolderId: string): Promise<{
     const addLog = (msg: string) => {
         console.log(msg)
         logs.push(msg)
+    }
+
+    // Validación preliminar
+    const canAccess = await validateFolderAccess(rootFolderId)
+    if (!canAccess) {
+        throw new Error(`No se puede acceder a la carpeta con ID: ${rootFolderId}. Verifica: 1. Que el ID sea correcto. 2. Que hayas COMPARTIDO la carpeta con el email de la Service Account.`)
     }
 
     addLog(`[DRIVE_SCAN] Scanning root folder: ${rootFolderId}`)
