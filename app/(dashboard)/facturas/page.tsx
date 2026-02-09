@@ -32,10 +32,11 @@ export default async function FacturasPage({ searchParams }: PageProps) {
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    // 1. Query de Facturas
+    // 1. Query de Facturas (Borradores primero, luego por fecha desc)
     let query = supabase
         .from("facturas")
         .select("*, cliente:clientes(nombre, persona_contacto)", { count: "exact" })
+        .order("estado", { ascending: true }) // 'borrador' va antes que 'cobrada', 'emitida'
         .order("fecha", { ascending: false })
         .order("numero", { ascending: false })
         .range(from, to)

@@ -230,6 +230,11 @@
 
 /* Print styles para facturas */
 @media print {
+  /* Ocultar headers y footers del navegador (URL, fecha) */
+  @page {
+    margin: 10mm;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -259,3 +264,4 @@
     @apply bg-background text-foreground;
   }
 }
+
