@@ -77,10 +77,12 @@ export function GastosTable({ gastos }: GastosTableProps) {
                     description: "Gasto eliminado correctamente"
                 })
                 router.refresh()
-            } catch (error) {
+            } catch (error: any) {
+                console.error("Error eliminando gasto:", error)
                 toast({
                     variant: "destructive",
-                    description: "No se pudo eliminar el gasto"
+                    title: "No se pudo eliminar el gasto",
+                    description: error.message || "Error desconocido. Revisa la consola."
                 })
             } finally {
                 setIsDeleting(null)
