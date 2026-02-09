@@ -225,38 +225,61 @@ export function FacturasTable({
         }
     }
 
-    // Compartir factura (usa Web Share API en móvil, o WhatsApp como fallback)
+    // Compartir factura como PDF (descarga el PDF y usa Web Share API)
     const handleWhatsApp = async (factura: Factura & { cliente?: any }) => {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-        const facturaUrl = `${baseUrl}/facturas/${factura.id}`
         const clienteName = factura.cliente?.persona_contacto || factura.cliente?.nombre || 'Cliente'
-        const shareText = `Hola ${clienteName}, te envío la factura ${factura.numero} de Pauleta Canaria por un total de ${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(factura.total)}.`
 
-        // Intentar usar Web Share API (mejor para móvil)
-        if (typeof navigator !== 'undefined' && navigator.share) {
-            try {
+        try {
+            // Descargar el PDF
+            const response = await fetch(`/api/facturas/${factura.id}/pdf`)
+            if (!response.ok) {
+                throw new Error('Error generando PDF')
+            }
+
+            const blob = await response.blob()
+            const file = new File([blob], `${factura.numero}.pdf`, { type: 'application/pdf' })
+
+            // Intentar usar Web Share API con archivo (mejor para móvil)
+            if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({
+                    files: [file],
                     title: `Factura ${factura.numero}`,
-                    text: shareText,
-                    url: facturaUrl,
+                    text: `Hola ${clienteName}, te envío la factura ${factura.numero} de Pauleta Canaria.`,
                 })
                 return
-            } catch (err) {
-                // Si el usuario cancela o hay error, usar WhatsApp como fallback
-                console.log('Web Share cancelled or failed, using WhatsApp fallback')
             }
-        }
 
-        // Fallback: abrir WhatsApp con mensaje
-        const message = encodeURIComponent(`${shareText}\n\nVer factura: ${facturaUrl}`)
-        window.open(`https://wa.me/?text=${message}`, '_blank')
+            // Fallback: descargar el PDF y abrir WhatsApp con mensaje
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${factura.numero}.pdf`
+            a.click()
+            URL.revokeObjectURL(url)
+
+            toast({
+                title: "PDF descargado",
+                description: "Ahora puedes adjuntarlo en WhatsApp manualmente",
+            })
+
+            // Abrir WhatsApp con mensaje
+            const message = encodeURIComponent(`Hola ${clienteName}, te envío la factura ${factura.numero} de Pauleta Canaria por un total de ${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(factura.total)}.`)
+            window.open(`https://wa.me/?text=${message}`, '_blank')
+
+        } catch (err) {
+            console.error('Error sharing PDF:', err)
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No se pudo generar el PDF",
+            })
+        }
     }
 
-    // Abrir la factura en modo impresión (abre el detalle y el usuario puede imprimir)
+    // Abrir/descargar el PDF de la factura
     const handlePrint = (factura: Factura) => {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-        // Abrir la página de detalle de la factura
-        window.open(`${baseUrl}/facturas/${factura.id}`, '_blank')
+        // Abrir el PDF en nueva pestaña
+        window.open(`/api/facturas/${factura.id}/pdf`, '_blank')
     }
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
