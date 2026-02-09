@@ -4,6 +4,7 @@ import { GastosStats } from "@/components/gastos/GastosStats"
 import { Button } from "@/components/ui/button"
 import { Plus, Import } from "lucide-react"
 import Link from "next/link"
+import { DriveImportButton } from "@/components/gastos/DriveImportButton"
 
 export const metadata = {
     title: "Gastos y Compras",
@@ -55,6 +56,7 @@ export default async function GastosPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <DriveImportButton />
                     <Button variant="outline" asChild>
                         <Link href="/gastos/importar">
                             <Import className="mr-2 h-4 w-4" />
