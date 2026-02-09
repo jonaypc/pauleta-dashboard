@@ -48,6 +48,25 @@ export async function checkDuplicateExpenseByNames(numero: string, proveedorNomb
 export async function deleteGasto(id: string) {
     const supabase = await createClient()
 
+    // 1. Eliminar pagos asociados (pagos_gastos)
+    await supabase
+        .from("pagos_gastos")
+        .delete()
+        .eq("gasto_id", id)
+
+    // 2. Eliminar registros de sync log (drive_sync_log)
+    await supabase
+        .from("drive_sync_log")
+        .delete()
+        .eq("gasto_id", id)
+
+    // 3. Eliminar líneas de gasto si existen
+    await supabase
+        .from("lineas_gasto")
+        .delete()
+        .eq("gasto_id", id)
+
+    // 4. Finalmente, eliminar el gasto
     const { error } = await supabase
         .from("gastos")
         .delete()

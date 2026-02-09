@@ -164,6 +164,20 @@ export async function GET(request: NextRequest) {
                     }
                 }
 
+                // Segunda línea de defensa: buscar por nombre de archivo en notas
+                if (!existingGastoId) {
+                    const { data: duplicateByFileName } = await supabase
+                        .from('gastos')
+                        .select('id')
+                        .ilike('notas', `%${file.name}%`)
+                        .maybeSingle()
+
+                    if (duplicateByFileName) {
+                        existingGastoId = duplicateByFileName.id
+                        console.log(`[SYNC] Duplicate detected by filename for ${file.name} (Gasto ID: ${existingGastoId})`)
+                    }
+                }
+
                 if (existingGastoId) {
                     // Log duplicate find but do not insert
                     await supabase.from('drive_sync_log').insert({
