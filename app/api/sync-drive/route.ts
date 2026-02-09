@@ -20,17 +20,15 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
 
     try {
-        // Obtener configuración de Drive (DB o Env)
-        let configFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID
+        // Obtener configuración de Drive (DB)
+        const { data: config } = await supabase
+            .from('drive_config')
+            .select('*')
+            .eq('is_active', true)
+            .maybeSingle()
 
-        if (!configFolderId) {
-            const { data: config } = await supabase
-                .from('drive_config')
-                .select('*')
-                .eq('is_active', true)
-                .single()
-            configFolderId = config?.folder_id
-        }
+        // ID de carpeta: Prioridad ENV > DB
+        const configFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || config?.folder_id
 
         if (!configFolderId) {
             return NextResponse.json({
@@ -246,10 +244,13 @@ export async function GET(request: NextRequest) {
         }
 
         // Actualizar última sincronización
-        await supabase
-            .from('drive_config')
-            .update({ last_sync_at: new Date().toISOString() })
-            .eq('id', config.id)
+        // Actualizar última sincronización (solo si existe registro en BD)
+        if (config) {
+            await supabase
+                .from('drive_config')
+                .update({ last_sync_at: new Date().toISOString() })
+                .eq('id', config.id)
+        }
 
         return NextResponse.json({
             success: true,
