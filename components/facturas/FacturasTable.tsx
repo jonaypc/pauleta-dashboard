@@ -276,10 +276,10 @@ export function FacturasTable({
         }
     }
 
-    // Abrir/descargar el PDF de la factura
+    // Abrir la vista de impresión de la factura (con plantilla visual)
     const handlePrint = (factura: Factura) => {
-        // Abrir el PDF en nueva pestaña
-        window.open(`/api/facturas/${factura.id}/pdf`, '_blank')
+        // Abrir la página de impresión con el diseño profesional
+        window.open(`/print/facturas/${factura.id}`, '_blank')
     }
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
