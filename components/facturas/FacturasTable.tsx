@@ -225,21 +225,38 @@ export function FacturasTable({
         }
     }
 
-    // Abrir WhatsApp con enlace a la factura
-    const handleWhatsApp = (factura: Factura & { cliente?: any }) => {
+    // Compartir factura (usa Web Share API en móvil, o WhatsApp como fallback)
+    const handleWhatsApp = async (factura: Factura & { cliente?: any }) => {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-        const facturaUrl = `${baseUrl}/facturas/${factura.id}/print`
+        const facturaUrl = `${baseUrl}/facturas/${factura.id}`
         const clienteName = factura.cliente?.persona_contacto || factura.cliente?.nombre || 'Cliente'
-        const message = encodeURIComponent(
-            `Hola ${clienteName}, te envío la factura ${factura.numero} de Pauleta Canaria:\n${facturaUrl}`
-        )
+        const shareText = `Hola ${clienteName}, te envío la factura ${factura.numero} de Pauleta Canaria por un total de ${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(factura.total)}.`
+
+        // Intentar usar Web Share API (mejor para móvil)
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Factura ${factura.numero}`,
+                    text: shareText,
+                    url: facturaUrl,
+                })
+                return
+            } catch (err) {
+                // Si el usuario cancela o hay error, usar WhatsApp como fallback
+                console.log('Web Share cancelled or failed, using WhatsApp fallback')
+            }
+        }
+
+        // Fallback: abrir WhatsApp con mensaje
+        const message = encodeURIComponent(`${shareText}\n\nVer factura: ${facturaUrl}`)
         window.open(`https://wa.me/?text=${message}`, '_blank')
     }
 
-    // Abrir la factura en modo impresión
+    // Abrir la factura en modo impresión (abre el detalle y el usuario puede imprimir)
     const handlePrint = (factura: Factura) => {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-        window.open(`${baseUrl}/facturas/${factura.id}/print`, '_blank')
+        // Abrir la página de detalle de la factura
+        window.open(`${baseUrl}/facturas/${factura.id}`, '_blank')
     }
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
