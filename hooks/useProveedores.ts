@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Proveedor } from "@/types"
 import { useState, useEffect, useCallback } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { deleteProveedorAction } from "@/lib/actions/proveedores"
 
 export function useProveedores() {
     const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -89,12 +90,7 @@ export function useProveedores() {
 
     const deleteProveedor = async (id: string) => {
         try {
-            const { error } = await supabase
-                .from('proveedores')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
+            await deleteProveedorAction(id)
             setProveedores(prev => prev.filter(p => p.id !== id))
             toast({
                 description: "Proveedor eliminado"
@@ -102,17 +98,9 @@ export function useProveedores() {
             return true
         } catch (error: any) {
             console.error('Error deleting proveedor:', error)
-
-            let message = "Error al eliminar proveedor"
-            if (error.code === "23503") { // FK violation
-                message = "No se puede eliminar: tiene registros asociados (productos, etc.)"
-            } else if (error.message) {
-                message = error.message
-            }
-
             toast({
                 title: "No se pudo eliminar",
-                description: message,
+                description: error.message,
                 variant: "destructive"
             })
             return false

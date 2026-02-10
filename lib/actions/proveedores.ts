@@ -1,10 +1,8 @@
-'use server'
-
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function mergeProveedores(sourceId: string, targetId: string) {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     if (!sourceId || !targetId) {
         throw new Error("Se requieren ambos proveedores")
@@ -48,15 +46,17 @@ export async function mergeProveedores(sourceId: string, targetId: string) {
 
     // 3. Eliminar proveedor source
     try {
-        const { error: deleteError } = await supabase
+        const { error: deleteError, count } = await supabase
             .from("proveedores")
-            .delete()
+            .delete({ count: 'exact' })
             .eq("id", sourceId)
 
         if (deleteError) {
-            // Si falla por FK, es probable que haya otra tabla (no gastos/productos) bloqueando.
-            // Lanzamos error para que el usuario lo vea.
-            throw new Error(`No se pudo eliminar el proveedor antiguo: ${deleteError.message} (Código: ${deleteError.code})`)
+            throw new Error(`No se pudo eliminar: ${deleteError.message}`)
+        }
+
+        if (count === 0) {
+            throw new Error("No se pudo eliminar el proveedor (posiblemente por permisos RLS o ya fue eliminado)")
         }
     } catch (error: any) {
         throw new Error(error.message)
@@ -66,4 +66,29 @@ export async function mergeProveedores(sourceId: string, targetId: string) {
     revalidatePath(`/proveedores/${targetId}`)
 
     return { success: true }
+}
+
+export async function deleteProveedorAction(id: string) {
+    const supabase = await createAdminClient()
+
+    try {
+        const { error, count } = await supabase
+            .from("proveedores")
+            .delete({ count: 'exact' })
+            .eq("id", id)
+
+        if (error) {
+            throw new Error(`No se pudo eliminar: ${error.message} (Código: ${error.code})`)
+        }
+
+        if (count === 0) {
+            throw new Error("No se pudo eliminar: el proveedor no existe o ya fue eliminado.")
+        }
+
+        revalidatePath("/proveedores")
+        return { success: true }
+    } catch (error: any) {
+        // Re-throw con mensaje limpio
+        throw new Error(error.message)
+    }
 }
