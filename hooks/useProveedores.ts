@@ -100,11 +100,19 @@ export function useProveedores() {
                 description: "Proveedor eliminado"
             })
             return true
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting proveedor:', error)
+
+            let message = "Error al eliminar proveedor"
+            if (error.code === "23503") { // FK violation
+                message = "No se puede eliminar: tiene registros asociados (productos, etc.)"
+            } else if (error.message) {
+                message = error.message
+            }
+
             toast({
-                title: "Error",
-                description: "Error al eliminar proveedor",
+                title: "No se pudo eliminar",
+                description: message,
                 variant: "destructive"
             })
             return false
