@@ -60,6 +60,7 @@ export function MergeProveedorDialog({ sourceProveedorId, sourceProveedorNombre 
 
             setOpen(false)
             // Redirigir al proveedor destino
+            router.refresh()
             router.push(`/proveedores/${targetId}`)
         } catch (error: any) {
             console.error("Error merging proveedores:", error)

@@ -41,9 +41,10 @@ const formSchema = z.object({
 interface ProveedorFormProps {
     initialData?: Proveedor | null
     onSuccess?: (prov: Proveedor) => void
+    redirectUrl?: string
 }
 
-export function ProveedorForm({ initialData, onSuccess }: ProveedorFormProps) {
+export function ProveedorForm({ initialData, onSuccess, redirectUrl }: ProveedorFormProps) {
     const router = useRouter()
     const { createProveedor, updateProveedor } = useProveedores()
     const [loading, setLoading] = useState(false)
@@ -71,6 +72,9 @@ export function ProveedorForm({ initialData, onSuccess }: ProveedorFormProps) {
                 if (created && onSuccess) onSuccess(created)
             }
             router.refresh()
+            if (redirectUrl) {
+                router.push(redirectUrl)
+            }
         } catch (error) {
             console.error(error)
         } finally {

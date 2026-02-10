@@ -4,7 +4,8 @@ import { ProveedorForm } from "@/components/proveedores/ProveedorForm"
 import { GastosTable } from "@/components/gastos/GastosTable"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Phone, Mail, MapPin, Globe, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { Phone, Mail, MapPin, Globe, Loader2, ChevronLeft } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { MergeProveedorDialog } from "@/components/proveedores/MergeProveedorDialog"
 
@@ -48,6 +49,12 @@ export default async function ProveedorDetallePage({ params }: { params: { id: s
 
     return (
         <div className="space-y-6">
+
+            <Button variant="ghost" className="mb-4 pl-0 hover:pl-2 transition-all" asChild>
+                <Link href="/proveedores">
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Volver a proveedores
+                </Link>
+            </Button>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">{proveedor.nombre}</h1>
@@ -141,7 +148,7 @@ export default async function ProveedorDetallePage({ params }: { params: { id: s
                             <CardTitle className="text-sm font-medium">Editar Datos</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ProveedorForm initialData={proveedor} />
+                            <ProveedorForm initialData={proveedor} redirectUrl="/proveedores" />
                         </CardContent>
                     </Card>
                 </div>
