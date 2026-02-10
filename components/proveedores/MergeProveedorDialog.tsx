@@ -51,7 +51,11 @@ export function MergeProveedorDialog({ sourceProveedorId, sourceProveedorNombre 
 
         setIsMerging(true)
         try {
-            await mergeProveedores(sourceProveedorId, targetId)
+            const result = await mergeProveedores(sourceProveedorId, targetId)
+
+            if (!result.success) {
+                throw new Error(result.error)
+            }
 
             toast({
                 title: "Fusión completada",

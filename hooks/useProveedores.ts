@@ -90,7 +90,12 @@ export function useProveedores() {
 
     const deleteProveedor = async (id: string) => {
         try {
-            await deleteProveedorAction(id)
+            const result = await deleteProveedorAction(id)
+
+            if (!result.success) {
+                throw new Error(result.error)
+            }
+
             setProveedores(prev => prev.filter(p => p.id !== id))
             toast({
                 description: "Proveedor eliminado"
@@ -100,7 +105,7 @@ export function useProveedores() {
             console.error('Error deleting proveedor:', error)
             toast({
                 title: "No se pudo eliminar",
-                description: error.message,
+                description: error.message || "Error desconocido",
                 variant: "destructive"
             })
             return false
