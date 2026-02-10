@@ -54,10 +54,10 @@ export async function deleteGasto(id: string) {
         .delete()
         .eq("gasto_id", id)
 
-    // 2. Eliminar registros de sync log (drive_sync_log)
+    // 2. Marcar registros de sync log como eliminados (NO borrar, para evitar re-importación)
     await supabase
         .from("drive_sync_log")
-        .delete()
+        .update({ status: 'deleted', gasto_id: null })
         .eq("gasto_id", id)
 
     // 3. Eliminar líneas de gasto si existen
