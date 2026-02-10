@@ -71,6 +71,21 @@ export async function deleteProveedorAction(id: string) {
     const supabase = await createAdminClient()
 
     try {
+        // DEBUG: Verificar si existe antes de borrar
+        const { data: exists, error: findError } = await supabase
+            .from("proveedores")
+            .select("id, nombre")
+            .eq("id", id)
+            .maybeSingle()
+
+        if (findError) {
+            return { success: false, error: `Error buscándolo: ${findError.message}` }
+        }
+
+        if (!exists) {
+            return { success: false, error: `El proveedor con ID ${id} NO existe en la base de datos (según admin client).` }
+        }
+
         const { error, count } = await supabase
             .from("proveedores")
             .delete({ count: 'exact' })
@@ -81,7 +96,7 @@ export async function deleteProveedorAction(id: string) {
         }
 
         if (count === 0) {
-            return { success: false, error: "No se pudo eliminar: el proveedor no existe o ya fue eliminado." }
+            return { success: false, error: `Se encontró el proveedor '${exists.nombre}' pero el DELETE retornó 0. Posible Trigger bloqueante.` }
         }
 
         revalidatePath("/proveedores")
