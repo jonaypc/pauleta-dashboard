@@ -20,11 +20,14 @@ async function getProductionStats() {
             .in("estado", ["planificada", "en_proceso"])
 
         // Materias primas con stock bajo
-        const { data: materiasBajas } = await supabase
+        const { data: materiasTodasActivas } = await supabase
             .from("materias_primas")
-            .select("*")
-            .lte("stock_actual", supabase.raw("stock_minimo"))
+            .select("stock_actual, stock_minimo")
             .eq("activo", true)
+
+        const materiasBajas = materiasTodasActivas?.filter(
+            m => m.stock_actual <= m.stock_minimo
+        ) || []
 
         // Lotes próximos a caducar (30 días)
         const fechaLimite = new Date()
@@ -55,7 +58,7 @@ async function getProductionStats() {
 
         return {
             ordenesActivas: ordenesActivas || 0,
-            materiasBajas: materiasBajas?.length || 0,
+            materiasBajas: materiasBajas.length,
             lotesCaducando: lotesCaducando || 0,
             comprasPendientes: comprasPendientes || 0,
             totalMaterias: totalMaterias || 0,
