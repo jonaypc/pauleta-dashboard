@@ -10,6 +10,15 @@ export interface BankMovement {
     referencia?: string
 }
 
+export interface TreasuryStats {
+    saldoActual: number
+    ingresosPendientes: number
+    gastosPendientes: number
+    proyeccion30dias: number
+    movimientosSinConciliar: number
+    ultimaActualizacion: string
+}
+
 export async function saveBankMovements(movements: BankMovement[]) {
     try {
         const supabase = await createClient()
@@ -52,6 +61,153 @@ export async function getPendingBankMovements() {
 
     if (error) throw new Error(error.message)
     return data
+}
+
+export async function getAllBankMovements(limit = 100) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from("banco_movimientos")
+        .select("*")
+        .order("fecha", { ascending: false })
+        .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+export async function getTreasuryStats(): Promise<TreasuryStats> {
+    const supabase = await createClient()
+
+    try {
+        // 1. Calcular saldo actual (suma de todos los movimientos conciliados)
+        const { data: movimientos } = await supabase
+            .from("banco_movimientos")
+            .select("importe, estado")
+
+        const saldoActual = (movimientos || [])
+            .filter(m => m.estado === 'conciliado')
+            .reduce((sum, m) => sum + (Number(m.importe) || 0), 0)
+
+        // 2. Ingresos pendientes (facturas emitidas sin cobrar)
+        const { data: facturasPendientes } = await supabase
+            .from("facturas")
+            .select("total")
+            .eq("estado", "emitida")
+
+        const ingresosPendientes = (facturasPendientes || [])
+            .reduce((sum, f) => sum + (Number(f.total) || 0), 0)
+
+        // 3. Gastos pendientes
+        const { data: gastosPendientes } = await supabase
+            .from("gastos")
+            .select("importe")
+            .eq("estado", "pendiente")
+
+        const gastosPendientesTotal = (gastosPendientes || [])
+            .reduce((sum, g) => sum + (Number(g.importe) || 0), 0)
+
+        // 4. Proyección a 30 días (facturas que vencen en los próximos 30 días)
+        const hoy = new Date()
+        const en30dias = new Date()
+        en30dias.setDate(hoy.getDate() + 30)
+
+        const { data: facturasProximas } = await supabase
+            .from("facturas")
+            .select("total")
+            .eq("estado", "emitida")
+            .lte("fecha_vencimiento", en30dias.toISOString().split('T')[0])
+
+        const ingresosProximos = (facturasProximas || [])
+            .reduce((sum, f) => sum + (Number(f.total) || 0), 0)
+
+        const { data: gastosProximos } = await supabase
+            .from("gastos")
+            .select("importe")
+            .eq("estado", "pendiente")
+            .lte("fecha_vencimiento", en30dias.toISOString().split('T')[0])
+
+        const gastosProximosTotal = (gastosProximos || [])
+            .reduce((sum, g) => sum + (Number(g.importe) || 0), 0)
+
+        const proyeccion30dias = saldoActual + ingresosProximos - gastosProximosTotal
+
+        // 5. Movimientos sin conciliar
+        const { count: movimientosSinConciliar } = await supabase
+            .from("banco_movimientos")
+            .select("*", { count: 'exact', head: true })
+            .eq("estado", "pendiente")
+
+        return {
+            saldoActual,
+            ingresosPendientes,
+            gastosPendientes: gastosPendientesTotal,
+            proyeccion30dias,
+            movimientosSinConciliar: movimientosSinConciliar || 0,
+            ultimaActualizacion: new Date().toISOString()
+        }
+    } catch (error) {
+        console.error("Error calculating treasury stats:", error)
+        return {
+            saldoActual: 0,
+            ingresosPendientes: 0,
+            gastosPendientes: 0,
+            proyeccion30dias: 0,
+            movimientosSinConciliar: 0,
+            ultimaActualizacion: new Date().toISOString()
+        }
+    }
+}
+
+export async function getCashFlowProjection(months = 6) {
+    const supabase = await createClient()
+
+    try {
+        const now = new Date()
+        const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+        const startDateStr = startDate.toISOString().split('T')[0]
+
+        // Obtener facturas de los últimos N meses
+        const { data: facturas } = await supabase
+            .from("facturas")
+            .select("fecha, total, estado")
+            .gte("fecha", startDateStr)
+            .neq("estado", "anulada")
+
+        // Obtener gastos de los últimos N meses
+        const { data: gastos } = await supabase
+            .from("gastos")
+            .select("fecha, importe")
+            .gte("fecha", startDateStr)
+
+        // Agrupar por mes
+        const cashFlow: { mes: string; ingresos: number; gastos: number; neto: number }[] = []
+
+        for (let i = months - 1; i >= 0; i--) {
+            const fecha = new Date(now.getFullYear(), now.getMonth() - i, 1)
+            const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
+            const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })
+
+            const ingresos = (facturas || [])
+                .filter(f => f.fecha && f.fecha.startsWith(mesKey))
+                .reduce((sum, f) => sum + (Number(f.total) || 0), 0)
+
+            const gastosTotal = (gastos || [])
+                .filter(g => g.fecha && g.fecha.startsWith(mesKey))
+                .reduce((sum, g) => sum + (Number(g.importe) || 0), 0)
+
+            cashFlow.push({
+                mes: nombreMes,
+                ingresos,
+                gastos: gastosTotal,
+                neto: ingresos - gastosTotal
+            })
+        }
+
+        return cashFlow
+    } catch (error) {
+        console.error("Error calculating cash flow projection:", error)
+        return []
+    }
 }
 
 export async function reconcileMovement(movementId: string, matchType: 'gasto' | 'factura', matchIds: string | string[]) {
@@ -121,6 +277,7 @@ export async function reconcileMovement(movementId: string, matchType: 'gasto' |
     revalidatePath("/tesoreria")
     revalidatePath("/gastos")
     revalidatePath("/facturas")
+    revalidatePath("/")
     return { success: true }
 }
 

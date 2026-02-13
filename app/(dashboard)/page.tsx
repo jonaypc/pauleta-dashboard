@@ -5,10 +5,12 @@ import { UnpaidExpenses } from "@/components/dashboard/UpcomingPayments"
 import { TopClientes } from "@/components/dashboard/TopClientes"
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary"
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart"
+import { TreasuryKPIs } from "@/components/dashboard/TreasuryKPIs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Plus, TrendingUp, Package, Clock, FileText } from "lucide-react"
+import { getTreasuryStats } from "@/lib/actions/tesoreria"
 
 export const dynamic = 'force-dynamic'
 
@@ -333,6 +335,22 @@ async function getDashboardData() {
 export default async function DashboardPage() {
   const data = await getDashboardData()
 
+  // Obtener estadísticas de tesorería
+  let treasuryStats = {
+    saldoActual: 0,
+    ingresosPendientes: 0,
+    gastosPendientes: 0,
+    proyeccion30dias: 0,
+    movimientosSinConciliar: 0,
+    ultimaActualizacion: new Date().toISOString()
+  }
+
+  try {
+    treasuryStats = await getTreasuryStats()
+  } catch (error) {
+    console.error("Error loading treasury stats:", error)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -368,6 +386,23 @@ export default async function DashboardPage() {
         facturasEmitidas={data.facturasEmitidas}
         totalClientes={data.totalClientes}
       />
+
+      {/* Métricas de Tesorería */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Tesorería y Liquidez</h2>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/tesoreria">Ver detalles</Link>
+          </Button>
+        </div>
+        <TreasuryKPIs
+          saldoActual={treasuryStats.saldoActual}
+          ingresosPendientes={treasuryStats.ingresosPendientes}
+          gastosPendientes={treasuryStats.gastosPendientes}
+          proyeccion30dias={treasuryStats.proyeccion30dias}
+          movimientosSinConciliar={treasuryStats.movimientosSinConciliar}
+        />
+      </div>
 
       {/* Nuevas tarjetas de métricas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
