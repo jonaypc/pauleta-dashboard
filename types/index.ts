@@ -347,3 +347,281 @@ export interface AlbaranPDFData {
   lineas: LineaFactura[]
   fecha_servicio: string
 }
+
+// ===========================================
+// TIPOS PARA MÓDULO DE PRODUCCIÓN
+// ===========================================
+
+export type CategoriaMateriaPrima = 'fruta' | 'insumo' | 'embalaje' | 'otro'
+export type UnidadMedidaMateria = 'kg' | 'litros' | 'unidades' | 'gramos' | 'ml'
+export type EstadoOrdenProduccion = 'planificada' | 'en_proceso' | 'completada' | 'cancelada' | 'pausada'
+export type TurnoProduccion = 'mañana' | 'tarde' | 'noche'
+export type EstadoLote = 'disponible' | 'reservado' | 'vendido' | 'caducado' | 'retirado' | 'en_cuarentena'
+export type TipoMovimientoInventario = 'entrada' | 'salida' | 'ajuste' | 'merma' | 'devolucion'
+export type EstadoOrdenCompra = 'borrador' | 'enviada' | 'confirmada' | 'recibida_parcial' | 'recibida' | 'cancelada'
+export type TipoInspeccion = 'materia_prima' | 'proceso' | 'producto_terminado'
+export type ResultadoInspeccion = 'aprobado' | 'rechazado' | 'condicional' | 'en_revision'
+
+export interface MateriaPrima {
+  id: string
+  codigo: string
+  nombre: string
+  categoria: CategoriaMateriaPrima
+  unidad_medida: UnidadMedidaMateria
+  stock_actual: number
+  stock_minimo: number
+  stock_maximo: number | null
+  costo_promedio: number
+  ultimo_costo: number | null
+  proveedor_principal_id: string | null
+  requiere_refrigeracion: boolean
+  dias_caducidad: number | null
+  temperatura_almacenamiento: number | null
+  descripcion: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Relaciones
+  proveedor?: Proveedor
+}
+
+export interface Receta {
+  id: string
+  producto_id: string
+  nombre: string
+  version: number
+  descripcion: string | null
+  rendimiento: number
+  tiempo_preparacion: number | null
+  tiempo_congelacion: number | null
+  activa: boolean
+  notas: string | null
+  created_at: string
+  updated_at: string
+  // Relaciones
+  producto?: Producto
+  ingredientes?: RecetaIngrediente[]
+}
+
+export interface RecetaIngrediente {
+  id: string
+  receta_id: string
+  materia_prima_id: string
+  cantidad: number
+  unidad: string
+  costo_unitario: number | null
+  es_opcional: boolean
+  notas: string | null
+  created_at: string
+  // Relaciones
+  materia_prima?: MateriaPrima
+}
+
+export interface OrdenProduccion {
+  id: string
+  numero: string
+  producto_id: string
+  receta_id: string | null
+  cantidad_planificada: number
+  cantidad_producida: number
+  cantidad_rechazada: number
+  cantidad_aprobada: number
+  fecha_planificada: string
+  fecha_inicio: string | null
+  fecha_fin: string | null
+  estado: EstadoOrdenProduccion
+  prioridad: number
+  operario_responsable: string | null
+  turno: TurnoProduccion | null
+  costo_materias_primas: number
+  costo_mano_obra: number
+  costo_total: number
+  notas: string | null
+  created_at: string
+  updated_at: string
+  // Relaciones
+  producto?: Producto
+  receta?: Receta
+  lotes?: LoteProduccion[]
+}
+
+export interface LoteProduccion {
+  id: string
+  numero_lote: string
+  orden_produccion_id: string
+  producto_id: string
+  cantidad: number
+  fecha_fabricacion: string
+  fecha_caducidad: string
+  estado: EstadoLote
+  ubicacion_almacen: string | null
+  temperatura_almacenamiento: number | null
+  observaciones: string | null
+  created_at: string
+  updated_at: string
+  // Relaciones
+  orden_produccion?: OrdenProduccion
+  producto?: Producto
+  materias_primas_usadas?: LoteMateriaPrima[]
+}
+
+export interface MovimientoInventario {
+  id: string
+  materia_prima_id: string
+  tipo: TipoMovimientoInventario
+  cantidad: number
+  costo_unitario: number | null
+  costo_total: number | null
+  stock_anterior: number | null
+  stock_nuevo: number | null
+  referencia_id: string | null
+  referencia_tipo: string | null
+  lote_proveedor: string | null
+  fecha_caducidad: string | null
+  fecha: string
+  usuario_id: string | null
+  motivo: string | null
+  notas: string | null
+  created_at: string
+  // Relaciones
+  materia_prima?: MateriaPrima
+}
+
+export interface OrdenCompra {
+  id: string
+  numero: string
+  proveedor_id: string
+  fecha: string
+  fecha_entrega_esperada: string | null
+  fecha_entrega_real: string | null
+  estado: EstadoOrdenCompra
+  subtotal: number
+  impuestos: number
+  total: number
+  metodo_pago: string | null
+  referencia_proveedor: string | null
+  notas: string | null
+  created_at: string
+  updated_at: string
+  // Relaciones
+  proveedor?: Proveedor
+  lineas?: LineaOrdenCompra[]
+}
+
+export interface LineaOrdenCompra {
+  id: string
+  orden_compra_id: string
+  materia_prima_id: string
+  cantidad_pedida: number
+  cantidad_recibida: number
+  precio_unitario: number
+  subtotal: number
+  impuesto: number
+  total: number
+  lote_proveedor: string | null
+  fecha_caducidad: string | null
+  notas: string | null
+  created_at: string
+  // Relaciones
+  materia_prima?: MateriaPrima
+}
+
+export interface InspeccionCalidad {
+  id: string
+  orden_produccion_id: string | null
+  lote_produccion_id: string | null
+  tipo: TipoInspeccion
+  fecha: string
+  inspector: string | null
+  resultado: ResultadoInspeccion
+  cantidad_inspeccionada: number | null
+  cantidad_aprobada: number | null
+  cantidad_rechazada: number | null
+  motivo_rechazo: string | null
+  criterios_evaluados: Record<string, any> | null
+  observaciones: string | null
+  acciones_correctivas: string | null
+  created_at: string
+}
+
+export interface LoteMateriaPrima {
+  id: string
+  lote_produccion_id: string
+  materia_prima_id: string
+  lote_materia_prima: string | null
+  cantidad_usada: number
+  unidad: string | null
+  costo_unitario: number | null
+  fecha_uso: string
+  created_at: string
+  // Relaciones
+  materia_prima?: MateriaPrima
+}
+
+// ===========================================
+// TIPOS PARA FORMULARIOS DE PRODUCCIÓN
+// ===========================================
+
+export interface MateriaPrimaFormData {
+  codigo: string
+  nombre: string
+  categoria: CategoriaMateriaPrima
+  unidad_medida: UnidadMedidaMateria
+  stock_minimo: number
+  stock_maximo?: number
+  proveedor_principal_id?: string
+  requiere_refrigeracion: boolean
+  dias_caducidad?: number
+  temperatura_almacenamiento?: number
+  descripcion?: string
+}
+
+export interface RecetaFormData {
+  producto_id: string
+  nombre: string
+  version: number
+  descripcion?: string
+  rendimiento: number
+  tiempo_preparacion?: number
+  tiempo_congelacion?: number
+  notas?: string
+  ingredientes: RecetaIngredienteFormData[]
+}
+
+export interface RecetaIngredienteFormData {
+  materia_prima_id: string
+  cantidad: number
+  unidad: string
+  es_opcional: boolean
+  notas?: string
+}
+
+export interface OrdenProduccionFormData {
+  producto_id: string
+  receta_id?: string
+  cantidad_planificada: number
+  fecha_planificada: string
+  prioridad: number
+  operario_responsable?: string
+  turno?: TurnoProduccion
+  notas?: string
+}
+
+export interface OrdenCompraFormData {
+  proveedor_id: string
+  fecha: string
+  fecha_entrega_esperada?: string
+  metodo_pago?: string
+  referencia_proveedor?: string
+  notas?: string
+  lineas: LineaOrdenCompraFormData[]
+}
+
+export interface LineaOrdenCompraFormData {
+  materia_prima_id: string
+  cantidad_pedida: number
+  precio_unitario: number
+  lote_proveedor?: string
+  fecha_caducidad?: string
+  notas?: string
+}
