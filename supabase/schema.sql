@@ -468,12 +468,165 @@ CREATE TRIGGER on_auth_user_created
     EXECUTE FUNCTION handle_new_user();
 
 -- ===========================================
+-- TABLA: proveedores
+-- ===========================================
+CREATE TABLE IF NOT EXISTS proveedores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre VARCHAR(255) NOT NULL,
+  cif VARCHAR(20),
+  direccion TEXT,
+  telefono VARCHAR(20),
+  email VARCHAR(255),
+  categoria_default VARCHAR(100),
+  activo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE POLICY "Proveedores visibles para admin/empleado" ON proveedores
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Proveedores editables para admin" ON proveedores
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Proveedores actualizables para admin" ON proveedores
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+
+-- ===========================================
+-- TABLA: gastos
+-- ===========================================
+CREATE TABLE IF NOT EXISTS gastos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  numero VARCHAR(50),
+  proveedor_id UUID REFERENCES proveedores(id),
+  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+  fecha_vencimiento DATE,
+  importe DECIMAL(10,2) NOT NULL,
+  base_imponible DECIMAL(10,2),
+  impuestos DECIMAL(10,2),
+  estado VARCHAR(20) DEFAULT 'pendiente',
+  metodo_pago VARCHAR(50),
+  categoria VARCHAR(100),
+  archivo_url TEXT,
+  notas TEXT,
+  monto_pagado DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE POLICY "Gastos visibles para admin/empleado" ON gastos
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Gastos insertables para admin" ON gastos
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Gastos actualizables para admin" ON gastos
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Gastos eliminables para admin" ON gastos
+  FOR DELETE USING (auth.role() = 'authenticated');
+
+ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
+
+-- ===========================================
+-- TABLA: lineas_gasto
+-- ===========================================
+CREATE TABLE IF NOT EXISTS lineas_gasto (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gasto_id UUID NOT NULL REFERENCES gastos(id) ON DELETE CASCADE,
+    descripcion TEXT,
+    base_imponible DECIMAL(10,2) NOT NULL DEFAULT 0,
+    importe_impuesto DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tipo_impuesto DECIMAL(4,2) NOT NULL DEFAULT 7.00,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE lineas_gasto ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Lineas de gasto visibles para autenticados" ON lineas_gasto FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lineas de gasto insertables para autenticados" ON lineas_gasto FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Lineas de gasto actualizables para autenticados" ON lineas_gasto FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Lineas de gasto eliminables para autenticados" ON lineas_gasto FOR DELETE TO authenticated USING (true);
+
+-- ===========================================
+-- TABLA: pagos_gastos
+-- ===========================================
+CREATE TABLE IF NOT EXISTS pagos_gastos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gasto_id UUID REFERENCES gastos(id) ON DELETE CASCADE,
+  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+  importe DECIMAL(10,2) NOT NULL,
+  metodo_pago VARCHAR(50),
+  notas TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE pagos_gastos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Pagos gastos visibles para auth" ON pagos_gastos FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Pagos gastos editables para auth" ON pagos_gastos FOR ALL TO authenticated USING (true);
+
+-- Trigger para actualizar monto_pagado y estado en gastos
+CREATE OR REPLACE FUNCTION update_gasto_payment_status()
+RETURNS TRIGGER AS $$
+DECLARE
+    total_pagado DECIMAL(10,2);
+    total_gasto DECIMAL(10,2);
+BEGIN
+    SELECT COALESCE(SUM(importe), 0) INTO total_pagado FROM pagos_gastos WHERE gasto_id = NEW.gasto_id;
+    SELECT importe INTO total_gasto FROM gastos WHERE id = NEW.gasto_id;
+
+    UPDATE gastos
+    SET 
+        monto_pagado = total_pagado,
+        estado = CASE 
+            WHEN total_pagado >= total_gasto THEN 'pagado'
+            WHEN total_pagado > 0 THEN 'parcial'
+            ELSE 'pendiente'
+        END
+    WHERE id = NEW.gasto_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_gasto_payment
+AFTER INSERT OR UPDATE OR DELETE ON pagos_gastos
+FOR EACH ROW
+EXECUTE FUNCTION update_gasto_payment_status();
+
+-- ===========================================
+-- TABLA: webhook_logs
+-- ===========================================
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    source VARCHAR(50), 
+    status VARCHAR(20), 
+    metadata JSONB,     
+    error TEXT
+);
+
+ALTER TABLE webhook_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can view webhook logs" ON webhook_logs
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND (rol = 'admin' OR rol = 'empleado')));
+
+CREATE POLICY "Service role can insert logs" ON webhook_logs
+    FOR INSERT
+    WITH CHECK (true);
+
+-- ===========================================
 -- MENSAJE FINAL
 -- ===========================================
 DO $$
 BEGIN
     RAISE NOTICE '✅ Base de datos de Pauleta Canaria configurada correctamente';
-    RAISE NOTICE '📋 Tablas creadas: empresa, usuarios, clientes, productos, facturas, lineas_factura, cobros, pagos_fijos, notificaciones';
+    RAISE NOTICE '📋 Tablas creadas: empresa, usuarios, clientes, productos, facturas, lineas_factura, cobros, pagos_fijos, notificaciones, proveedores, gastos, lineas_gasto, pagos_gastos, webhook_logs';
     RAISE NOTICE '🔒 Row Level Security habilitado';
     RAISE NOTICE '📦 Datos iniciales insertados';
 END $$;
