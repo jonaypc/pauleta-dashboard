@@ -203,8 +203,8 @@ export default async function ProduccionPage() {
 
             {/* Accesos Rápidos */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/ordenes">
+                <Link href="/produccion/ordenes">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-blue-100">
@@ -216,11 +216,11 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/materias-primas">
+                <Link href="/produccion/materias-primas">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-green-100">
@@ -232,11 +232,11 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/recetas">
+                <Link href="/produccion/recetas">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-purple-100">
@@ -248,11 +248,11 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/lotes">
+                <Link href="/produccion/lotes">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-indigo-100">
@@ -264,11 +264,11 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/compras">
+                <Link href="/produccion/compras">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-amber-100">
@@ -280,11 +280,11 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card className="hover:border-primary transition-colors cursor-pointer" asChild>
-                    <Link href="/produccion/calidad">
+                <Link href="/produccion/calidad">
+                    <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-rose-100">
@@ -296,8 +296,8 @@ export default async function ProduccionPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                    </Link>
-                </Card>
+                    </Card>
+                </Link>
             </div>
 
             {/* Banner informativo */}
