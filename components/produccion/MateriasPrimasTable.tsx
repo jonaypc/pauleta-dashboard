@@ -144,7 +144,7 @@ export function MateriasPrimasTable({ materiasPrimas }: MateriasPrimasTableProps
                                                 {materia.codigo}
                                             </span>
                                             {materia.requiere_refrigeracion && (
-                                                <Snowflake className="h-3 w-3 text-blue-500" title="Requiere refrigeración" />
+                                                <Snowflake className="h-3 w-3 text-blue-500" aria-label="Requiere refrigeración" />
                                             )}
                                         </div>
                                     </td>
@@ -165,8 +165,8 @@ export function MateriasPrimasTable({ materiasPrimas }: MateriasPrimasTableProps
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className={`font-medium tabular-nums ${materia.stock_actual <= materia.stock_minimo
-                                                ? 'text-destructive font-bold'
-                                                : 'text-foreground'
+                                            ? 'text-destructive font-bold'
+                                            : 'text-foreground'
                                             }`}>
                                             {formatNumber(materia.stock_actual)} {UNIDADES_LABELS[materia.unidad_medida]}
                                         </span>
@@ -177,12 +177,12 @@ export function MateriasPrimasTable({ materiasPrimas }: MateriasPrimasTableProps
                                     <td className="px-4 py-3 text-center">
                                         <div className="flex items-center justify-center gap-1">
                                             <StatusIcon className={`h-4 w-4 ${stockStatus.variant === 'destructive' ? 'text-red-500' :
-                                                    stockStatus.variant === 'warning' ? 'text-amber-500' :
-                                                        'text-green-500'
+                                                stockStatus.variant === 'warning' ? 'text-amber-500' :
+                                                    'text-green-500'
                                                 }`} />
                                             <span className={`text-xs font-medium ${stockStatus.variant === 'destructive' ? 'text-red-600' :
-                                                    stockStatus.variant === 'warning' ? 'text-amber-600' :
-                                                        'text-green-600'
+                                                stockStatus.variant === 'warning' ? 'text-amber-600' :
+                                                    'text-green-600'
                                                 }`}>
                                                 {stockStatus.label}
                                             </span>
