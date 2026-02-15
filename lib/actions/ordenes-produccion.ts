@@ -152,6 +152,36 @@ export async function updateEstadoOrden(id: string, estado: string) {
 }
 
 // ===========================================
+// ACTUALIZAR ORDEN DE PRODUCCIÓN
+// ===========================================
+export async function updateOrdenProduccion(id: string, formData: {
+    cantidad_producida?: number
+    cantidad_rechazada?: number
+    cantidad_aprobada?: number
+    operario_responsable?: string
+    turno?: string
+    notas?: string
+}) {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from("ordenes_produccion")
+        .update(formData)
+        .eq("id", id)
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error updating orden produccion:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/produccion/ordenes")
+    revalidatePath(`/produccion/ordenes/${id}`)
+    return { data }
+}
+
+// ===========================================
 // CONSUMIR MATERIAS PRIMAS DE UNA ORDEN
 // ===========================================
 async function consumirMateriasPrimasOrden(ordenId: string) {
