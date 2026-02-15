@@ -70,7 +70,7 @@ export async function getAlertas() {
         .lte("fecha_caducidad", fechaLimite.toISOString().split("T")[0])
         .gte("fecha_caducidad", new Date().toISOString().split("T")[0])
 
-    lotesProximos?.forEach((lote) => {
+    lotesProximos?.forEach((lote: any) => {
         const diasRestantes = Math.ceil(
             (new Date(lote.fecha_caducidad).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
         )
@@ -79,12 +79,14 @@ export async function getAlertas() {
         if (diasRestantes <= 2) prioridad = "alta"
         else if (diasRestantes <= 5) prioridad = "media"
 
+        const nombreProducto = Array.isArray(lote.producto) ? lote.producto[0]?.nombre : lote.producto?.nombre
+
         alertas.push({
             id: `caducidad-${lote.id}`,
             tipo: "caducidad_proxima",
             prioridad,
             titulo: `Caducidad en ${diasRestantes} día${diasRestantes > 1 ? "s" : ""}`,
-            descripcion: `Lote ${lote.numero_lote} de ${lote.producto?.nombre || "producto"} caduca el ${new Date(lote.fecha_caducidad).toLocaleDateString("es-ES")}`,
+            descripcion: `Lote ${lote.numero_lote} de ${nombreProducto || "producto"} caduca el ${new Date(lote.fecha_caducidad).toLocaleDateString("es-ES")}`,
             lote,
         })
     })
@@ -102,13 +104,15 @@ export async function getAlertas() {
         .in("estado", ["disponible", "reservado"])
         .lt("fecha_caducidad", new Date().toISOString().split("T")[0])
 
-    lotesCaducados?.forEach((lote) => {
+    lotesCaducados?.forEach((lote: any) => {
+        const nombreProducto = Array.isArray(lote.producto) ? lote.producto[0]?.nombre : lote.producto?.nombre
+
         alertas.push({
             id: `caducado-${lote.id}`,
             tipo: "caducidad_proxima",
             prioridad: "alta",
             titulo: "Lote Caducado",
-            descripcion: `Lote ${lote.numero_lote} de ${lote.producto?.nombre || "producto"} está caducado desde el ${new Date(lote.fecha_caducidad).toLocaleDateString("es-ES")}`,
+            descripcion: `Lote ${lote.numero_lote} de ${nombreProducto || "producto"} está caducado desde el ${new Date(lote.fecha_caducidad).toLocaleDateString("es-ES")}`,
             lote,
         })
     })
