@@ -267,7 +267,7 @@ export default async function ProduccionPage() {
                     </Card>
                 </Link>
 
-                <Link href="/produccion/compras">
+                <Link href="/produccion/ordenes-compra">
                     <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">
@@ -283,7 +283,7 @@ export default async function ProduccionPage() {
                     </Card>
                 </Link>
 
-                <Link href="/produccion/calidad">
+                <Link href="/produccion/inspecciones">
                     <Card className="hover:border-primary transition-colors cursor-pointer">
                         <CardHeader>
                             <div className="flex items-center gap-3">

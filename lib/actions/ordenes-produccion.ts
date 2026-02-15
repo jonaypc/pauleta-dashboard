@@ -124,9 +124,15 @@ export async function updateEstadoOrden(id: string, estado: string) {
         updates.fecha_inicio = new Date().toISOString()
     }
 
-    // Si se completa, registrar fecha de fin
+    // Si se completa, registrar fecha de fin y consumir materias primas
     if (estado === "completada") {
         updates.fecha_fin = new Date().toISOString()
+
+        // Consumir materias primas automáticamente
+        await consumirMateriasPrimasOrden(id)
+
+        // Calcular costos
+        await calcularCostosOrden(id)
     }
 
     const { data, error } = await supabase
@@ -143,6 +149,107 @@ export async function updateEstadoOrden(id: string, estado: string) {
 
     revalidatePath("/produccion/ordenes")
     return { data }
+}
+
+// ===========================================
+// CONSUMIR MATERIAS PRIMAS DE UNA ORDEN
+// ===========================================
+async function consumirMateriasPrimasOrden(ordenId: string) {
+    const supabase = await createClient()
+
+    try {
+        // Obtener la orden con su receta
+        const { data: orden, error: ordenError } = await supabase
+            .from("ordenes_produccion")
+            .select(`
+                *,
+                receta:recetas(
+                    id,
+                    ingredientes:receta_ingredientes(
+                        id,
+                        materia_prima_id,
+                        cantidad,
+                        unidad,
+                        materia_prima:materias_primas(id, nombre, stock_actual, costo_promedio)
+                    )
+                )
+            `)
+            .eq("id", ordenId)
+            .single()
+
+        if (ordenError || !orden || !orden.receta) {
+            console.error("No se pudo obtener la receta:", ordenError)
+            return
+        }
+
+        // Calcular factor de escala (cantidad producida vs rendimiento de receta)
+        const cantidadProducida = orden.cantidad_producida || orden.cantidad_planificada
+        const rendimiento = orden.receta.rendimiento || 1
+        const factor = cantidadProducida / rendimiento
+
+        // Consumir cada ingrediente
+        for (const ingrediente of orden.receta.ingredientes || []) {
+            const cantidadConsumida = ingrediente.cantidad * factor
+            const materiaPrima = ingrediente.materia_prima
+
+            if (!materiaPrima) continue
+
+            // Obtener stock actual
+            const stockActual = materiaPrima.stock_actual || 0
+
+            // Crear movimiento de salida
+            await supabase
+                .from("movimientos_inventario")
+                .insert({
+                    materia_prima_id: ingrediente.materia_prima_id,
+                    tipo: "salida",
+                    cantidad: cantidadConsumida,
+                    costo_unitario: materiaPrima.costo_promedio || 0,
+                    costo_total: cantidadConsumida * (materiaPrima.costo_promedio || 0),
+                    stock_anterior: stockActual,
+                    stock_nuevo: stockActual - cantidadConsumida,
+                    referencia_id: ordenId,
+                    referencia_tipo: "orden_produccion",
+                    motivo: `Consumo por orden ${orden.numero}`,
+                })
+        }
+
+        console.log(`Materias primas consumidas para orden ${orden.numero}`)
+    } catch (error) {
+        console.error("Error al consumir materias primas:", error)
+    }
+}
+
+// ===========================================
+// CALCULAR COSTOS DE UNA ORDEN
+// ===========================================
+async function calcularCostosOrden(ordenId: string) {
+    const supabase = await createClient()
+
+    try {
+        // Obtener movimientos de inventario de esta orden
+        const { data: movimientos } = await supabase
+            .from("movimientos_inventario")
+            .select("costo_total")
+            .eq("referencia_id", ordenId)
+            .eq("referencia_tipo", "orden_produccion")
+            .eq("tipo", "salida")
+
+        const costoMateriasPrimas = movimientos?.reduce((sum, m) => sum + (m.costo_total || 0), 0) || 0
+
+        // Actualizar costos en la orden
+        await supabase
+            .from("ordenes_produccion")
+            .update({
+                costo_materias_primas: costoMateriasPrimas,
+                costo_total: costoMateriasPrimas, // Por ahora solo materias primas
+            })
+            .eq("id", ordenId)
+
+        console.log(`Costos calculados para orden: ${costoMateriasPrimas}€`)
+    } catch (error) {
+        console.error("Error al calcular costos:", error)
+    }
 }
 
 // ===========================================
