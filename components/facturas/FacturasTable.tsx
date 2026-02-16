@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CobroForm } from "@/components/cobros/CobroForm"
-import type { Factura, EstadoFactura } from "@/types"
+import type { Factura, EstadoFactura, EmailTracking } from "@/types"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
 interface FacturasTableProps {
-    facturas: (Factura & { cliente?: { nombre: string; persona_contacto?: string } })[]
+    facturas: (Factura & { cliente?: { nombre: string; persona_contacto?: string }; email_tracking?: EmailTracking[] })[]
     onEmitir?: (factura: Factura) => void
     onCobrar?: (factura: Factura) => void
     onAnular?: (factura: Factura) => void
@@ -263,6 +263,9 @@ export function FacturasTable({
                         <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                             Estado
                         </th>
+                        <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                            Email
+                        </th>
                         <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                             Acciones
                         </th>
@@ -272,7 +275,7 @@ export function FacturasTable({
                     {facturas.length === 0 ? (
                         <tr>
                             <td
-                                colSpan={7}
+                                colSpan={8}
                                 className="px-4 py-8 text-center text-muted-foreground"
                             >
                                 No hay facturas registradas
@@ -325,6 +328,9 @@ export function FacturasTable({
                                     >
                                         {getEstadoLabel(factura.estado)}
                                     </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <EmailStatusIcon tracking={factura.email_tracking} />
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-1">
@@ -536,6 +542,52 @@ export function FacturasTable({
                     }}
                 />
             )}
+        </div>
+    )
+}
+
+function EmailStatusIcon({ tracking }: { tracking?: EmailTracking[] }) {
+    // Obtener el tracking más reciente
+    const latest = tracking && tracking.length > 0 ? tracking[0] : null
+
+    if (!latest) {
+        return (
+            <div title="No enviado por email">
+                <Mail className="h-4 w-4 text-muted-foreground/30 mx-auto" />
+            </div>
+        )
+    }
+
+    if (latest.estado === 'abierto' || latest.estado === 'clickeado') {
+        const fecha = latest.abierto_at
+            ? new Date(latest.abierto_at).toLocaleDateString("es-ES", {
+                day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+            })
+            : ''
+        return (
+            <div title={`Leído${latest.abierto_count > 1 ? ` (${latest.abierto_count}x)` : ''} - ${fecha}`}>
+                <EyeIcon className="h-4 w-4 text-green-500 mx-auto" />
+            </div>
+        )
+    }
+
+    if (latest.estado === 'rebotado' || latest.estado === 'error') {
+        return (
+            <div title={`Error: ${latest.error_mensaje || latest.estado}`}>
+                <Mail className="h-4 w-4 text-red-500 mx-auto" />
+            </div>
+        )
+    }
+
+    // enviado o entregado
+    const fecha = latest.enviado_at
+        ? new Date(latest.enviado_at).toLocaleDateString("es-ES", {
+            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+        })
+        : ''
+    return (
+        <div title={`Enviado - ${fecha}`}>
+            <MailCheck className="h-4 w-4 text-blue-500 mx-auto" />
         </div>
     )
 }

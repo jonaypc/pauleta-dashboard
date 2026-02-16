@@ -200,6 +200,28 @@ export interface Notificacion {
 }
 
 // ===========================================
+// TIPOS PARA EMAIL TRACKING
+// ===========================================
+
+export type EstadoEmailTracking = 'enviado' | 'entregado' | 'abierto' | 'clickeado' | 'rebotado' | 'error'
+
+export interface EmailTracking {
+  id: string
+  factura_id: string
+  email_to: string
+  resend_email_id: string | null
+  estado: EstadoEmailTracking
+  enviado_at: string
+  entregado_at: string | null
+  abierto_at: string | null
+  abierto_count: number
+  clickeado_at: string | null
+  error_mensaje: string | null
+  metadata: Record<string, any> | null
+  created_at: string
+}
+
+// ===========================================
 // TIPOS PARA FORMULARIOS
 // ===========================================
 

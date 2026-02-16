@@ -17,6 +17,8 @@ interface SendInvoiceEmailParams {
   fecha: string
   empresaNombre: string
   printUrl: string
+  trackingId?: string
+  pdfBuffer?: Buffer
 }
 
 export async function sendInvoiceEmail({
@@ -27,6 +29,8 @@ export async function sendInvoiceEmail({
   fecha,
   empresaNombre,
   printUrl,
+  trackingId,
+  pdfBuffer,
 }: SendInvoiceEmailParams) {
   const formattedTotal = new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -38,6 +42,11 @@ export async function sendInvoiceEmail({
     month: "long",
     year: "numeric",
   })
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const trackingPixel = trackingId
+    ? `<img src="${baseUrl}/api/track/${trackingId}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -59,7 +68,7 @@ export async function sendInvoiceEmail({
             </td>
           </tr>
         </table>
-        
+
         <!-- Content -->
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: white; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
           <tr>
@@ -68,9 +77,9 @@ export async function sendInvoiceEmail({
                 Hola <strong>${clienteNombre}</strong>,
               </p>
               <p style="margin: 0 0 24px; color: #64748b; font-size: 14px; line-height: 1.6;">
-                Te enviamos la factura <strong>${facturaNumero}</strong> correspondiente a nuestros servicios.
+                Te enviamos la factura <strong>${facturaNumero}</strong> correspondiente a nuestros servicios.${pdfBuffer ? ' Encontrarás el PDF adjunto a este email.' : ''}
               </p>
-              
+
               <!-- Invoice Summary -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
                 <tr>
@@ -92,7 +101,7 @@ export async function sendInvoiceEmail({
                   </td>
                 </tr>
               </table>
-              
+
               <!-- CTA Button -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -103,14 +112,14 @@ export async function sendInvoiceEmail({
                   </td>
                 </tr>
               </table>
-              
+
               <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.6;">
                 Si tienes alguna pregunta sobre esta factura, no dudes en contactarnos.
               </p>
             </td>
           </tr>
         </table>
-        
+
         <!-- Footer -->
         <table width="100%" cellpadding="0" cellspacing="0" style="padding: 24px;">
           <tr>
@@ -127,18 +136,32 @@ export async function sendInvoiceEmail({
       </td>
     </tr>
   </table>
+  ${trackingPixel}
 </body>
 </html>
   `
 
   const resend = getResendClient()
-  const { data, error } = await resend.emails.send({
+
+  const emailOptions: Parameters<typeof resend.emails.send>[0] = {
     from: `${empresaNombre} <facturas@pauletacanaria.es>`,
     to: [to],
     reply_to: 'contacto@pauletacanaria.es',
     subject: `Factura ${facturaNumero} - ${empresaNombre}`,
     html,
-  })
+  }
+
+  // Adjuntar PDF si existe
+  if (pdfBuffer) {
+    emailOptions.attachments = [
+      {
+        filename: `Factura-${facturaNumero}.pdf`,
+        content: pdfBuffer,
+      },
+    ]
+  }
+
+  const { data, error } = await resend.emails.send(emailOptions)
 
   if (error) {
     throw error

@@ -22,8 +22,9 @@ import {
     Truck,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import type { EstadoFactura } from "@/types"
+import type { EstadoFactura, EmailTracking } from "@/types"
 import { CambiarClienteButton } from "@/components/facturas/CambiarClienteButton"
+import { EmailTrackingTimeline } from "@/components/facturas/EmailTrackingTimeline"
 
 interface PageProps {
     params: { id: string }
@@ -94,6 +95,13 @@ export default async function FacturaDetailPage({
             </div>
         )
     }
+
+    // Cargar tracking de email
+    const { data: emailTrackings } = await supabase
+        .from("email_tracking")
+        .select("*")
+        .eq("factura_id", id)
+        .order("created_at", { ascending: false })
 
     // Cargar todos los clientes para el botón de cambiar cliente
     const { data: todosClientes } = await supabase
@@ -383,6 +391,13 @@ export default async function FacturaDetailPage({
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Email Tracking */}
+                    <EmailTrackingTimeline
+                        trackings={(emailTrackings || []) as EmailTracking[]}
+                        facturaId={id}
+                        clienteEmail={factura.cliente?.email}
+                    />
                 </div>
             </div>
         </div>
