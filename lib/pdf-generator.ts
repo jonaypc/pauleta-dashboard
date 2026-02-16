@@ -63,25 +63,35 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
 
   if (mostrarLogo && empresa.logo_url) {
     try {
+      console.log('[PDF] Fetching logo from:', empresa.logo_url)
       const response = await fetch(empresa.logo_url)
+      console.log('[PDF] Logo fetch status:', response.status, response.statusText)
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer()
         const base64 = Buffer.from(arrayBuffer).toString('base64')
         const contentType = response.headers.get('content-type') || 'image/png'
-        const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'JPEG' : 'PNG'
+        // Detect format from URL extension if content-type is generic
+        const url = empresa.logo_url.toLowerCase()
+        let ext: 'JPEG' | 'PNG' = 'PNG'
+        if (contentType.includes('jpeg') || contentType.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
+          ext = 'JPEG'
+        }
         const dataUrl = `data:${contentType};base64,${base64}`
 
-        // Logo height in mm (proportional, cap at 20mm height)
+        // Logo dimensions in mm
         const logoHeightMm = Math.min(20, logoWidth * 0.25)
         const logoWidthMm = logoHeightMm * 2.5
 
         doc.addImage(dataUrl, ext, margin, y - 5, logoWidthMm, logoHeightMm)
         y += logoHeightMm + 2
         logoAdded = true
+        console.log('[PDF] Logo added successfully, format:', ext, 'size:', arrayBuffer.byteLength, 'bytes')
       }
     } catch (logoError) {
-      console.error('Error fetching logo for PDF:', logoError)
+      console.error('[PDF] Error fetching logo:', logoError)
     }
+  } else {
+    console.log('[PDF] No logo to add. mostrarLogo:', mostrarLogo, 'logo_url:', empresa.logo_url)
   }
 
   if (!logoAdded) {

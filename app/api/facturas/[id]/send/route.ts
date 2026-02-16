@@ -42,6 +42,7 @@ export async function POST(
             .single()
 
         const empresaNombre = empresa?.nombre || "Pauleta Canaria S.L."
+        console.log('[SEND] Empresa logo_url:', empresa?.logo_url, 'mostrar_logo:', empresa?.mostrar_logo)
 
         // Crear registro de tracking ANTES de enviar
         const { data: tracking, error: trackingError } = await supabase
