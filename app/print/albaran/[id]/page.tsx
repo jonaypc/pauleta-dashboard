@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
 import NextImage from "next/image"
@@ -26,7 +26,7 @@ export async function generateMetadata() {
 }
 
 export default async function AlbaranPrintPage({ params }: PageProps) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data: factura, error } = await supabase
     .from("facturas")

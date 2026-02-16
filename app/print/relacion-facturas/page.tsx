@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
 
@@ -27,7 +27,7 @@ export default async function RelacionFacturasPrintPage({
 }: { 
     searchParams: SearchParams 
 }) {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { cif, desde, hasta, periodo, mes, entregado, fecha } = searchParams
 
     if (!cif || !desde || !hasta) {

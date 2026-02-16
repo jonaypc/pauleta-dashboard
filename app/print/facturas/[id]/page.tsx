@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
 import NextImage from "next/image"
@@ -42,7 +42,7 @@ export async function generateMetadata() {
 }
 
 export default async function FacturaPrintPage({ params, searchParams }: PageProps) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const isCopia = searchParams.copia === 'true'
 
   const { data: factura, error } = await supabase
