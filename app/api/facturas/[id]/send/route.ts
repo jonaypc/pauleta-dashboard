@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { sendInvoiceEmail } from "@/lib/email"
-import { generateInvoicePDF } from "@/lib/pdf-generator"
 
 export async function POST(
     request: NextRequest,
@@ -62,9 +61,10 @@ export async function POST(
 
         const trackingId = tracking?.id || undefined
 
-        // Generar PDF de la factura
+        // Generar PDF de la factura (import dinámico para evitar problemas en serverless)
         let pdfBuffer: Buffer | undefined
         try {
+            const { generateInvoicePDF } = await import("@/lib/pdf-generator")
             pdfBuffer = generateInvoicePDF({
                 factura: {
                     ...factura,
@@ -73,9 +73,9 @@ export async function POST(
                 cliente: factura.cliente,
                 empresa: empresa || { nombre: empresaNombre } as any,
             })
-        } catch (pdfError) {
-            console.error("Error generating PDF:", pdfError)
-            // Continuar sin PDF si falla la generación
+        } catch (pdfError: unknown) {
+            const msg = pdfError instanceof Error ? pdfError.message : String(pdfError)
+            console.error("Error generating PDF (sending without attachment):", msg)
         }
 
         // Construir URL de la factura
