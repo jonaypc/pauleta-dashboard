@@ -65,7 +65,7 @@ export async function POST(
         let pdfBuffer: Buffer | undefined
         try {
             const { generateInvoicePDF } = await import("@/lib/pdf-generator")
-            pdfBuffer = generateInvoicePDF({
+            pdfBuffer = await generateInvoicePDF({
                 factura: {
                     ...factura,
                     lineas: factura.lineas || [],

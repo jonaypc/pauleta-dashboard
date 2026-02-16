@@ -31,7 +31,7 @@ function formatFecha(fecha: string): string {
   })
 }
 
-export function generateInvoicePDF(data: InvoicePDFData): Buffer {
+export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> {
   const { factura, cliente, empresa } = data
   const color = empresa.color_primario || "#1e40af"
 
@@ -56,11 +56,45 @@ export function generateInvoicePDF(data: InvoicePDFData): Buffer {
 
   const [r, g, b] = hexToRgb(color)
 
-  // === HEADER: Company name ===
-  doc.setFontSize(20)
-  doc.setTextColor(r, g, b)
-  doc.setFont('helvetica', 'bold')
-  doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  // === HEADER: Company logo + name ===
+  const mostrarLogo = empresa.mostrar_logo ?? true
+  const logoWidth = empresa.logo_width || 80
+  let logoAdded = false
+
+  if (mostrarLogo && empresa.logo_url) {
+    try {
+      const response = await fetch(empresa.logo_url)
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const contentType = response.headers.get('content-type') || 'image/png'
+        const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'JPEG' : 'PNG'
+        const dataUrl = `data:${contentType};base64,${base64}`
+
+        // Logo height in mm (proportional, cap at 20mm height)
+        const logoHeightMm = Math.min(20, logoWidth * 0.25)
+        const logoWidthMm = logoHeightMm * 2.5
+
+        doc.addImage(dataUrl, ext, margin, y - 5, logoWidthMm, logoHeightMm)
+        y += logoHeightMm + 2
+        logoAdded = true
+      }
+    } catch (logoError) {
+      console.error('Error fetching logo for PDF:', logoError)
+    }
+  }
+
+  if (!logoAdded) {
+    doc.setFontSize(20)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  } else {
+    doc.setFontSize(14)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  }
 
   // Company details
   y += 6
