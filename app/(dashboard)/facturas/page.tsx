@@ -35,7 +35,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
     // 1. Query de Facturas
     let query = supabase
         .from("facturas")
-        .select("*, cliente:clientes(nombre, persona_contacto), email_tracking(*)", { count: "exact" })
+        .select("*, cliente:clientes(nombre, persona_contacto, email), email_tracking(*)", { count: "exact" })
         .order("fecha", { ascending: false })
         .order("numero", { ascending: false })
         .range(from, to)

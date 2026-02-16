@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +19,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
 interface FacturasTableProps {
-    facturas: (Factura & { cliente?: { nombre: string; persona_contacto?: string }; email_tracking?: EmailTracking[] })[]
+    facturas: (Factura & { cliente?: { nombre: string; persona_contacto?: string; email?: string | null }; email_tracking?: EmailTracking[] })[]
     onEmitir?: (factura: Factura) => void
     onCobrar?: (factura: Factura) => void
     onAnular?: (factura: Factura) => void
@@ -69,6 +69,8 @@ export function FacturasTable({
     const [facturaParaCobrar, setFacturaParaCobrar] = useState<Factura | null>(null)
     const [isActionLoading, setIsActionLoading] = useState(false)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [isSendingEmail, setIsSendingEmail] = useState<string | null>(null) // ID of invoice being sent
+    const [isBulkSending, setIsBulkSending] = useState(false)
 
     // Totales
     const totalVisible = facturas.reduce((sum, f) => sum + (f.total || 0), 0)
@@ -233,11 +235,103 @@ export function FacturasTable({
 
     // Abrir la vista de impresión de la factura (con plantilla visual)
     const handlePrint = (factura: Factura) => {
-        // Abrir la página de impresión con el diseño profesional
         window.open(`/print/facturas/${factura.id}`, '_blank')
     }
+
+    // Enviar email individual
+    const handleSendEmail = async (factura: Factura & { cliente?: { email?: string | null } }) => {
+        if (!factura.cliente?.email) return
+        setIsSendingEmail(factura.id)
+        try {
+            const response = await fetch(`/api/facturas/${factura.id}/send`, { method: "POST" })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || "Error al enviar email")
+            toast({
+                title: "Email enviado",
+                description: `Factura ${factura.numero} enviada a ${factura.cliente.email}`,
+                variant: "success",
+            })
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al enviar email",
+                variant: "destructive",
+            })
+        } finally {
+            setIsSendingEmail(null)
+        }
+    }
+
+    // Enviar emails masivos
+    const handleBulkSend = async () => {
+        if (selectedIds.size === 0) return
+        setIsBulkSending(true)
+        try {
+            const response = await fetch("/api/facturas/send-bulk", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ facturaIds: Array.from(selectedIds) }),
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || "Error al enviar emails")
+
+            const parts: string[] = []
+            if (data.enviados > 0) parts.push(`${data.enviados} enviada${data.enviados > 1 ? 's' : ''}`)
+            if (data.sinEmail?.length > 0) parts.push(`${data.sinEmail.length} sin email`)
+            if (data.errores?.length > 0) parts.push(`${data.errores.length} con error`)
+
+            toast({
+                title: data.enviados > 0 ? "Emails enviados" : "No se enviaron emails",
+                description: parts.join(" · "),
+                variant: data.enviados > 0 ? "success" : "destructive",
+            })
+
+            setSelectedIds(new Set())
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al enviar emails",
+                variant: "destructive",
+            })
+        } finally {
+            setIsBulkSending(false)
+        }
+    }
+
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
+            {/* Barra de acciones masivas */}
+            {selectedIds.size > 0 && (
+                <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-primary/5 px-4 py-2">
+                    <span className="text-sm font-medium">
+                        {selectedIds.size} factura{selectedIds.size > 1 ? 's' : ''} seleccionada{selectedIds.size > 1 ? 's' : ''}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleBulkSend}
+                            disabled={isBulkSending}
+                        >
+                            {isBulkSending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Mail className="mr-2 h-4 w-4" />
+                            )}
+                            {isBulkSending ? "Enviando..." : "Enviar por email"}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedIds(new Set())}
+                        >
+                            Cancelar
+                        </Button>
+                    </div>
+                </div>
+            )}
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-border bg-muted/50">
@@ -353,6 +447,22 @@ export function FacturasTable({
                                         >
                                             <Printer className="h-4 w-4" />
                                         </Button>
+                                        {factura.cliente?.email && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                onClick={() => handleSendEmail(factura)}
+                                                disabled={isSendingEmail === factura.id}
+                                                title={`Enviar email a ${factura.cliente.email}`}
+                                            >
+                                                {isSendingEmail === factura.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Mail className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        )}
 
                                         {/* Cambio Rápido de Estado */}
                                         {factura.estado === "borrador" && (
