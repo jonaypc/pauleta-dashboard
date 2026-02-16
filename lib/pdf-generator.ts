@@ -63,8 +63,10 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
 
   if (mostrarLogo && empresa.logo_url) {
     try {
-      console.log('[PDF] Fetching logo from:', empresa.logo_url)
-      const response = await fetch(empresa.logo_url)
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const logoUrl = empresa.logo_url.startsWith('http') ? empresa.logo_url : `${baseUrl}${empresa.logo_url}`
+      console.log('[PDF] Fetching logo from:', logoUrl)
+      const response = await fetch(logoUrl)
       console.log('[PDF] Logo fetch status:', response.status, response.statusText)
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer()
