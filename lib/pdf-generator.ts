@@ -1,6 +1,35 @@
 import jsPDF from 'jspdf'
 import type { Empresa, Cliente, LineaFactura } from '@/types'
 
+// Parse image dimensions from binary data
+function getImageDimensions(buffer: ArrayBuffer, format: 'PNG' | 'JPEG'): { width: number; height: number } | null {
+  try {
+    const view = new DataView(buffer)
+    if (format === 'PNG') {
+      // PNG: width at byte 16-19, height at byte 20-23 (big-endian)
+      if (buffer.byteLength > 24) {
+        return { width: view.getUint32(16), height: view.getUint32(20) }
+      }
+    } else {
+      // JPEG: scan for SOF0 (0xFFC0) or SOF2 (0xFFC2) marker
+      let offset = 2
+      while (offset < buffer.byteLength - 9) {
+        if (view.getUint8(offset) === 0xFF) {
+          const marker = view.getUint8(offset + 1)
+          if (marker === 0xC0 || marker === 0xC2) {
+            return { width: view.getUint16(offset + 7), height: view.getUint16(offset + 5) }
+          }
+          const segLen = view.getUint16(offset + 2)
+          offset += 2 + segLen
+        } else {
+          offset++
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
 interface InvoicePDFData {
   factura: {
     numero: string
@@ -80,12 +109,29 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
         }
         const dataUrl = `data:${contentType};base64,${base64}`
 
-        // Logo dimensions in mm
-        const logoHeightMm = Math.min(20, logoWidth * 0.25)
-        const logoWidthMm = logoHeightMm * 2.5
+        // Get real image dimensions for correct aspect ratio
+        const dims = getImageDimensions(arrayBuffer, ext)
+        const maxHeightMm = 18
+        const maxWidthMm = 60
+        let logoWidthMm: number
+        let logoHeightMm: number
 
-        doc.addImage(dataUrl, ext, margin, y - 5, logoWidthMm, logoHeightMm)
-        y += logoHeightMm + 2
+        if (dims && dims.width > 0 && dims.height > 0) {
+          const aspect = dims.width / dims.height
+          // Fit within max bounds while preserving aspect ratio
+          logoHeightMm = maxHeightMm
+          logoWidthMm = logoHeightMm * aspect
+          if (logoWidthMm > maxWidthMm) {
+            logoWidthMm = maxWidthMm
+            logoHeightMm = logoWidthMm / aspect
+          }
+        } else {
+          logoHeightMm = maxHeightMm
+          logoWidthMm = maxHeightMm * 2
+        }
+
+        doc.addImage(dataUrl, ext, margin, y - 3, logoWidthMm, logoHeightMm)
+        y += logoHeightMm + 3
         logoAdded = true
         console.log('[PDF] Logo added successfully, format:', ext, 'size:', arrayBuffer.byteLength, 'bytes')
       }
@@ -217,12 +263,14 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
     doc.text(formatPrecio(linea.precio_unitario), colX[2] + colWidths[2] - 2, y, { align: 'right' })
     doc.text(formatPrecio(linea.subtotal), colX[3] + colWidths[3] - 2, y, { align: 'right' })
 
-    const lineHeight = descLines.length * 4 + 4
-    y += lineHeight
+    // Calculate text height and add padding before drawing separator
+    const textHeight = descLines.length * 3.5
+    y += textHeight + 3
 
     doc.setDrawColor(241, 245, 249)
     doc.setLineWidth(0.2)
-    doc.line(margin, y - 2, pageWidth - margin, y - 2)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 4
   }
 
   // === Totals ===
