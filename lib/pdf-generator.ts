@@ -34,7 +34,6 @@ interface InvoicePDFData {
   factura: {
     numero: string
     fecha: string
-    fecha_servicio?: string | null
     base_imponible: number
     igic: number
     total: number
@@ -57,6 +56,14 @@ function formatFecha(fecha: string): string {
   return new Date(fecha).toLocaleDateString("es-ES", {
     day: "2-digit",
     month: "long",
+    year: "numeric",
+  })
+}
+
+function formatFechaCorta(fecha: string): string {
+  return new Date(fecha).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   })
 }
@@ -191,20 +198,8 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.setFont('helvetica', 'normal')
   doc.text(formatFecha(factura.fecha), boxX + boxW / 2, boxY + 24, { align: 'center' })
 
-  // Fecha de servicio (below the invoice box if present)
-  let extraBoxH = 0
-  if (factura.fecha_servicio) {
-    extraBoxH = 8
-    doc.setFillColor(248, 250, 252)
-    doc.roundedRect(boxX, boxY + boxH + 2, boxW, extraBoxH, 2, 2, 'F')
-    doc.setFontSize(8)
-    doc.setTextColor(100, 116, 139)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`F. Servicio: ${formatFecha(factura.fecha_servicio)}`, boxX + boxW / 2, boxY + boxH + 7, { align: 'center' })
-  }
-
   // === Separator ===
-  y = Math.max(y, boxY + boxH + extraBoxH) + 8
+  y = Math.max(y, boxY + boxH) + 8
   doc.setDrawColor(226, 232, 240)
   doc.setLineWidth(0.5)
   doc.line(margin, y, pageWidth - margin, y)
@@ -278,7 +273,17 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
 
     // Calculate text height and add padding before drawing separator
     const textHeight = descLines.length * 3.5
-    y += textHeight + 3
+    y += textHeight
+
+    // Show per-line fecha_servicio if present
+    if (linea.fecha_servicio) {
+      doc.setFontSize(7)
+      doc.setTextColor(100, 116, 139)
+      doc.text(`F. Servicio: ${formatFechaCorta(linea.fecha_servicio)}`, colX[0], y + 1)
+      y += 4
+    }
+
+    y += 3
 
     doc.setDrawColor(241, 245, 249)
     doc.setLineWidth(0.2)

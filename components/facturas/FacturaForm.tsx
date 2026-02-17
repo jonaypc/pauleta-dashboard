@@ -59,9 +59,6 @@ export function FacturaForm({
     const [fechaVencimiento, setFechaVencimiento] = useState(
         factura?.fecha_vencimiento || ""
     )
-    const [fechaServicio, setFechaServicio] = useState(
-        factura?.fecha_servicio || ""
-    )
     const [notas, setNotas] = useState(factura?.notas || "")
     const [lineas, setLineas] = useState<LineaFacturaFormData[]>(
         factura?.lineas?.map((l) => ({
@@ -73,6 +70,7 @@ export function FacturaForm({
             es_intercambio: (l as any).es_intercambio || false, // Cast temporal si types no actualiza rápido
             producto_devuelto_id: (l as any).producto_devuelto_id || undefined,
             motivo_devolucion: (l as any).motivo_devolucion || undefined,
+            fecha_servicio: (l as any).fecha_servicio || undefined,
         })) || []
     )
 
@@ -125,7 +123,6 @@ export function FacturaForm({
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
-                        fecha_servicio: fechaServicio || null,
                         notas: notas || null,
                     })
                     .eq("id", factura.id)
@@ -149,7 +146,8 @@ export function FacturaForm({
                     subtotal: l.cantidad * l.precio_unitario,
                     es_intercambio: l.es_intercambio || false,
                     producto_devuelto_id: l.producto_devuelto_id || null,
-                    motivo_devolucion: l.motivo_devolucion || null
+                    motivo_devolucion: l.motivo_devolucion || null,
+                    fecha_servicio: l.fecha_servicio || null,
                 }))
 
                 const { error: lineasError } = await supabase
@@ -183,7 +181,6 @@ export function FacturaForm({
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
-                        fecha_servicio: fechaServicio || null,
                         notas: notas || null,
                         estado: "borrador",
                         base_imponible: baseImponible,
@@ -206,7 +203,8 @@ export function FacturaForm({
                     subtotal: l.cantidad * l.precio_unitario,
                     es_intercambio: l.es_intercambio || false,
                     producto_devuelto_id: l.producto_devuelto_id || null,
-                    motivo_devolucion: l.motivo_devolucion || null
+                    motivo_devolucion: l.motivo_devolucion || null,
+                    fecha_servicio: l.fecha_servicio || null,
                 }))
 
                 const { error: lineasError } = await supabase
@@ -280,19 +278,6 @@ export function FacturaForm({
                             onChange={(e) => setFechaVencimiento(e.target.value)}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="fechaServicio">Fecha de servicio</Label>
-                        <Input
-                            id="fechaServicio"
-                            type="date"
-                            value={fechaServicio}
-                            onChange={(e) => setFechaServicio(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Fecha de entrega del servicio o producto
-                        </p>
-                    </div>
-
                     <div className="space-y-2">
                         <Label htmlFor="numero">
                             Número de Factura

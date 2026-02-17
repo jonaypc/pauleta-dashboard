@@ -190,6 +190,18 @@ export function LineasFactura({
                                     className="mt-2 text-xs"
                                     disabled={disabled}
                                 />
+                                <div className="mt-1 flex items-center gap-1">
+                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">F. Servicio:</span>
+                                    <Input
+                                        type="date"
+                                        value={linea.fecha_servicio || ""}
+                                        onChange={(e) =>
+                                            handleLineaChange(index, "fecha_servicio", e.target.value)
+                                        }
+                                        className="h-6 text-[10px] px-1"
+                                        disabled={disabled}
+                                    />
+                                </div>
                                 {linea.es_intercambio && (
                                     <div className="mt-1 text-[10px] text-orange-600 font-medium">
                                         * Se registrará como Merma (Coste 0)

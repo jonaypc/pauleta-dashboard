@@ -97,7 +97,6 @@ export interface Factura {
   total: number
   estado: EstadoFactura
   fecha_vencimiento: string | null
-  fecha_servicio: string | null
   notas: string | null
   created_at: string
   updated_at: string
@@ -116,6 +115,7 @@ export interface LineaFactura {
   precio_unitario: number
   igic: number
   subtotal: number
+  fecha_servicio?: string | null
   es_intercambio?: boolean
   producto_devuelto_id?: string | null
   motivo_devolucion?: string | null
@@ -257,7 +257,6 @@ export interface FacturaFormData {
   cliente_id: string
   fecha: string
   fecha_vencimiento?: string
-  fecha_servicio?: string
   notas?: string
   lineas: LineaFacturaFormData[]
 }
@@ -268,6 +267,7 @@ export interface LineaFacturaFormData {
   cantidad: number
   precio_unitario: number
   igic: number
+  fecha_servicio?: string
   es_intercambio?: boolean
   producto_devuelto_id?: string
   motivo_devolucion?: string
@@ -369,7 +369,6 @@ export interface AlbaranPDFData {
   factura: Factura
   cliente: Cliente
   lineas: LineaFactura[]
-  fecha_servicio: string
 }
 
 // ===========================================

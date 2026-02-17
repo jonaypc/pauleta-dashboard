@@ -347,9 +347,6 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
               <div className="label">Albarán de entrega</div>
               <h2>{numeroAlbaran}</h2>
               <p>Fecha: {formatFecha(factura.fecha)}</p>
-              {factura.fecha_servicio && (
-                <p>Fecha de servicio: {formatFecha(factura.fecha_servicio)}</p>
-              )}
             </div>
           </div>
 
@@ -385,9 +382,17 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 descripcion: string;
                 cantidad: number;
                 precio_unitario: number;
+                fecha_servicio?: string | null;
               }) => (
                 <tr key={linea.id}>
-                  <td>{linea.descripcion}</td>
+                  <td>
+                    {linea.descripcion}
+                    {linea.fecha_servicio && (
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                        F. Servicio: {formatFecha(linea.fecha_servicio)}
+                      </div>
+                    )}
+                  </td>
                   <td className="center">{linea.cantidad}</td>
                 </tr>
               ))}

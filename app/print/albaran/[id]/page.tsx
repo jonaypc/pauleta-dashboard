@@ -17,6 +17,14 @@ function formatFecha(fecha: string): string {
   })
 }
 
+function formatFechaCorta(fecha: string): string {
+  return new Date(fecha).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
 export async function generateMetadata() {
   return {
     title: {
@@ -415,11 +423,6 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
             <div className="albaran-label">Albarán de Entrega</div>
             <div className="albaran-number">{numeroAlbaran}</div>
             <div className="albaran-date">{formatFecha(factura.fecha)}</div>
-            {factura.fecha_servicio && (
-              <div className="albaran-date" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
-                F. Servicio: {formatFecha(factura.fecha_servicio)}
-              </div>
-            )}
           </div>
         </div>
 
@@ -470,6 +473,11 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 </td>
                 <td>
                   <span className="item-description">{linea.descripcion}</span>
+                  {linea.fecha_servicio && (
+                    <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                      F. Servicio: {formatFechaCorta(linea.fecha_servicio)}
+                    </div>
+                  )}
                 </td>
                 <td className="center">{linea.cantidad}</td>
               </tr>

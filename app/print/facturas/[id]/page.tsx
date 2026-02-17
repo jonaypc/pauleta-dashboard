@@ -496,11 +496,6 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
             <div className="invoice-label">{isCopia ? 'Factura (COPIA)' : 'Factura'}</div>
             <div className="invoice-number">N.º {factura.numero}</div>
             <div className="invoice-date">{formatFecha(factura.fecha)}</div>
-            {factura.fecha_servicio && (
-              <div className="invoice-date" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
-                F. Servicio: {formatFecha(factura.fecha_servicio)}
-              </div>
-            )}
           </div>
         </div>
 
@@ -562,6 +557,11 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
                         </span>
                       )}
                     </span>
+                    {linea.fecha_servicio && (
+                      <span style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                        F. Servicio: {formatFechaCorta(linea.fecha_servicio)}
+                      </span>
+                    )}
                     {linea.es_intercambio && linea.motivo_devolucion && (
                       <span className="text-[10px] text-gray-500 italic mt-0.5">
                         Motivo: {linea.motivo_devolucion}

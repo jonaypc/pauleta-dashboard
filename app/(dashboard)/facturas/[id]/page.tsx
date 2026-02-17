@@ -294,9 +294,16 @@ export default async function FacturaDetailPage({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {factura.lineas?.map((linea: { id: string; descripcion: string; cantidad: number; precio_unitario: number; igic: number; subtotal: number }) => (
+                                        {factura.lineas?.map((linea: { id: string; descripcion: string; cantidad: number; precio_unitario: number; igic: number; subtotal: number; fecha_servicio?: string | null }) => (
                                             <tr key={linea.id} className="border-b last:border-b-0">
-                                                <td className="py-2">{linea.descripcion}</td>
+                                                <td className="py-2">
+                                                    {linea.descripcion}
+                                                    {linea.fecha_servicio && (
+                                                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                                                            F. Servicio: {formatDate(linea.fecha_servicio)}
+                                                        </div>
+                                                    )}
+                                                </td>
                                                 <td className="py-2 text-center">{linea.cantidad}</td>
                                                 <td className="py-2 text-right tabular-nums">
                                                     {formatPrecio(linea.precio_unitario)}
@@ -379,12 +386,6 @@ export default async function FacturaDetailPage({
                                 <span className="text-muted-foreground">Fecha</span>
                                 <span>{formatDate(factura.fecha)}</span>
                             </div>
-                            {factura.fecha_servicio && (
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">F. Servicio</span>
-                                    <span>{formatDate(factura.fecha_servicio)}</span>
-                                </div>
-                            )}
                             {factura.fecha_vencimiento && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Vencimiento</span>
