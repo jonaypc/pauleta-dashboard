@@ -59,6 +59,9 @@ export function FacturaForm({
     const [fechaVencimiento, setFechaVencimiento] = useState(
         factura?.fecha_vencimiento || ""
     )
+    const [fechaServicio, setFechaServicio] = useState(
+        factura?.fecha_servicio || ""
+    )
     const [notas, setNotas] = useState(factura?.notas || "")
     const [lineas, setLineas] = useState<LineaFacturaFormData[]>(
         factura?.lineas?.map((l) => ({
@@ -122,6 +125,7 @@ export function FacturaForm({
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
+                        fecha_servicio: fechaServicio || null,
                         notas: notas || null,
                     })
                     .eq("id", factura.id)
@@ -179,6 +183,7 @@ export function FacturaForm({
                         cliente_id: clienteId,
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
+                        fecha_servicio: fechaServicio || null,
                         notas: notas || null,
                         estado: "borrador",
                         base_imponible: baseImponible,
@@ -274,6 +279,18 @@ export function FacturaForm({
                             value={fechaVencimiento}
                             onChange={(e) => setFechaVencimiento(e.target.value)}
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="fechaServicio">Fecha de servicio</Label>
+                        <Input
+                            id="fechaServicio"
+                            type="date"
+                            value={fechaServicio}
+                            onChange={(e) => setFechaServicio(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Fecha de entrega del servicio o producto
+                        </p>
                     </div>
 
                     <div className="space-y-2">

@@ -415,6 +415,11 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
             <div className="albaran-label">Albarán de Entrega</div>
             <div className="albaran-number">{numeroAlbaran}</div>
             <div className="albaran-date">{formatFecha(factura.fecha)}</div>
+            {factura.fecha_servicio && (
+              <div className="albaran-date" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
+                F. Servicio: {formatFecha(factura.fecha_servicio)}
+              </div>
+            )}
           </div>
         </div>
 

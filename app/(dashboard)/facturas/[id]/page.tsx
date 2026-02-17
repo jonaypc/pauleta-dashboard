@@ -379,6 +379,12 @@ export default async function FacturaDetailPage({
                                 <span className="text-muted-foreground">Fecha</span>
                                 <span>{formatDate(factura.fecha)}</span>
                             </div>
+                            {factura.fecha_servicio && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">F. Servicio</span>
+                                    <span>{formatDate(factura.fecha_servicio)}</span>
+                                </div>
+                            )}
                             {factura.fecha_vencimiento && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Vencimiento</span>

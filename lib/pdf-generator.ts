@@ -34,6 +34,7 @@ interface InvoicePDFData {
   factura: {
     numero: string
     fecha: string
+    fecha_servicio?: string | null
     base_imponible: number
     igic: number
     total: number
@@ -190,8 +191,20 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.setFont('helvetica', 'normal')
   doc.text(formatFecha(factura.fecha), boxX + boxW / 2, boxY + 24, { align: 'center' })
 
+  // Fecha de servicio (below the invoice box if present)
+  let extraBoxH = 0
+  if (factura.fecha_servicio) {
+    extraBoxH = 8
+    doc.setFillColor(248, 250, 252)
+    doc.roundedRect(boxX, boxY + boxH + 2, boxW, extraBoxH, 2, 2, 'F')
+    doc.setFontSize(8)
+    doc.setTextColor(100, 116, 139)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`F. Servicio: ${formatFecha(factura.fecha_servicio)}`, boxX + boxW / 2, boxY + boxH + 7, { align: 'center' })
+  }
+
   // === Separator ===
-  y = Math.max(y, boxY + boxH) + 8
+  y = Math.max(y, boxY + boxH + extraBoxH) + 8
   doc.setDrawColor(226, 232, 240)
   doc.setLineWidth(0.5)
   doc.line(margin, y, pageWidth - margin, y)

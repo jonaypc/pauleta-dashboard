@@ -97,6 +97,7 @@ export interface Factura {
   total: number
   estado: EstadoFactura
   fecha_vencimiento: string | null
+  fecha_servicio: string | null
   notas: string | null
   created_at: string
   updated_at: string
@@ -256,6 +257,7 @@ export interface FacturaFormData {
   cliente_id: string
   fecha: string
   fecha_vencimiento?: string
+  fecha_servicio?: string
   notas?: string
   lineas: LineaFacturaFormData[]
 }
