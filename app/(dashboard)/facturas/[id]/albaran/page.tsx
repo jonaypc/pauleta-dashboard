@@ -383,17 +383,35 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 cantidad: number;
                 precio_unitario: number;
                 fecha_servicio?: string | null;
+                es_intercambio?: boolean;
+                motivo_devolucion?: string | null;
               }) => (
-                <tr key={linea.id}>
+                <tr key={linea.id} style={linea.es_intercambio ? { background: 'rgba(249, 115, 22, 0.05)' } : {}}>
                   <td>
-                    {linea.descripcion}
-                    {linea.fecha_servicio && (
-                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-                        F. Servicio: {formatFecha(linea.fecha_servicio)}
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {linea.descripcion}
+                        {linea.es_intercambio && (
+                          <span style={{ fontSize: '9px', border: '1px solid #f97316', color: '#ea580c', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontWeight: 700 }}>
+                            CAMBIO / MERMA
+                          </span>
+                        )}
+                      </span>
+                      {linea.fecha_servicio && (
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                          F. Servicio: {formatFecha(linea.fecha_servicio)}
+                        </div>
+                      )}
+                      {linea.es_intercambio && linea.motivo_devolucion && (
+                        <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>
+                          Motivo: {linea.motivo_devolucion}
+                        </div>
+                      )}
+                    </div>
                   </td>
-                  <td className="center">{linea.cantidad}</td>
+                  <td className="center" style={linea.es_intercambio ? { color: '#dc2626', fontWeight: 700 } : {}}>
+                    {linea.es_intercambio ? `-${linea.cantidad}` : linea.cantidad}
+                  </td>
                 </tr>
               ))}
             </tbody>

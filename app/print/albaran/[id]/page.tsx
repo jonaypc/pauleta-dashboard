@@ -465,21 +465,37 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           </thead>
           <tbody>
             {factura.lineas?.map((linea: any) => (
-              <tr key={linea.id}>
+              <tr key={linea.id} className={linea.es_intercambio ? "bg-orange-50/10" : ""}>
                 <td>
                   <span className="item-code">
                     {linea.producto?.codigo_barras || '-'}
                   </span>
                 </td>
                 <td>
-                  <span className="item-description">{linea.descripcion}</span>
-                  {linea.fecha_servicio && (
-                    <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
-                      F. Servicio: {formatFechaCorta(linea.fecha_servicio)}
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span className="item-description" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {linea.descripcion}
+                      {linea.es_intercambio && (
+                        <span style={{ fontSize: '8px', border: '1px solid #f97316', color: '#ea580c', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                          CAMBIO / MERMA
+                        </span>
+                      )}
+                    </span>
+                    {linea.fecha_servicio && (
+                      <span style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                        F. Servicio: {formatFechaCorta(linea.fecha_servicio)}
+                      </span>
+                    )}
+                    {linea.es_intercambio && linea.motivo_devolucion && (
+                      <span style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>
+                        Motivo: {linea.motivo_devolucion}
+                      </span>
+                    )}
+                  </div>
                 </td>
-                <td className="center">{linea.cantidad}</td>
+                <td className="center" style={linea.es_intercambio ? { color: '#dc2626', fontWeight: 700 } : {}}>
+                  {linea.es_intercambio ? `-${linea.cantidad}` : linea.cantidad}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -490,7 +506,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           <div className="summary-box">
             <span className="summary-label">Total Unidades</span>
             <span className="summary-value">
-              {factura.lineas?.reduce((acc: number, l: any) => acc + l.cantidad, 0) || 0}
+              {factura.lineas?.reduce((acc: number, l: any) => acc + (l.es_intercambio ? -l.cantidad : l.cantidad), 0) || 0}
             </span>
             <span className="summary-unit">uds.</span>
           </div>
