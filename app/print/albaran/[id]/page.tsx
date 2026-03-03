@@ -41,7 +41,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock))
     `)
     .eq("id", params.id)
     .single()
@@ -477,7 +477,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                       {linea.descripcion}
                       {linea.es_intercambio && (
                         <span style={{ fontSize: '8px', border: '1px solid #f97316', color: '#ea580c', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
-                          CAMBIO / MERMA
+                          SE REPONE
                         </span>
                       )}
                     </span>
@@ -493,8 +493,10 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                     )}
                   </div>
                 </td>
-                <td className="center" style={linea.es_intercambio ? { color: '#dc2626', fontWeight: 700 } : {}}>
-                  {linea.es_intercambio ? `-${linea.cantidad}` : linea.cantidad}
+                <td className="center" style={linea.es_intercambio ? { color: '#ea580c', fontWeight: 700 } : {}}>
+                  {linea.es_intercambio
+                    ? `${linea.cantidad} (repuesto)`
+                    : linea.cantidad * (linea.producto?.multiplicador_stock || 1)}
                 </td>
               </tr>
             ))}
@@ -506,7 +508,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           <div className="summary-box">
             <span className="summary-label">Total Unidades</span>
             <span className="summary-value">
-              {factura.lineas?.reduce((acc: number, l: any) => acc + (l.es_intercambio ? -l.cantidad : l.cantidad), 0) || 0}
+              {factura.lineas?.reduce((acc: number, l: any) => acc + (l.es_intercambio ? 0 : l.cantidad * (l.producto?.multiplicador_stock || 1)), 0) || 0}
             </span>
             <span className="summary-unit">uds.</span>
           </div>

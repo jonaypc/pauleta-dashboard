@@ -50,7 +50,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock))
     `)
     .eq("id", params.id)
     .single()
@@ -553,7 +553,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
                       {linea.descripcion}
                       {linea.es_intercambio && (
                         <span className="text-[9px] border border-orange-500 text-orange-600 px-1 rounded uppercase font-bold tracking-wider">
-                          CAMBIO / MERMA
+                          SE REPONE
                         </span>
                       )}
                     </span>
@@ -569,7 +569,11 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
                     )}
                   </div>
                 </td>
-                <td className="center">{linea.cantidad}</td>
+                <td className="center" style={linea.es_intercambio ? { color: '#ea580c', fontWeight: 600 } : {}}>
+                  {linea.es_intercambio
+                    ? `${linea.cantidad} (rep.)`
+                    : linea.cantidad * (linea.producto?.multiplicador_stock || 1)}
+                </td>
                 <td className="right">
                   {linea.es_intercambio ? (
                     <span className="text-gray-400 line-through mr-1 text-[10px]">
