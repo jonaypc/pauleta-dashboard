@@ -496,7 +496,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 <td className="center" style={linea.es_intercambio ? { color: '#ea580c', fontWeight: 700 } : {}}>
                   {linea.es_intercambio
                     ? `${linea.cantidad} (repuesto)`
-                    : linea.cantidad * (linea.producto?.multiplicador_stock || 1)}
+                    : linea.cantidad}
                 </td>
               </tr>
             ))}
