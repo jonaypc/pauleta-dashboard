@@ -106,7 +106,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         .invoice {
           width: 210mm;
           min-height: 297mm;
-          padding: 15mm 20mm;
+          padding: 10mm 18mm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
@@ -138,7 +138,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 8mm;
+          margin-bottom: 5mm;
           position: relative;
           z-index: 1;
         }
@@ -171,7 +171,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         
         .invoice-title-box {
           text-align: right;
-          padding: 12px 20px;
+          padding: 8px 16px;
           background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
           border-radius: 8px;
           color: white;
@@ -200,8 +200,8 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         .parties-section {
           display: flex;
           gap: 15mm;
-          margin-bottom: 10mm;
-          padding: 15px 0;
+          margin-bottom: 5mm;
+          padding: 8px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
           position: relative;
@@ -256,15 +256,15 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 8mm;
+          margin-bottom: 4mm;
         }
-        
+
         .items-table thead {
           background: #f8fafc;
         }
-        
+
         .items-table th {
-          padding: 12px 10px;
+          padding: 6px 8px;
           text-align: left;
           font-size: 10px;
           text-transform: uppercase;
@@ -286,7 +286,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         }
         
         .items-table td {
-          padding: 12px 10px;
+          padding: 5px 8px;
           font-size: 12px;
           color: #334155;
         }
@@ -410,7 +410,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         /* === FOOTER === */
         .footer {
           margin-top: auto;
-          padding-top: 10mm;
+          padding-top: 5mm;
           border-top: 1px solid #e2e8f0;
         }
         

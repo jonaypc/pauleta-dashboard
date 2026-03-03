@@ -92,7 +92,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         .albaran {
           width: 210mm;
           min-height: 297mm;
-          padding: 15mm 20mm;
+          padding: 10mm 18mm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
@@ -106,7 +106,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 8mm;
+          margin-bottom: 5mm;
         }
         
         .company-info {
@@ -137,7 +137,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         
         .albaran-title-box {
           text-align: right;
-          padding: 12px 20px;
+          padding: 8px 16px;
           background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
           border-radius: 8px;
           color: white;
@@ -165,8 +165,8 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         .parties-section {
           display: flex;
           gap: 15mm;
-          margin-bottom: 10mm;
-          padding: 15px 0;
+          margin-bottom: 5mm;
+          padding: 8px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
         }
@@ -219,15 +219,15 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 10mm;
+          margin-bottom: 5mm;
         }
-        
+
         .items-table thead {
           background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
         }
-        
+
         .items-table th {
-          padding: 12px 10px;
+          padding: 6px 8px;
           text-align: left;
           font-size: 9px;
           text-transform: uppercase;
@@ -248,7 +248,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         }
         
         .items-table td {
-          padding: 12px 10px;
+          padding: 5px 8px;
           font-size: 11px;
           color: #334155;
         }
@@ -269,7 +269,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         .summary-section {
           display: flex;
           justify-content: flex-end;
-          margin-bottom: 10mm;
+          margin-bottom: 5mm;
         }
         
         .summary-box {
@@ -306,7 +306,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           justify-content: space-between;
           gap: 20mm;
           margin-top: auto;
-          padding-top: 10mm;
+          padding-top: 5mm;
         }
         
         .signature-box {
@@ -315,7 +315,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         }
         
         .signature-space {
-          height: 25mm;
+          height: 18mm;
           border: 2px dashed #e2e8f0;
           border-radius: 8px;
           margin-bottom: 8px;
@@ -337,8 +337,8 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         
         /* === FOOTER === */
         .footer {
-          margin-top: 10mm;
-          padding-top: 8mm;
+          margin-top: 5mm;
+          padding-top: 4mm;
           border-top: 1px solid #e2e8f0;
           text-align: center;
         }
