@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 
 interface SearchParams {
     cif?: string
+    cifs?: string
     desde?: string
     hasta?: string
     periodo?: string
@@ -28,9 +29,12 @@ export default async function RelacionFacturasPrintPage({
     searchParams: SearchParams 
 }) {
     const supabase = await createAdminClient()
-    const { cif, desde, hasta, periodo, mes, entregado, fecha } = searchParams
+    const { cif, cifs, desde, hasta, periodo, mes, entregado, fecha } = searchParams
 
-    if (!cif || !desde || !hasta) {
+    // Soportar tanto un CIF individual (retrocompatible) como múltiples
+    const cifList = cifs ? cifs.split(",").filter(Boolean) : cif ? [cif] : []
+
+    if (cifList.length === 0 || !desde || !hasta) {
         notFound()
     }
 
@@ -40,25 +44,35 @@ export default async function RelacionFacturasPrintPage({
         .select("*")
         .single()
 
-    // Obtener clientes con este CIF
+    // Obtener clientes con estos CIFs
     const { data: clientesConCIF } = await supabase
         .from("clientes")
         .select("id, nombre, cif, persona_contacto")
-        .eq("cif", cif)
+        .in("cif", cifList)
 
     if (!clientesConCIF || clientesConCIF.length === 0) {
         notFound()
     }
 
     const clienteIds = clientesConCIF.map(c => c.id)
-    const nombreGrupo = clientesConCIF[0].nombre
+    const multiEmpresa = cifList.length > 1
+
+    // Agrupar clientes por CIF para mostrar por empresa
+    const empresasPorCIF = cifList.map(cifVal => {
+        const clientesDeEmpresa = clientesConCIF.filter(c => c.cif === cifVal)
+        return {
+            cif: cifVal,
+            nombre: clientesDeEmpresa[0]?.nombre || cifVal,
+            clienteIds: clientesDeEmpresa.map(c => c.id)
+        }
+    })
 
     // Obtener facturas del período
     const { data: facturas } = await supabase
         .from("facturas")
         .select(`
             id, numero, fecha, total,
-            cliente:clientes(nombre, persona_contacto)
+            cliente:clientes(nombre, persona_contacto, cif)
         `)
         .in("cliente_id", clienteIds)
         .gte("fecha", desde)
@@ -68,6 +82,13 @@ export default async function RelacionFacturasPrintPage({
 
     const total = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
     const periodoLabel = periodo === "1" ? "1ª quincena" : "2ª quincena"
+
+    // Agrupar facturas por empresa
+    const facturasPorEmpresa = empresasPorCIF.map(emp => ({
+        ...emp,
+        facturas: facturas?.filter(f => emp.clienteIds.includes((f as any).cliente_id) || (f.cliente as any)?.cif === emp.cif) || [],
+        total: (facturas?.filter(f => (f.cliente as any)?.cif === emp.cif) || []).reduce((sum, f) => sum + (f.total || 0), 0)
+    })).filter(g => g.facturas.length > 0)
 
     const formatFecha = (f: string) => new Date(f).toLocaleDateString("es-ES")
     const formatFechaISO = (f: string) => f
@@ -256,39 +277,73 @@ export default async function RelacionFacturasPrintPage({
                 </div>
                 <div className="periodo-info" style={{ marginTop: '-10px' }}>
                     <div><strong>Entregado por:</strong> {entregado || "-"}</div>
-                    <div><strong>Cliente:</strong> {nombreGrupo}</div>
+                    <div><strong>{multiEmpresa ? "Empresas" : "Cliente"}:</strong> {multiEmpresa ? facturasPorEmpresa.map(e => e.nombre).join(", ") : facturasPorEmpresa[0]?.nombre}</div>
                 </div>
 
-                {/* Tabla de facturas */}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nº Factura</th>
-                            <th>Fecha</th>
-                            <th>Tienda SPAR</th>
-                            <th>Nº Albarán</th>
-                            <th className="right">Importe (€)</th>
-                            <th>Observaciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {facturas?.map(f => (
-                            <tr key={f.id}>
-                                <td className="mono">{f.numero}</td>
-                                <td>{formatFechaISO(f.fecha)}</td>
-                                <td>{(f.cliente as any)?.persona_contacto || (f.cliente as any)?.nombre}</td>
-                                <td className="mono">{f.numero}</td>
-                                <td className="right">{f.total.toFixed(2)}</td>
-                                <td></td>
-                            </tr>
-                        ))}
-                        <tr className="total-row">
-                            <td colSpan={4} style={{ textAlign: 'right' }}>TOTAL:</td>
-                            <td className="right">{total.toFixed(2)}</td>
-                            <td></td>
-                        </tr>
-                    </tbody>
-                </table>
+                {/* Tablas de facturas por empresa */}
+                {facturasPorEmpresa.map((grupo, idx) => (
+                    <div key={grupo.cif}>
+                        {multiEmpresa && (
+                            <div style={{
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                color: color,
+                                padding: '8px 0 4px',
+                                borderBottom: `1px solid ${color}`,
+                                marginBottom: '4px',
+                                marginTop: idx > 0 ? '16px' : '0'
+                            }}>
+                                {grupo.nombre} ({grupo.cif})
+                            </div>
+                        )}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nº Factura</th>
+                                    <th>Fecha</th>
+                                    <th>Tienda SPAR</th>
+                                    <th>Nº Albarán</th>
+                                    <th className="right">Importe (€)</th>
+                                    <th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {grupo.facturas.map(f => (
+                                    <tr key={f.id}>
+                                        <td className="mono">{f.numero}</td>
+                                        <td>{formatFechaISO(f.fecha)}</td>
+                                        <td>{(f.cliente as any)?.persona_contacto || (f.cliente as any)?.nombre}</td>
+                                        <td className="mono">{f.numero}</td>
+                                        <td className="right">{f.total.toFixed(2)}</td>
+                                        <td></td>
+                                    </tr>
+                                ))}
+                                <tr className="total-row">
+                                    <td colSpan={4} style={{ textAlign: 'right' }}>{multiEmpresa ? `Subtotal ${grupo.nombre}:` : "TOTAL:"}</td>
+                                    <td className="right">{grupo.total.toFixed(2)}</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
+
+                {/* Total general cuando hay múltiples empresas */}
+                {multiEmpresa && (
+                    <div style={{
+                        marginTop: '12px',
+                        padding: '12px 15px',
+                        background: '#f1f5f9',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontWeight: 700,
+                        fontSize: '14px'
+                    }}>
+                        <span>TOTAL GENERAL ({facturas?.length || 0} facturas)</span>
+                        <span>{total.toFixed(2)} €</span>
+                    </div>
+                )}
 
                 {/* Firmas */}
                 <div className="signatures">

@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
-import { FileText, Printer, Download, Loader2, Calendar, Building2 } from "lucide-react"
+import { FileText, Printer, Download, Loader2, Calendar, Building2, Check } from "lucide-react"
 
 interface Cliente {
     id: string
@@ -35,6 +36,7 @@ interface FacturaRelacion {
     fecha: string
     total: number
     cliente_nombre: string
+    cliente_cif?: string
     observaciones?: string
 }
 
@@ -46,7 +48,7 @@ interface RelacionFacturasGeneratorProps {
 export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFacturasGeneratorProps) {
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
-    const [selectedCIF, setSelectedCIF] = useState("")
+    const [selectedCIFs, setSelectedCIFs] = useState<string[]>([])
     const [periodo, setPeriodo] = useState<"1" | "2">("1")
     const [mes, setMes] = useState(() => {
         const now = new Date()
@@ -70,6 +72,22 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
             }
         })
 
+    const toggleCIF = (cif: string) => {
+        setSelectedCIFs(prev =>
+            prev.includes(cif)
+                ? prev.filter(c => c !== cif)
+                : [...prev, cif]
+        )
+    }
+
+    const selectAllCIFs = () => {
+        if (selectedCIFs.length === cifsUnicos.length) {
+            setSelectedCIFs([])
+        } else {
+            setSelectedCIFs(cifsUnicos.map(c => c.cif))
+        }
+    }
+
     // Calcular fechas del período
     const calcularFechas = () => {
         const [year, month] = mes.split('-').map(Number)
@@ -92,25 +110,25 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     }
 
     const buscarFacturas = async () => {
-        if (!selectedCIF) {
-            toast({ title: "Error", description: "Selecciona un cliente", variant: "destructive" })
+        if (selectedCIFs.length === 0) {
+            toast({ title: "Error", description: "Selecciona al menos una empresa", variant: "destructive" })
             return
         }
 
         setIsLoading(true)
         try {
             const { desde, hasta } = calcularFechas()
-            
-            // Obtener IDs de clientes con este CIF
-            const clientesConCIF = clientes.filter(c => c.cif === selectedCIF)
-            const clienteIds = clientesConCIF.map(c => c.id)
+
+            // Obtener IDs de clientes con los CIFs seleccionados
+            const clientesSeleccionados = clientes.filter(c => c.cif && selectedCIFs.includes(c.cif))
+            const clienteIds = clientesSeleccionados.map(c => c.id)
 
             // Buscar facturas de estos clientes en el período
             const { data, error } = await supabase
                 .from("facturas")
                 .select(`
                     id, numero, fecha, total,
-                    cliente:clientes(nombre, persona_contacto)
+                    cliente:clientes(nombre, persona_contacto, cif)
                 `)
                 .in("cliente_id", clienteIds)
                 .gte("fecha", desde)
@@ -125,7 +143,8 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                 numero: f.numero,
                 fecha: f.fecha,
                 total: f.total,
-                cliente_nombre: (f.cliente as any)?.persona_contacto || (f.cliente as any)?.nombre || "Sin cliente"
+                cliente_nombre: (f.cliente as any)?.persona_contacto || (f.cliente as any)?.nombre || "Sin cliente",
+                cliente_cif: (f.cliente as any)?.cif || ""
             })) || []
 
             setFacturas(facturasFormateadas)
@@ -154,10 +173,21 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     const { desde, hasta, label } = calcularFechas()
 
     const imprimirRelacion = () => {
-        window.open(`/print/relacion-facturas?cif=${selectedCIF}&desde=${desde}&hasta=${hasta}&periodo=${periodo}&mes=${mes}&entregado=${encodeURIComponent(entregadoPor)}&fecha=${fechaPresentacion}`, '_blank')
+        const cifsParam = selectedCIFs.join(",")
+        window.open(`/print/relacion-facturas?cifs=${encodeURIComponent(cifsParam)}&desde=${desde}&hasta=${hasta}&periodo=${periodo}&mes=${mes}&entregado=${encodeURIComponent(entregadoPor)}&fecha=${fechaPresentacion}`, '_blank')
     }
 
-    const nombreCliente = cifsUnicos.find(c => c.cif === selectedCIF)?.nombre || ""
+    // Agrupar facturas por empresa (CIF)
+    const facturasPorEmpresa = selectedCIFs.map(cif => {
+        const empresa = cifsUnicos.find(c => c.cif === cif)
+        const facturasEmpresa = facturas.filter(f => f.cliente_cif === cif)
+        return {
+            cif,
+            nombre: empresa?.nombre || cif,
+            facturas: facturasEmpresa,
+            total: facturasEmpresa.reduce((sum, f) => sum + f.total, 0)
+        }
+    }).filter(g => g.facturas.length > 0)
 
     return (
         <div className="space-y-6">
@@ -173,29 +203,44 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {/* Selector de cliente (por CIF) */}
-                        <div className="space-y-2">
-                            <Label>Cliente/Grupo empresarial</Label>
-                            <Select value={selectedCIF} onValueChange={setSelectedCIF}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cliente..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {cifsUnicos.map(c => (
-                                        <SelectItem key={c.cif} value={c.cif}>
-                                            {c.nombre} ({c.numSucursales} tiendas)
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                    {/* Selector de empresas (multi-selección por CIF) */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label>Empresas / Grupos empresariales</Label>
+                            <Button variant="ghost" size="sm" onClick={selectAllCIFs} className="h-auto py-1 px-2 text-xs">
+                                {selectedCIFs.length === cifsUnicos.length ? "Deseleccionar todas" : "Seleccionar todas"}
+                            </Button>
                         </div>
+                        <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                            {cifsUnicos.map(c => (
+                                <div key={c.cif} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`cif-${c.cif}`}
+                                        checked={selectedCIFs.includes(c.cif)}
+                                        onCheckedChange={() => toggleCIF(c.cif)}
+                                    />
+                                    <label
+                                        htmlFor={`cif-${c.cif}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                    >
+                                        {c.nombre} <span className="text-muted-foreground">({c.cif} – {c.numSucursales} tiendas)</span>
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedCIFs.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                {selectedCIFs.length} empresa{selectedCIFs.length > 1 ? "s" : ""} seleccionada{selectedCIFs.length > 1 ? "s" : ""}
+                            </p>
+                        )}
+                    </div>
 
+                    <div className="grid gap-4 md:grid-cols-3">
                         {/* Selector de mes */}
                         <div className="space-y-2">
                             <Label>Mes</Label>
-                            <Input 
-                                type="month" 
+                            <Input
+                                type="month"
                                 value={mes}
                                 onChange={(e) => setMes(e.target.value)}
                             />
@@ -218,7 +263,7 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                         {/* Botón buscar */}
                         <div className="space-y-2">
                             <Label>&nbsp;</Label>
-                            <Button onClick={buscarFacturas} disabled={isLoading} className="w-full">
+                            <Button onClick={buscarFacturas} disabled={isLoading || selectedCIFs.length === 0} className="w-full">
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
                                 Buscar Facturas
                             </Button>
@@ -267,40 +312,51 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                     <CardContent>
                         {facturas.length > 0 ? (
                             <>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nº Factura</TableHead>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead>Tienda</TableHead>
-                                            <TableHead>Nº Albarán</TableHead>
-                                            <TableHead className="text-right">Importe (€)</TableHead>
-                                            <TableHead>Observaciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {facturas.map(f => (
-                                            <TableRow key={f.id}>
-                                                <TableCell className="font-mono">{f.numero}</TableCell>
-                                                <TableCell>{formatFecha(f.fecha)}</TableCell>
-                                                <TableCell>{f.cliente_nombre}</TableCell>
-                                                <TableCell className="font-mono">{f.numero}</TableCell>
-                                                <TableCell className="text-right font-medium">{f.total.toFixed(2)}</TableCell>
-                                                <TableCell className="text-muted-foreground">-</TableCell>
-                                            </TableRow>
-                                        ))}
-                                        <TableRow className="bg-muted/50 font-bold">
-                                            <TableCell colSpan={4} className="text-right">TOTAL:</TableCell>
-                                            <TableCell className="text-right">{totalFacturas.toFixed(2)}</TableCell>
-                                            <TableCell></TableCell>
-                                        </TableRow>
-                                    </TableBody>
-                                </Table>
-                                
-                                <div className="mt-4 flex justify-between text-sm text-muted-foreground">
-                                    <span>{facturas.length} facturas encontradas</span>
+                                {facturasPorEmpresa.map(grupo => (
+                                    <div key={grupo.cif} className="mb-6">
+                                        {selectedCIFs.length > 1 && (
+                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b">
+                                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-semibold">{grupo.nombre}</span>
+                                                <span className="text-xs text-muted-foreground">({grupo.cif})</span>
+                                            </div>
+                                        )}
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Nº Factura</TableHead>
+                                                    <TableHead>Fecha</TableHead>
+                                                    <TableHead>Tienda</TableHead>
+                                                    <TableHead>Nº Albarán</TableHead>
+                                                    <TableHead className="text-right">Importe (€)</TableHead>
+                                                    <TableHead>Observaciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {grupo.facturas.map(f => (
+                                                    <TableRow key={f.id}>
+                                                        <TableCell className="font-mono">{f.numero}</TableCell>
+                                                        <TableCell>{formatFecha(f.fecha)}</TableCell>
+                                                        <TableCell>{f.cliente_nombre}</TableCell>
+                                                        <TableCell className="font-mono">{f.numero}</TableCell>
+                                                        <TableCell className="text-right font-medium">{f.total.toFixed(2)}</TableCell>
+                                                        <TableCell className="text-muted-foreground">-</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                <TableRow className="bg-muted/50 font-bold">
+                                                    <TableCell colSpan={4} className="text-right">Subtotal {grupo.nombre}:</TableCell>
+                                                    <TableCell className="text-right">{grupo.total.toFixed(2)}</TableCell>
+                                                    <TableCell></TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ))}
+
+                                <div className="mt-4 flex justify-between text-sm text-muted-foreground border-t pt-4">
+                                    <span>{facturas.length} facturas encontradas{selectedCIFs.length > 1 ? ` de ${facturasPorEmpresa.length} empresas` : ""}</span>
                                     <Badge variant="outline" className="text-lg px-4 py-1">
-                                        Total: {formatMoney(totalFacturas)}
+                                        Total General: {formatMoney(totalFacturas)}
                                     </Badge>
                                 </div>
                             </>
