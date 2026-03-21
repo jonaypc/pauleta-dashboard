@@ -5,6 +5,9 @@
 // Estados de factura
 export type EstadoFactura = 'borrador' | 'emitida' | 'cobrada' | 'anulada'
 
+// Estados de presupuesto
+export type EstadoPresupuesto = 'borrador' | 'enviado' | 'aceptado' | 'rechazado' | 'facturado'
+
 // Métodos de pago
 export type MetodoPago = 'transferencia' | 'efectivo' | 'bizum' | 'tarjeta'
 
@@ -135,6 +138,40 @@ export interface Cobro {
   created_at: string
   // Relaciones
   factura?: Factura
+}
+
+export interface Presupuesto {
+  id: string
+  numero: string
+  fecha: string
+  cliente_id: string
+  base_imponible: number
+  igic: number
+  total: number
+  estado: EstadoPresupuesto
+  fecha_validez: string | null
+  notas: string | null
+  factura_id: string | null
+  created_at: string
+  updated_at: string
+  // Relaciones
+  cliente?: Cliente
+  lineas?: LineaPresupuesto[]
+  factura?: Factura
+}
+
+export interface LineaPresupuesto {
+  id: string
+  presupuesto_id: string
+  producto_id: string | null
+  descripcion: string
+  cantidad: number
+  precio_unitario: number
+  igic: number
+  subtotal: number
+  created_at: string
+  // Relaciones
+  producto?: Producto
 }
 
 export interface PagoFijo {
@@ -273,6 +310,22 @@ export interface LineaFacturaFormData {
   motivo_devolucion?: string
 }
 
+export interface PresupuestoFormData {
+  cliente_id: string
+  fecha: string
+  fecha_validez?: string
+  notas?: string
+  lineas: LineaPresupuestoFormData[]
+}
+
+export interface LineaPresupuestoFormData {
+  producto_id?: string
+  descripcion: string
+  cantidad: number
+  precio_unitario: number
+  igic: number
+}
+
 export interface CobroFormData {
   factura_id: string
   fecha: string
@@ -342,6 +395,14 @@ export interface PaginatedResponse<T> {
 
 export interface FiltrosFactura {
   estado?: EstadoFactura
+  cliente_id?: string
+  fecha_desde?: string
+  fecha_hasta?: string
+  busqueda?: string
+}
+
+export interface FiltrosPresupuesto {
+  estado?: EstadoPresupuesto
   cliente_id?: string
   fecha_desde?: string
   fecha_hasta?: string

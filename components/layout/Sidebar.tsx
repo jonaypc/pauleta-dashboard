@@ -9,6 +9,7 @@ import {
   Users,
   Package,
   FileText,
+  FileCheck,
   Receipt,
   Calendar,
   BarChart3,
@@ -38,6 +39,11 @@ const navigation = [
     name: "Productos",
     href: "/productos",
     icon: Package,
+  },
+  {
+    name: "Presupuestos",
+    href: "/presupuestos",
+    icon: FileCheck,
   },
   {
     name: "Facturas",

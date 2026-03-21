@@ -34,6 +34,9 @@ const badgeVariants = cva(
           "bg-purple-100 text-purple-700 border border-purple-200",
         tarjeta:
           "bg-cyan-100 text-cyan-700 border border-cyan-200",
+        // Estado presupuesto
+        facturado:
+          "bg-violet-100 text-violet-700 border border-violet-200",
         // General
         success:
           "bg-green-100 text-green-700 border border-green-200",
@@ -62,6 +65,7 @@ function Badge({ className, variant, dot = false, children, ...props }: BadgePro
           variant === 'cobrada' && "bg-green-500",
           variant === 'anulada' && "bg-red-500",
           variant === 'pendiente' && "bg-amber-500",
+          variant === 'facturado' && "bg-violet-500",
         )} />
       )}
       {children}
