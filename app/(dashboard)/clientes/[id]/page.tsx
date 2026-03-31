@@ -9,11 +9,12 @@ import {
   ArrowLeft, 
   Pencil, 
   Building2, 
-  MapPin, 
-  Phone, 
+  MapPin,
+  Phone,
   Mail,
   FileText,
-  User
+  User,
+  Truck
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 
@@ -169,6 +170,28 @@ export default async function ClienteDetailPage({ params, searchParams }: PagePr
               )}
             </CardContent>
           </Card>
+
+          {/* Dirección de entrega */}
+          {(cliente.direccion_entrega || cliente.ciudad_entrega || cliente.provincia_entrega) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Truck className="h-5 w-5" />
+                  Dirección de entrega
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {cliente.direccion_entrega && <p>{cliente.direccion_entrega}</p>}
+                  <p>
+                    {[cliente.cp_entrega, cliente.ciudad_entrega, cliente.provincia_entrega]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contacto */}
           <Card>

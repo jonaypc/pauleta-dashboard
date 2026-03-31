@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { Save, X, Building2, MapPin, Phone, FileText } from "lucide-react"
+import { Save, X, Building2, MapPin, Phone, FileText, Truck } from "lucide-react"
 import type { Cliente, ClienteFormData } from "@/types"
 
 interface ClienteFormProps {
@@ -33,6 +33,10 @@ export function ClienteForm({ cliente, onCancel }: ClienteFormProps) {
     email: cliente?.email || "",
     persona_contacto: cliente?.persona_contacto || "",
     notas: cliente?.notas || "",
+    direccion_entrega: cliente?.direccion_entrega || "",
+    cp_entrega: cliente?.cp_entrega || "",
+    ciudad_entrega: cliente?.ciudad_entrega || "",
+    provincia_entrega: cliente?.provincia_entrega || "",
   })
 
   const handleChange = (
@@ -178,6 +182,58 @@ export function ClienteForm({ cliente, onCancel }: ClienteFormProps) {
               id="provincia"
               name="provincia"
               value={formData.provincia}
+              onChange={handleChange}
+              placeholder="Las Palmas"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dirección de entrega */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Truck className="h-5 w-5" />
+            Dirección de entrega
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="direccion_entrega">Dirección</Label>
+            <Input
+              id="direccion_entrega"
+              name="direccion_entrega"
+              value={formData.direccion_entrega}
+              onChange={handleChange}
+              placeholder="Calle, número, local..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cp_entrega">Código postal</Label>
+            <Input
+              id="cp_entrega"
+              name="cp_entrega"
+              value={formData.cp_entrega}
+              onChange={handleChange}
+              placeholder="35000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ciudad_entrega">Ciudad</Label>
+            <Input
+              id="ciudad_entrega"
+              name="ciudad_entrega"
+              value={formData.ciudad_entrega}
+              onChange={handleChange}
+              placeholder="Las Palmas de Gran Canaria"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="provincia_entrega">Provincia</Label>
+            <Input
+              id="provincia_entrega"
+              name="provincia_entrega"
+              value={formData.provincia_entrega}
               onChange={handleChange}
               placeholder="Las Palmas"
             />

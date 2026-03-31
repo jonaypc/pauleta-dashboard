@@ -366,6 +366,21 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                 {factura.cliente?.telefono && <p>Tel: {factura.cliente.telefono}</p>}
               </div>
             </div>
+            {(factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega) && (
+              <div className="party">
+                <div className="party-label">Dirección de Envío:</div>
+                <div className="party-name">{factura.cliente?.nombre || "Cliente"}</div>
+                <div className="party-details">
+                  {factura.cliente?.direccion_entrega && <p>{factura.cliente.direccion_entrega}</p>}
+                  {(factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega) && (
+                    <p>
+                      {factura.cliente.cp_entrega} {factura.cliente.ciudad_entrega}
+                      {factura.cliente?.provincia_entrega && `, ${factura.cliente.provincia_entrega}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Items Table */}

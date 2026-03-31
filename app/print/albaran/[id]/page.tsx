@@ -443,12 +443,18 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
             </div>
           </div>
           
-          {factura.cliente?.direccion_envio && (
+          {(factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega) && (
             <div className="party-box">
               <div className="party-label">Dirección de Envío</div>
               <div className="party-name">{factura.cliente?.nombre}</div>
               <div className="party-address">
-                <div>{factura.cliente.direccion_envio}</div>
+                {factura.cliente?.direccion_entrega && <div>{factura.cliente.direccion_entrega}</div>}
+                {(factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega) && (
+                  <div>
+                    {factura.cliente.cp_entrega} {factura.cliente.ciudad_entrega}
+                    {factura.cliente?.provincia_entrega && ` (${factura.cliente.provincia_entrega})`}
+                  </div>
+                )}
               </div>
             </div>
           )}

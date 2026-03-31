@@ -68,6 +68,10 @@ export interface Cliente {
   email: string | null
   persona_contacto: string | null
   notas: string | null
+  direccion_entrega: string | null
+  cp_entrega: string | null
+  ciudad_entrega: string | null
+  provincia_entrega: string | null
   activo: boolean
   created_at: string
   updated_at: string
@@ -274,6 +278,10 @@ export interface ClienteFormData {
   email?: string
   persona_contacto?: string
   notas?: string
+  direccion_entrega?: string
+  cp_entrega?: string
+  ciudad_entrega?: string
+  provincia_entrega?: string
 }
 
 export interface ProductoFormData {
