@@ -14,7 +14,8 @@ import {
   Mail,
   FileText,
   User,
-  Truck
+  Truck,
+  ClipboardList
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 
@@ -104,12 +105,20 @@ export default async function ClienteDetailPage({ params, searchParams }: PagePr
             )}
           </div>
         </div>
-        <Button asChild>
-          <Link href={`/clientes/${params.id}?editar=true`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/print/control-cambios/${params.id}`} target="_blank">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Control de cambios
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/clientes/${params.id}?editar=true`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Grid de información */}
