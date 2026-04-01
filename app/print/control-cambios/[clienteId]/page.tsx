@@ -38,7 +38,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
   const color = "#d97706" // Amber para control de cambios
   const mostrarLogo = empresa?.mostrar_logo ?? true
   const logoWidth = empresa?.logo_width || 80
-  const totalRows = 20
+  const totalRows = 16
 
   return (
     <div className="print-container">
@@ -71,14 +71,15 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
 
         .control-cambios {
           width: 210mm;
-          min-height: 297mm;
-          padding: 10mm 18mm;
+          height: 297mm;
+          padding: 8mm 15mm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
           position: relative;
           background: white;
           box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+          overflow: hidden;
         }
 
         /* === HEADER === */
@@ -86,7 +87,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 5mm;
+          margin-bottom: 3mm;
         }
 
         .company-info {
@@ -140,8 +141,8 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
         .parties-section {
           display: flex;
           gap: 15mm;
-          margin-bottom: 5mm;
-          padding: 8px 0;
+          margin-bottom: 3mm;
+          padding: 5px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
         }
@@ -225,9 +226,9 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
         }
 
         .items-table tbody td {
-          padding: 7px 8px;
+          padding: 5px 8px;
           border-bottom: 1px solid #e2e8f0;
-          height: 28px;
+          height: 22px;
         }
 
         .items-table tbody tr:nth-child(even) {
@@ -270,11 +271,11 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
 
         /* === NOTES === */
         .notes-section {
-          margin-top: 4mm;
-          padding: 6px 10px;
+          margin-top: 3mm;
+          padding: 4px 10px;
           border: 1px dashed #e2e8f0;
           border-radius: 6px;
-          min-height: 18mm;
+          min-height: 12mm;
         }
 
         .notes-label {
@@ -290,7 +291,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
         .signature-section {
           display: flex;
           gap: 20mm;
-          margin-top: 5mm;
+          margin-top: 3mm;
         }
 
         .signature-box {
@@ -308,7 +309,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
         }
 
         .signature-line {
-          height: 18mm;
+          height: 15mm;
           border: 1px dashed #cbd5e1;
           border-radius: 6px;
         }

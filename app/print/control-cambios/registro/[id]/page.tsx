@@ -83,21 +83,22 @@ export default async function ControlCambiosRegistroPrintPage({ params }: PagePr
 
         .control-cambios {
           width: 210mm;
-          min-height: 297mm;
-          padding: 10mm 18mm;
+          height: 297mm;
+          padding: 8mm 15mm;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
           position: relative;
           background: white;
           box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+          overflow: hidden;
         }
 
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 5mm;
+          margin-bottom: 3mm;
         }
 
         .company-info { flex: 1; }
@@ -119,8 +120,8 @@ export default async function ControlCambiosRegistroPrintPage({ params }: PagePr
         .parties-section {
           display: flex;
           gap: 15mm;
-          margin-bottom: 5mm;
-          padding: 8px 0;
+          margin-bottom: 3mm;
+          padding: 5px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
         }
@@ -147,7 +148,7 @@ export default async function ControlCambiosRegistroPrintPage({ params }: PagePr
         }
         .items-table thead th:first-child { border-radius: 6px 0 0 0; }
         .items-table thead th:last-child { border-radius: 0 6px 0 0; }
-        .items-table tbody td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; }
+        .items-table tbody td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
         .items-table tbody tr:nth-child(even) { background: #fefce8; }
         .items-table .center { text-align: center; }
         .items-table .code { font-family: monospace; font-size: 9px; color: #94a3b8; }
@@ -162,16 +163,16 @@ export default async function ControlCambiosRegistroPrintPage({ params }: PagePr
         .total-value { font-size: 18px; font-weight: 800; color: #1e293b; min-width: 60px; padding: 2px 8px; margin-top: 2px; }
 
         .notes-section {
-          margin-top: 4mm; padding: 6px 10px;
+          margin-top: 3mm; padding: 4px 10px;
           border: 1px dashed #e2e8f0; border-radius: 6px; min-height: 12mm;
         }
         .notes-label { font-size: 9px; text-transform: uppercase; color: ${color}; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
         .notes-text { font-size: 10px; color: #475569; white-space: pre-wrap; }
 
-        .signature-section { display: flex; gap: 20mm; margin-top: 5mm; }
+        .signature-section { display: flex; gap: 20mm; margin-top: 3mm; }
         .signature-box { flex: 1; text-align: center; }
         .signature-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
-        .signature-line { height: 18mm; border: 1px dashed #cbd5e1; border-radius: 6px; }
+        .signature-line { height: 15mm; border: 1px dashed #cbd5e1; border-radius: 6px; }
 
         .watermark {
           position: absolute; top: 50%; left: 50%;
