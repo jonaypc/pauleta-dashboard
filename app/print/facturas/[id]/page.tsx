@@ -520,7 +520,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
           {(factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega) && (
             <div className="party-box">
               <div className="party-label">Enviar a</div>
-              <div className="party-name">{factura.cliente?.nombre}</div>
+              <div className="party-name">{factura.cliente?.persona_contacto || factura.cliente?.nombre}</div>
               <div className="party-address">
                 {factura.cliente?.direccion_entrega && <div>{factura.cliente.direccion_entrega}</div>}
                 {(factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega) && (

@@ -446,7 +446,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
           {(factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega) && (
             <div className="party-box">
               <div className="party-label">Dirección de Envío</div>
-              <div className="party-name">{factura.cliente?.nombre}</div>
+              <div className="party-name">{factura.cliente?.persona_contacto || factura.cliente?.nombre}</div>
               <div className="party-address">
                 {factura.cliente?.direccion_entrega && <div>{factura.cliente.direccion_entrega}</div>}
                 {(factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega) && (
