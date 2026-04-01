@@ -16,7 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 
 interface DeleteControlCambioButtonProps {
   id: string
@@ -37,11 +37,11 @@ export function DeleteControlCambioButton({ id }: DeleteControlCambioButtonProps
 
       if (error) throw error
 
-      toast.success("Registro eliminado correctamente")
+      toast({ title: "Registro eliminado", variant: "success" })
       router.push("/control-cambios")
       router.refresh()
     } catch {
-      toast.error("Error al eliminar el registro")
+      toast({ title: "Error al eliminar el registro", variant: "destructive" })
     } finally {
       setIsDeleting(false)
     }
