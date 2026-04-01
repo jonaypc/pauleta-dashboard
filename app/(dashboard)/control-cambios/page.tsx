@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Plus, BarChart3 } from "lucide-react"
+import { Plus, BarChart3, TrendingUp } from "lucide-react"
 import { ControlCambiosTable } from "@/components/control-cambios/ControlCambiosTable"
 
 export const metadata = {
@@ -30,7 +30,13 @@ export default async function ControlCambiosPage() {
           <Button variant="outline" asChild>
             <Link href="/control-cambios/resumen">
               <BarChart3 className="mr-2 h-4 w-4" />
-              Ver Resumen
+              Resumen
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/control-cambios/rotacion">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Rotación
             </Link>
           </Button>
           <Button asChild>
