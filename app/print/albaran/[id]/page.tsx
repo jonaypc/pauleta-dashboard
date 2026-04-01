@@ -500,9 +500,14 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                   </div>
                 </td>
                 <td className="center" style={linea.es_intercambio ? { color: '#ea580c', fontWeight: 700 } : {}}>
-                  {linea.es_intercambio
-                    ? `${linea.cantidad} (repuesto)`
-                    : linea.cantidad}
+                  {linea.es_intercambio ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span>{linea.cantidad}</span>
+                      <span style={{ fontSize: '8px', color: '#6b7280' }}>retirado</span>
+                    </div>
+                  ) : (
+                    linea.cantidad
+                  )}
                 </td>
               </tr>
             ))}
