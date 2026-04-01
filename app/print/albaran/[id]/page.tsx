@@ -483,7 +483,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
                       {linea.descripcion}
                       {linea.es_intercambio && (
                         <span style={{ fontSize: '8px', border: '1px solid #f97316', color: '#ea580c', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
-                          SE REPONE
+                          SE RETIRA
                         </span>
                       )}
                     </span>

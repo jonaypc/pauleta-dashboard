@@ -559,7 +559,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
                       {linea.descripcion}
                       {linea.es_intercambio && (
                         <span className="text-[9px] border border-orange-500 text-orange-600 px-1 rounded uppercase font-bold tracking-wider">
-                          SE REPONE
+                          SE RETIRA
                         </span>
                       )}
                     </span>
