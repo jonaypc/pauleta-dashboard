@@ -177,6 +177,13 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
           margin-bottom: 2px;
         }
 
+        .party-contact {
+          font-size: 12px;
+          font-weight: 600;
+          color: ${color};
+          margin-bottom: 2px;
+        }
+
         .party-cif {
           font-size: 11px;
           color: #64748b;
@@ -361,6 +368,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
           <div className="party-box">
             <div className="party-label">Cliente</div>
             <div className="party-name">{cliente.nombre}</div>
+            {cliente.persona_contacto && <div className="party-contact">{cliente.persona_contacto}</div>}
             {cliente.cif && <div className="party-cif">{cliente.cif}</div>}
             <div className="party-address">
               {cliente.direccion && <div>{cliente.direccion}</div>}
@@ -376,7 +384,7 @@ export default async function ControlCambiosPrintPage({ params }: PageProps) {
           {(cliente.direccion_entrega || cliente.ciudad_entrega) && (
             <div className="party-box">
               <div className="party-label">Establecimiento</div>
-              <div className="party-name">{cliente.nombre}</div>
+              <div className="party-name">{cliente.persona_contacto || cliente.nombre}</div>
               <div className="party-address">
                 {cliente.direccion_entrega && <div>{cliente.direccion_entrega}</div>}
                 {(cliente.ciudad_entrega || cliente.cp_entrega) && (
