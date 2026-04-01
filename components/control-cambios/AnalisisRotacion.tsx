@@ -45,7 +45,7 @@ export function AnalisisRotacion({
   fechaDesde: fechaDesdeInicial,
   fechaHasta: fechaHastaInicial
 }: AnalisisRotacionProps) {
-  const [clienteId, setClienteId] = useState(clienteInicial || "")
+  const [clienteId, setClienteId] = useState(clienteInicial || "all")
   const [fechaDesde, setFechaDesde] = useState(fechaDesdeInicial || "")
   const [fechaHasta, setFechaHasta] = useState(fechaHastaInicial || "")
 
@@ -91,7 +91,7 @@ export function AnalisisRotacion({
 
   const handleFiltrar = () => {
     const params = new URLSearchParams()
-    if (clienteId) params.set("cliente", clienteId)
+    if (clienteId && clienteId !== "all") params.set("cliente", clienteId)
     if (fechaDesde) params.set("desde", fechaDesde)
     if (fechaHasta) params.set("hasta", fechaHasta)
     window.location.href = `/control-cambios/rotacion?${params.toString()}`
@@ -152,7 +152,7 @@ export function AnalisisRotacion({
                   <SelectValue placeholder="Todos los clientes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los clientes</SelectItem>
+                  <SelectItem value="all">Todos los clientes</SelectItem>
                   {clientes.map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.persona_contacto || c.nombre}
@@ -183,7 +183,7 @@ export function AnalisisRotacion({
               <RefreshCw className="mr-2 h-4 w-4" />
               Aplicar Filtros
             </Button>
-            {(clienteId || fechaDesde || fechaHasta) && (
+            {((clienteId && clienteId !== "all") || fechaDesde || fechaHasta) && (
               <Button variant="outline" onClick={handleLimpiar}>
                 Limpiar
               </Button>
