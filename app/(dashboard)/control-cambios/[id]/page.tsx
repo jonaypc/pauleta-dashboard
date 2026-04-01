@@ -7,6 +7,7 @@ import Link from "next/link"
 import { ArrowLeft, Pencil, Printer, ClipboardList } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { ControlCambiosForm } from "@/components/control-cambios/ControlCambiosForm"
+import { DeleteControlCambioButton } from "@/components/control-cambios/DeleteControlCambioButton"
 
 interface PageProps {
   params: { id: string }
@@ -88,6 +89,7 @@ export default async function ControlCambioDetailPage({ params, searchParams }: 
           </div>
         </div>
         <div className="flex gap-2">
+          <DeleteControlCambioButton id={params.id} />
           <Button variant="outline" asChild>
             <Link href={`/print/control-cambios/registro/${params.id}`} target="_blank">
               <Printer className="mr-2 h-4 w-4" />
