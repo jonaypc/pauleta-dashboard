@@ -81,7 +81,7 @@ export default async function RelacionFacturasPrintPage({
         .order("fecha", { ascending: true })
 
     const total = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
-    const periodoLabel = periodo === "1" ? "1ª quincena" : "2ª quincena"
+    const periodoLabel = periodo === "mensual" ? "Mes completo" : periodo === "1" ? "1ª quincena" : "2ª quincena"
 
     // Agrupar facturas por empresa
     const facturasPorEmpresa = empresasPorCIF.map(emp => ({

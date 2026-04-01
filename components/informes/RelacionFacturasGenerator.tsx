@@ -49,7 +49,7 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
     const [selectedCIFs, setSelectedCIFs] = useState<string[]>([])
-    const [periodo, setPeriodo] = useState<"1" | "2">("1")
+    const [periodo, setPeriodo] = useState<"1" | "2" | "mensual">("1")
     const [mes, setMes] = useState(() => {
         const now = new Date()
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -91,10 +91,15 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     // Calcular fechas del período
     const calcularFechas = () => {
         const [year, month] = mes.split('-').map(Number)
-        const primerDia = new Date(year, month - 1, 1)
         const ultimoDia = new Date(year, month, 0)
-        
-        if (periodo === "1") {
+
+        if (periodo === "mensual") {
+            return {
+                desde: `${year}-${String(month).padStart(2, '0')}-01`,
+                hasta: `${year}-${String(month).padStart(2, '0')}-${ultimoDia.getDate()}`,
+                label: "Mes completo"
+            }
+        } else if (periodo === "1") {
             return {
                 desde: `${year}-${String(month).padStart(2, '0')}-01`,
                 hasta: `${year}-${String(month).padStart(2, '0')}-15`,
@@ -249,13 +254,14 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                         {/* Selector de quincena */}
                         <div className="space-y-2">
                             <Label>Período</Label>
-                            <Select value={periodo} onValueChange={(v) => setPeriodo(v as "1" | "2")}>
+                            <Select value={periodo} onValueChange={(v) => setPeriodo(v as "1" | "2" | "mensual")}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="1">1ª Quincena (1-15)</SelectItem>
                                     <SelectItem value="2">2ª Quincena (16-fin)</SelectItem>
+                                    <SelectItem value="mensual">Mes completo</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
