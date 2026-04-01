@@ -47,6 +47,29 @@ export default async function ResumenReposicionPage({
     console.error("Error al cargar líneas:", error)
   }
 
+  // Función para convertir cajas a unidades individuales
+  const procesarProducto = (descripcion: string, cantidadRetirada: number, cantidadEntregada: number) => {
+    const regex = /caja de (.+)/i
+    const match = descripcion.match(regex)
+
+    if (match) {
+      // Es una caja, convertir a unidades individuales (1 caja = 20 unidades)
+      const sabor = match[1].trim()
+      return {
+        descripcion: sabor,
+        cantidadRetirada: cantidadRetirada * 20,
+        cantidadEntregada: cantidadEntregada * 20
+      }
+    }
+
+    // No es una caja, devolver tal cual
+    return {
+      descripcion,
+      cantidadRetirada,
+      cantidadEntregada
+    }
+  }
+
   // Agregar por producto
   const agregado = new Map<string, {
     producto_id: string | null
@@ -58,19 +81,20 @@ export default async function ResumenReposicionPage({
   }>()
 
   lineas?.forEach((linea: any) => {
-    const key = linea.descripcion
+    const procesado = procesarProducto(linea.descripcion, linea.cantidad_retirada, linea.cantidad_entregada)
+    const key = procesado.descripcion
     const existing = agregado.get(key)
 
     if (existing) {
-      existing.total_retirado += linea.cantidad_retirada
-      existing.total_entregado += linea.cantidad_entregada
+      existing.total_retirado += procesado.cantidadRetirada
+      existing.total_entregado += procesado.cantidadEntregada
       existing.control_cambio_ids.add(linea.control_cambio_id)
     } else {
       agregado.set(key, {
         producto_id: linea.producto_id,
-        descripcion: linea.descripcion,
-        total_retirado: linea.cantidad_retirada,
-        total_entregado: linea.cantidad_entregada,
+        descripcion: procesado.descripcion,
+        total_retirado: procesado.cantidadRetirada,
+        total_entregado: procesado.cantidadEntregada,
         num_registros: 1,
         control_cambio_ids: new Set([linea.control_cambio_id])
       })

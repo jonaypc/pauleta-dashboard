@@ -79,6 +79,27 @@ export default async function RotacionPage({
     console.error("Error al cargar datos:", errorFacturas || errorRetiros)
   }
 
+  // Función para convertir cajas a unidades individuales
+  const procesarProducto = (descripcion: string, cantidad: number) => {
+    const regex = /caja de (.+)/i
+    const match = descripcion.match(regex)
+
+    if (match) {
+      // Es una caja, convertir a unidades individuales (1 caja = 20 unidades)
+      const sabor = match[1].trim()
+      return {
+        descripcion: sabor,
+        cantidad: cantidad * 20
+      }
+    }
+
+    // No es una caja, devolver tal cual
+    return {
+      descripcion,
+      cantidad
+    }
+  }
+
   // Agrupar por producto (descripción)
   const agregado = new Map<string, {
     producto_id: string | null
@@ -91,12 +112,13 @@ export default async function RotacionPage({
 
   // Procesar líneas de facturas (entregado)
   lineasFacturas?.forEach((linea: any) => {
-    const key = linea.descripcion
+    const procesado = procesarProducto(linea.descripcion, linea.cantidad)
+    const key = procesado.descripcion
     const existing = agregado.get(key)
     const fechaFactura = linea.factura.fecha
 
     if (existing) {
-      existing.entregado += linea.cantidad
+      existing.entregado += procesado.cantidad
       existing.fechas_entrega.push(fechaFactura)
       // Actualizar última entrega si esta es más reciente
       if (!existing.ultima_entrega || fechaFactura > existing.ultima_entrega) {
@@ -105,8 +127,8 @@ export default async function RotacionPage({
     } else {
       agregado.set(key, {
         producto_id: linea.producto_id,
-        descripcion: linea.descripcion,
-        entregado: linea.cantidad,
+        descripcion: procesado.descripcion,
+        entregado: procesado.cantidad,
         retirado: 0,
         ultima_entrega: fechaFactura,
         fechas_entrega: [fechaFactura]
@@ -116,18 +138,19 @@ export default async function RotacionPage({
 
   // Procesar líneas de retiros
   lineasRetiros?.forEach((linea: any) => {
-    const key = linea.descripcion
+    const procesado = procesarProducto(linea.descripcion, linea.cantidad_retirada)
+    const key = procesado.descripcion
     const existing = agregado.get(key)
 
     if (existing) {
-      existing.retirado += linea.cantidad_retirada
+      existing.retirado += procesado.cantidad
     } else {
       // Producto retirado pero nunca entregado en el período
       agregado.set(key, {
         producto_id: linea.producto_id,
-        descripcion: linea.descripcion,
+        descripcion: procesado.descripcion,
         entregado: 0,
-        retirado: linea.cantidad_retirada,
+        retirado: procesado.cantidad,
         ultima_entrega: null,
         fechas_entrega: []
       })
