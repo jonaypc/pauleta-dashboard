@@ -576,9 +576,14 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
                   </div>
                 </td>
                 <td className="center" style={linea.es_intercambio ? { color: '#ea580c', fontWeight: 600 } : {}}>
-                  {linea.es_intercambio
-                    ? `${linea.cantidad} (rep.)`
-                    : linea.cantidad}
+                  {linea.es_intercambio ? (
+                    <div className="flex flex-col items-center">
+                      <span>{linea.cantidad}</span>
+                      <span className="text-[8px] text-gray-500">retirado</span>
+                    </div>
+                  ) : (
+                    linea.cantidad
+                  )}
                 </td>
                 <td className="right">
                   {linea.es_intercambio ? (
