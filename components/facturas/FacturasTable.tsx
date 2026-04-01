@@ -589,6 +589,20 @@ export function FacturasTable({
                                                         Anular
                                                     </DropdownMenuItem>
                                                 )}
+                                                {factura.estado === "anulada" && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm(`¿Revertir la anulación de la factura ${factura.numero}?\nLa factura volverá al estado BORRADOR.`)) {
+                                                                handleCambiarEstado(factura, "borrador")
+                                                            }
+                                                        }}
+                                                        disabled={isActionLoading}
+                                                        className="cursor-pointer text-blue-600"
+                                                    >
+                                                        <ArrowLeftRight className="mr-2 h-4 w-4" />
+                                                        Revertir anulación
+                                                    </DropdownMenuItem>
+                                                )}
                                                 {factura.estado === "borrador" && (
                                                     <>
                                                         <DropdownMenuSeparator />
