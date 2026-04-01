@@ -263,9 +263,42 @@ export interface EmailTracking {
   created_at: string
 }
 
+export interface ControlCambio {
+  id: string
+  cliente_id: string | null
+  fecha: string
+  observaciones: string | null
+  total_retirado: number
+  total_entregado: number
+  created_at: string
+  updated_at: string
+  cliente?: Cliente
+  lineas?: LineaControlCambio[]
+}
+
+export interface LineaControlCambio {
+  id: string
+  control_cambio_id: string
+  producto_id: string | null
+  descripcion: string
+  cantidad_retirada: number
+  motivo: string | null
+  cantidad_entregada: number
+  created_at: string
+  producto?: Producto
+}
+
 // ===========================================
 // TIPOS PARA FORMULARIOS
 // ===========================================
+
+export interface LineaControlCambioFormData {
+  producto_id?: string
+  descripcion: string
+  cantidad_retirada: number
+  motivo: string
+  cantidad_entregada: number
+}
 
 export interface ClienteFormData {
   nombre: string

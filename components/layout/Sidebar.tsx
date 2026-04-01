@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Building2,
   Factory,
+  RefreshCw,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -49,6 +50,11 @@ const navigation = [
     name: "Facturas",
     href: "/facturas",
     icon: FileText,
+  },
+  {
+    name: "Control Cambios",
+    href: "/control-cambios",
+    icon: RefreshCw,
   },
   {
     name: "Cobros",
