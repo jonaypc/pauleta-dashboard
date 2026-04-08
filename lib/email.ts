@@ -343,31 +343,45 @@ export async function sendConsolidatedInvoiceEmail({
     trackingId,
   })
 
-  const resend = getResendClient()
-
-  // Retry once on application_error (Resend transient failures)
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const { data, error } = await resend.emails.send({
-      from: `${empresaNombre} <facturas@pauletacanaria.es>`,
-      to: [to],
-      reply_to: 'contacto@pauletacanaria.es',
-      subject,
-      html,
-      attachments: pdfAttachments,
-    })
-
-    if (error) {
-      const isTransient = (error as any).name === 'application_error'
-      if (isTransient && attempt === 0) {
-        console.warn('[CONSOLIDATED] Resend transient error, retrying...', error)
-        await new Promise(r => setTimeout(r, 2000))
-        continue
-      }
-      throw new Error(`Error de Resend: ${(error as any).message || JSON.stringify(error)}`)
-    }
-
-    return data
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY no está configurada')
   }
+
+  // Call Resend API directly for better control over attachment encoding
+  const payload = {
+    from: `${empresaNombre} <facturas@pauletacanaria.es>`,
+    to: [to],
+    reply_to: 'contacto@pauletacanaria.es',
+    subject,
+    html,
+    attachments: pdfAttachments.map(att => ({
+      filename: att.filename,
+      content: att.content.toString('base64'),
+      content_type: 'application/pdf',
+    })),
+  }
+
+  console.log('[CONSOLIDATED] Sending email with payload size:',
+    Math.round(JSON.stringify(payload).length / 1024), 'KB')
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const result = await response.json()
+
+  if (!response.ok) {
+    console.error('[CONSOLIDATED] Resend API error:', response.status, result)
+    throw new Error(`Error de Resend (${response.status}): ${result.message || JSON.stringify(result)}`)
+  }
+
+  return result
 }
 
 // ===========================================
