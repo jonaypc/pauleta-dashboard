@@ -305,30 +305,31 @@ export function FacturasTable({
     const handleConsolidatedSend = async () => {
         if (selectedIds.size === 0) return
 
-        // Verificar que todas las facturas seleccionadas son del mismo cliente
+        // Verificar que todas las facturas seleccionadas tienen el mismo email de cliente
         const selectedFacturas = facturas.filter(f => selectedIds.has(f.id))
-        const clienteIds = new Set(selectedFacturas.map(f => f.cliente_id))
+        const emailsList = selectedFacturas.map(f => f.cliente?.email).filter((e): e is string => !!e)
+        const uniqueEmails = Array.from(new Set(emailsList))
 
-        if (clienteIds.size > 1) {
+        if (uniqueEmails.length === 0) {
             toast({
                 title: "Error",
-                description: "Para enviar un resumen consolidado, todas las facturas deben ser del mismo cliente. Selecciona solo facturas de un cliente.",
+                description: "Ningún cliente seleccionado tiene email configurado.",
                 variant: "destructive",
             })
             return
         }
 
-        const cliente = selectedFacturas[0]?.cliente
-        if (!cliente?.email) {
+        if (uniqueEmails.length > 1) {
             toast({
                 title: "Error",
-                description: "El cliente no tiene email configurado.",
+                description: "Para enviar un resumen consolidado, todas las facturas deben ser de clientes con el mismo email.",
                 variant: "destructive",
             })
             return
         }
 
-        if (!confirm(`¿Enviar resumen consolidado de ${selectedIds.size} facturas a ${cliente.email}?`)) return
+        const destinoEmail = uniqueEmails[0]
+        if (!confirm(`¿Enviar resumen consolidado de ${selectedIds.size} facturas a ${destinoEmail}?`)) return
 
         setIsConsolidatedSending(true)
         try {
@@ -342,7 +343,7 @@ export function FacturasTable({
 
             toast({
                 title: "Resumen enviado",
-                description: `${data.enviadas} facturas enviadas como resumen a ${data.clienteEmail}`,
+                description: `${data.enviadas} facturas enviadas como resumen a ${destinoEmail}`,
                 variant: "success",
             })
 

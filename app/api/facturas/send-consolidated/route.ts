@@ -33,22 +33,23 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Validate all invoices belong to the same client
-        const clienteIds = new Set(facturas.map(f => f.cliente_id))
-        if (clienteIds.size > 1) {
+        // Validate all invoices share the same email (may be different client records for different stores)
+        const emails = new Set(facturas.map(f => f.cliente?.email).filter(Boolean))
+        if (emails.size === 0) {
             return NextResponse.json(
-                { error: "Todas las facturas deben ser del mismo cliente" },
+                { error: "Ningún cliente tiene email configurado" },
+                { status: 400 }
+            )
+        }
+        if (emails.size > 1) {
+            return NextResponse.json(
+                { error: "Todas las facturas deben ser de clientes con el mismo email para enviar un resumen consolidado" },
                 { status: 400 }
             )
         }
 
         const cliente = facturas[0].cliente
-        if (!cliente?.email) {
-            return NextResponse.json(
-                { error: "El cliente no tiene email configurado" },
-                { status: 400 }
-            )
-        }
+        const destinoEmail = cliente!.email!
 
         // Fetch empresa
         const { data: empresa } = await supabase
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
                         ...factura,
                         lineas: factura.lineas || [],
                     },
-                    cliente,
+                    cliente: factura.cliente,
                     empresa: empresa || ({ nombre: empresaNombre } as any),
                 })
                 pdfAttachments.push({
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
                 .from("email_tracking")
                 .insert({
                     factura_id: factura.id,
-                    email_to: cliente.email,
+                    email_to: destinoEmail,
                     estado: "enviado",
                     enviado_at: new Date().toISOString(),
                     metadata: { tipo: "consolidado", facturas_count: facturas.length },
@@ -138,8 +139,8 @@ export async function POST(request: NextRequest) {
 
         // Send consolidated email
         const emailResult = await sendConsolidatedInvoiceEmail({
-            to: cliente.email,
-            clienteNombre: cliente.nombre,
+            to: destinoEmail,
+            clienteNombre: cliente!.nombre,
             empresaNombre,
             facturas: facturas.map(f => ({
                 numero: f.numero,
@@ -171,8 +172,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             enviadas: facturas.length,
-            clienteEmail: cliente.email,
-            clienteNombre: cliente.nombre,
+            clienteEmail: destinoEmail,
+            clienteNombre: cliente!.nombre,
         })
     } catch (error) {
         console.error("[CONSOLIDATED] Error:", error)
