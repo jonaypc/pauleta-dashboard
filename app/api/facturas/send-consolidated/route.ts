@@ -139,6 +139,10 @@ export async function POST(request: NextRequest) {
         const trackingId = trackingIds[0] || undefined
         const totalGlobal = facturas.reduce((sum, f) => sum + f.total, 0)
 
+        // Log attachment info for debugging
+        console.log(`[CONSOLIDATED] Sending ${pdfAttachments.length} attachments:`,
+            pdfAttachments.map(a => `${a.filename} (${Math.round(a.content.length / 1024)}KB)`))
+
         // Send consolidated email
         const emailResult = await sendConsolidatedInvoiceEmail({
             to: destinoEmail,
