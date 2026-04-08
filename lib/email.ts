@@ -345,12 +345,6 @@ export async function sendConsolidatedInvoiceEmail({
 
   const resend = getResendClient()
 
-  // Convert Buffer attachments to base64 for better Resend compatibility
-  const attachments = pdfAttachments.map(att => ({
-    filename: att.filename,
-    content: att.content.toString('base64'),
-  }))
-
   // Retry once on application_error (Resend transient failures)
   for (let attempt = 0; attempt < 2; attempt++) {
     const { data, error } = await resend.emails.send({
@@ -359,7 +353,7 @@ export async function sendConsolidatedInvoiceEmail({
       reply_to: 'contacto@pauletacanaria.es',
       subject,
       html,
-      attachments,
+      attachments: pdfAttachments,
     })
 
     if (error) {
