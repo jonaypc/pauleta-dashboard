@@ -190,15 +190,19 @@ interface SendConsolidatedEmailParams {
   pdfAttachments: { filename: string; content: Buffer }[]
 }
 
-export async function sendConsolidatedInvoiceEmail({
-  to,
+export function generateConsolidatedEmailHTML({
   clienteNombre,
   empresaNombre,
   facturas,
   totalGlobal,
   trackingId,
-  pdfAttachments,
-}: SendConsolidatedEmailParams) {
+}: {
+  clienteNombre: string
+  empresaNombre: string
+  facturas: FacturaResumen[]
+  totalGlobal: number
+  trackingId?: string
+}): { html: string; subject: string; periodoLabel: string } {
   const formattedTotal = new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: "EUR",
@@ -236,6 +240,8 @@ export async function sendConsolidatedInvoiceEmail({
         <td style="padding: 10px 12px; color: #1e293b; font-size: 13px; font-weight: 600; text-align: right; border-bottom: 1px solid #f1f5f9;">${formattedImporte}</td>
       </tr>`
   }).join('')
+
+  const subject = `Resumen de facturas - ${periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1)} - ${empresaNombre}`
 
   const html = `
 <!DOCTYPE html>
@@ -317,9 +323,27 @@ export async function sendConsolidatedInvoiceEmail({
 </html>
   `
 
-  const resend = getResendClient()
+  return { html, subject, periodoLabel }
+}
 
-  const subject = `Resumen de facturas - ${periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1)} - ${empresaNombre}`
+export async function sendConsolidatedInvoiceEmail({
+  to,
+  clienteNombre,
+  empresaNombre,
+  facturas,
+  totalGlobal,
+  trackingId,
+  pdfAttachments,
+}: SendConsolidatedEmailParams) {
+  const { html, subject } = generateConsolidatedEmailHTML({
+    clienteNombre,
+    empresaNombre,
+    facturas,
+    totalGlobal,
+    trackingId,
+  })
+
+  const resend = getResendClient()
 
   const { data, error } = await resend.emails.send({
     from: `${empresaNombre} <facturas@pauletacanaria.es>`,

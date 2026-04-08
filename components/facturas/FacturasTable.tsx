@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2, FileStack } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2, FileStack, FileText } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -395,6 +395,52 @@ export function FacturasTable({
                                 <FileStack className="mr-2 h-4 w-4" />
                             )}
                             {isConsolidatedSending ? "Enviando resumen..." : "Enviar resumen al cliente"}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Previsualizar email consolidado"
+                            onClick={async () => {
+                                const ids = Array.from(selectedIds)
+                                const res = await fetch("/api/facturas/preview-consolidated", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ facturaIds: ids }),
+                                })
+                                if (!res.ok) {
+                                    const data = await res.json()
+                                    toast({ title: "Error", description: data.error, variant: "destructive" })
+                                    return
+                                }
+                                const blob = await res.blob()
+                                window.open(URL.createObjectURL(blob), "_blank")
+                            }}
+                        >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver email
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Previsualizar PDF resumen"
+                            onClick={async () => {
+                                const ids = Array.from(selectedIds)
+                                const res = await fetch("/api/facturas/preview-consolidated", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ facturaIds: ids, format: "pdf" }),
+                                })
+                                if (!res.ok) {
+                                    const data = await res.json()
+                                    toast({ title: "Error", description: data.error, variant: "destructive" })
+                                    return
+                                }
+                                const blob = await res.blob()
+                                window.open(URL.createObjectURL(blob), "_blank")
+                            }}
+                        >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Ver PDF
                         </Button>
                         <Button
                             size="sm"

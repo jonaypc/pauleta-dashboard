@@ -11,7 +11,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { FileStack, Loader2, Mail } from "lucide-react"
+import { Eye, FileStack, FileText, Loader2, Mail } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
 
@@ -185,6 +185,43 @@ export function SendConsolidatedButton({ clienteId, clienteNombre, clienteEmail 
                                 {facturas.length} factura{facturas.length > 1 ? "s" : ""}
                             </span>
                             <span className="text-lg font-bold text-primary">{formattedTotal}</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={async () => {
+                                    const res = await fetch("/api/facturas/preview-consolidated", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ facturaIds: facturas.map(f => f.id) }),
+                                    })
+                                    const blob = await res.blob()
+                                    const url = URL.createObjectURL(blob)
+                                    window.open(url, "_blank")
+                                }}
+                            >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver email
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={async () => {
+                                    const res = await fetch("/api/facturas/preview-consolidated", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ facturaIds: facturas.map(f => f.id), format: "pdf" }),
+                                    })
+                                    const blob = await res.blob()
+                                    const url = URL.createObjectURL(blob)
+                                    window.open(url, "_blank")
+                                }}
+                            >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Ver PDF
+                            </Button>
                         </div>
 
                         <Button
