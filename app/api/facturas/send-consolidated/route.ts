@@ -61,31 +61,11 @@ export async function POST(request: NextRequest) {
 
         const empresaNombre = empresa?.nombre || "Pauleta Canaria S.L."
 
-        // Generate individual PDFs
+        // Generate consolidated summary PDF only (individual PDFs excluded to stay within Resend 40MB limit)
         const pdfAttachments: { filename: string; content: Buffer }[] = []
 
-        const { generateInvoicePDF, generateConsolidatedPDF } = await import("@/lib/pdf-generator")
+        const { generateConsolidatedPDF } = await import("@/lib/pdf-generator")
 
-        for (const factura of facturas) {
-            try {
-                const pdfBuffer = await generateInvoicePDF({
-                    factura: {
-                        ...factura,
-                        lineas: factura.lineas || [],
-                    },
-                    cliente: factura.cliente,
-                    empresa: empresa || ({ nombre: empresaNombre } as any),
-                })
-                pdfAttachments.push({
-                    filename: `Factura-${factura.numero}.pdf`,
-                    content: pdfBuffer,
-                })
-            } catch (pdfError) {
-                console.error(`[CONSOLIDATED] Error generating PDF for ${factura.numero}:`, pdfError)
-            }
-        }
-
-        // Generate consolidated summary PDF
         try {
             const consolidatedPdf = await generateConsolidatedPDF({
                 facturas: facturas.map(f => ({
@@ -107,7 +87,7 @@ export async function POST(request: NextRequest) {
                 ? `${mesMin.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`
                 : `${mesMin.toLocaleDateString("es-ES", { month: "short", year: "numeric" })}-${mesMax.toLocaleDateString("es-ES", { month: "short", year: "numeric" })}`
 
-            pdfAttachments.unshift({
+            pdfAttachments.push({
                 filename: `Resumen-Facturas-${periodoFile.replace(/\s/g, '-')}.pdf`,
                 content: consolidatedPdf,
             })
