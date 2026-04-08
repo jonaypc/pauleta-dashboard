@@ -177,7 +177,11 @@ export async function POST(request: NextRequest) {
         })
     } catch (error) {
         console.error("[CONSOLIDATED] Error:", error)
-        const msg = error instanceof Error ? error.message : "Error desconocido"
+        const msg = error instanceof Error
+            ? error.message
+            : typeof error === "object" && error !== null
+                ? JSON.stringify(error)
+                : "Error desconocido"
         return NextResponse.json({ error: msg }, { status: 500 })
     }
 }
