@@ -345,20 +345,35 @@ export async function sendConsolidatedInvoiceEmail({
 
   const resend = getResendClient()
 
-  const { data, error } = await resend.emails.send({
-    from: `${empresaNombre} <facturas@pauletacanaria.es>`,
-    to: [to],
-    reply_to: 'contacto@pauletacanaria.es',
-    subject,
-    html,
-    attachments: pdfAttachments,
-  })
+  // Convert Buffer attachments to base64 for better Resend compatibility
+  const attachments = pdfAttachments.map(att => ({
+    filename: att.filename,
+    content: att.content.toString('base64'),
+  }))
 
-  if (error) {
-    throw error
+  // Retry once on application_error (Resend transient failures)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await resend.emails.send({
+      from: `${empresaNombre} <facturas@pauletacanaria.es>`,
+      to: [to],
+      reply_to: 'contacto@pauletacanaria.es',
+      subject,
+      html,
+      attachments,
+    })
+
+    if (error) {
+      const isTransient = (error as any).name === 'application_error'
+      if (isTransient && attempt === 0) {
+        console.warn('[CONSOLIDATED] Resend transient error, retrying...', error)
+        await new Promise(r => setTimeout(r, 2000))
+        continue
+      }
+      throw new Error(`Error de Resend: ${(error as any).message || JSON.stringify(error)}`)
+    }
+
+    return data
   }
-
-  return data
 }
 
 // ===========================================
