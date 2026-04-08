@@ -11,6 +11,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CobroForm } from "@/components/cobros/CobroForm"
 import type { Factura, EstadoFactura, EmailTracking } from "@/types"
@@ -72,6 +78,42 @@ export function FacturasTable({
     const [isSendingEmail, setIsSendingEmail] = useState<string | null>(null) // ID of invoice being sent
     const [isBulkSending, setIsBulkSending] = useState(false)
     const [isConsolidatedSending, setIsConsolidatedSending] = useState(false)
+    const [previewOpen, setPreviewOpen] = useState(false)
+    const [previewHtml, setPreviewHtml] = useState("")
+    const [previewLoading, setPreviewLoading] = useState(false)
+    const [previewType, setPreviewType] = useState<"email" | "pdf">("email")
+    const [pdfUrl, setPdfUrl] = useState("")
+
+    const handlePreview = async (type: "email" | "pdf") => {
+        setPreviewType(type)
+        setPreviewLoading(true)
+        setPreviewOpen(true)
+        setPreviewHtml("")
+        setPdfUrl("")
+        try {
+            const ids = Array.from(selectedIds)
+            const res = await fetch("/api/facturas/preview-consolidated", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ facturaIds: ids, format: type === "pdf" ? "pdf" : undefined }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || "Error al generar preview")
+            }
+            if (type === "pdf") {
+                const blob = await res.blob()
+                setPdfUrl(URL.createObjectURL(blob))
+            } else {
+                setPreviewHtml(await res.text())
+            }
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" })
+            setPreviewOpen(false)
+        } finally {
+            setPreviewLoading(false)
+        }
+    }
 
     // Totales
     const totalVisible = facturas.reduce((sum, f) => sum + (f.total || 0), 0)
@@ -400,21 +442,7 @@ export function FacturasTable({
                             size="sm"
                             variant="ghost"
                             title="Previsualizar email consolidado"
-                            onClick={async () => {
-                                const ids = Array.from(selectedIds)
-                                const res = await fetch("/api/facturas/preview-consolidated", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ facturaIds: ids }),
-                                })
-                                if (!res.ok) {
-                                    const data = await res.json()
-                                    toast({ title: "Error", description: data.error, variant: "destructive" })
-                                    return
-                                }
-                                const blob = await res.blob()
-                                window.open(URL.createObjectURL(blob), "_blank")
-                            }}
+                            onClick={() => handlePreview("email")}
                         >
                             <Eye className="mr-2 h-4 w-4" />
                             Ver email
@@ -423,21 +451,7 @@ export function FacturasTable({
                             size="sm"
                             variant="ghost"
                             title="Previsualizar PDF resumen"
-                            onClick={async () => {
-                                const ids = Array.from(selectedIds)
-                                const res = await fetch("/api/facturas/preview-consolidated", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ facturaIds: ids, format: "pdf" }),
-                                })
-                                if (!res.ok) {
-                                    const data = await res.json()
-                                    toast({ title: "Error", description: data.error, variant: "destructive" })
-                                    return
-                                }
-                                const blob = await res.blob()
-                                window.open(URL.createObjectURL(blob), "_blank")
-                            }}
+                            onClick={() => handlePreview("pdf")}
                         >
                             <FileText className="mr-2 h-4 w-4" />
                             Ver PDF
@@ -786,6 +800,35 @@ export function FacturasTable({
                     }}
                 />
             )}
+
+            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0">
+                    <DialogHeader className="px-4 py-3 border-b shrink-0">
+                        <DialogTitle>
+                            {previewType === "email" ? "Preview del email" : "Preview del PDF resumen"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden">
+                        {previewLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : previewType === "email" ? (
+                            <iframe
+                                srcDoc={previewHtml}
+                                className="w-full h-full border-0"
+                                title="Email preview"
+                            />
+                        ) : pdfUrl ? (
+                            <iframe
+                                src={pdfUrl}
+                                className="w-full h-full border-0"
+                                title="PDF preview"
+                            />
+                        ) : null}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

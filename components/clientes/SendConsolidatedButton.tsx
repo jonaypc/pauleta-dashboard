@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -10,8 +10,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Eye, FileStack, FileText, Loader2, Mail } from "lucide-react"
+import { Eye, FileStack, FileText, Loader2, Mail, X } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
 
@@ -46,6 +52,11 @@ export function SendConsolidatedButton({ clienteId, clienteNombre, clienteEmail 
     const [facturas, setFacturas] = useState<FacturaPreview[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [isSending, setIsSending] = useState(false)
+    const [previewOpen, setPreviewOpen] = useState(false)
+    const [previewHtml, setPreviewHtml] = useState("")
+    const [previewLoading, setPreviewLoading] = useState(false)
+    const [previewType, setPreviewType] = useState<"email" | "pdf">("email")
+    const [pdfUrl, setPdfUrl] = useState("")
     const supabase = createClient()
     const monthOptions = getMonthOptions()
 
@@ -78,6 +89,48 @@ export function SendConsolidatedButton({ clienteId, clienteNombre, clienteEmail 
             setFacturas([])
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handlePreview = async (type: "email" | "pdf") => {
+        setPreviewType(type)
+        setPreviewLoading(true)
+        setPreviewOpen(true)
+        setPreviewHtml("")
+        setPdfUrl("")
+
+        try {
+            const res = await fetch("/api/facturas/preview-consolidated", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    facturaIds: facturas.map(f => f.id),
+                    format: type === "pdf" ? "pdf" : undefined,
+                }),
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || "Error al generar preview")
+            }
+
+            if (type === "pdf") {
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                setPdfUrl(url)
+            } else {
+                const html = await res.text()
+                setPreviewHtml(html)
+            }
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al generar preview",
+                variant: "destructive",
+            })
+            setPreviewOpen(false)
+        } finally {
+            setPreviewLoading(false)
         }
     }
 
@@ -121,124 +174,137 @@ export function SendConsolidatedButton({ clienteId, clienteNombre, clienteEmail 
     if (!clienteEmail) return null
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileStack className="h-5 w-5" />
-                    Enviar resumen de facturas
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div>
-                    <label className="text-sm font-medium text-muted-foreground">Selecciona el mes</label>
-                    <Select value={selectedMonth} onValueChange={handleMonthChange}>
-                        <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Elige un mes..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {monthOptions.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {isLoading && (
-                    <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileStack className="h-5 w-5" />
+                        Enviar resumen de facturas
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium text-muted-foreground">Selecciona el mes</label>
+                        <Select value={selectedMonth} onValueChange={handleMonthChange}>
+                            <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Elige un mes..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {monthOptions.map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                )}
 
-                {!isLoading && selectedMonth && facturas.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                        No hay facturas para este periodo
-                    </p>
-                )}
+                    {isLoading && (
+                        <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
 
-                {!isLoading && facturas.length > 0 && (
-                    <>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {facturas.map(f => (
-                                <div key={f.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                                    <div>
-                                        <span className="font-medium">{f.numero}</span>
-                                        <span className="ml-2 text-muted-foreground">
-                                            {new Date(f.fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })}
-                                        </span>
+                    {!isLoading && selectedMonth && facturas.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                            No hay facturas para este periodo
+                        </p>
+                    )}
+
+                    {!isLoading && facturas.length > 0 && (
+                        <>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {facturas.map(f => (
+                                    <div key={f.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                                        <div>
+                                            <span className="font-medium">{f.numero}</span>
+                                            <span className="ml-2 text-muted-foreground">
+                                                {new Date(f.fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant={f.estado as any} className="text-xs">
+                                                {f.estado}
+                                            </Badge>
+                                            <span className="font-medium tabular-nums">
+                                                {new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(f.total)}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant={f.estado as any} className="text-xs">
-                                            {f.estado}
-                                        </Badge>
-                                        <span className="font-medium tabular-nums">
-                                            {new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(f.total)}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
 
-                        <div className="flex items-center justify-between border-t pt-3">
-                            <span className="text-sm font-medium">
-                                {facturas.length} factura{facturas.length > 1 ? "s" : ""}
-                            </span>
-                            <span className="text-lg font-bold text-primary">{formattedTotal}</span>
-                        </div>
+                            <div className="flex items-center justify-between border-t pt-3">
+                                <span className="text-sm font-medium">
+                                    {facturas.length} factura{facturas.length > 1 ? "s" : ""}
+                                </span>
+                                <span className="text-lg font-bold text-primary">{formattedTotal}</span>
+                            </div>
 
-                        <div className="flex gap-2">
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => handlePreview("email")}
+                                >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Ver email
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => handlePreview("pdf")}
+                                >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Ver PDF
+                                </Button>
+                            </div>
+
                             <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={async () => {
-                                    const res = await fetch("/api/facturas/preview-consolidated", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ facturaIds: facturas.map(f => f.id) }),
-                                    })
-                                    const blob = await res.blob()
-                                    const url = URL.createObjectURL(blob)
-                                    window.open(url, "_blank")
-                                }}
+                                className="w-full"
+                                onClick={handleSend}
+                                disabled={isSending}
                             >
-                                <Eye className="mr-2 h-4 w-4" />
-                                Ver email
+                                {isSending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Mail className="mr-2 h-4 w-4" />
+                                )}
+                                {isSending ? "Enviando resumen..." : `Enviar resumen a ${clienteEmail}`}
                             </Button>
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={async () => {
-                                    const res = await fetch("/api/facturas/preview-consolidated", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ facturaIds: facturas.map(f => f.id), format: "pdf" }),
-                                    })
-                                    const blob = await res.blob()
-                                    const url = URL.createObjectURL(blob)
-                                    window.open(url, "_blank")
-                                }}
-                            >
-                                <FileText className="mr-2 h-4 w-4" />
-                                Ver PDF
-                            </Button>
-                        </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
 
-                        <Button
-                            className="w-full"
-                            onClick={handleSend}
-                            disabled={isSending}
-                        >
-                            {isSending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Mail className="mr-2 h-4 w-4" />
-                            )}
-                            {isSending ? "Enviando resumen..." : `Enviar resumen a ${clienteEmail}`}
-                        </Button>
-                    </>
-                )}
-            </CardContent>
-        </Card>
+            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0">
+                    <DialogHeader className="px-4 py-3 border-b shrink-0">
+                        <DialogTitle>
+                            {previewType === "email" ? "Preview del email" : "Preview del PDF resumen"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden">
+                        {previewLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : previewType === "email" ? (
+                            <iframe
+                                srcDoc={previewHtml}
+                                className="w-full h-full border-0"
+                                title="Email preview"
+                            />
+                        ) : pdfUrl ? (
+                            <iframe
+                                src={pdfUrl}
+                                className="w-full h-full border-0"
+                                title="PDF preview"
+                            />
+                        ) : null}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
