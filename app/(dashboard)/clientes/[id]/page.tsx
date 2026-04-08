@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
-import { 
-  ArrowLeft, 
-  Pencil, 
-  Building2, 
+import {
+  ArrowLeft,
+  Pencil,
+  Building2,
   MapPin,
   Phone,
   Mail,
@@ -18,6 +18,7 @@ import {
   ClipboardList
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { SendConsolidatedButton } from "@/components/clientes/SendConsolidatedButton"
 
 interface PageProps {
   params: { id: string }
@@ -296,6 +297,13 @@ export default async function ClienteDetailPage({ params, searchParams }: PagePr
               )}
             </CardContent>
           </Card>
+
+          {/* Enviar resumen de facturas */}
+          <SendConsolidatedButton
+            clienteId={params.id}
+            clienteNombre={cliente.nombre}
+            clienteEmail={cliente.email}
+          />
 
           {/* Info adicional */}
           <Card>

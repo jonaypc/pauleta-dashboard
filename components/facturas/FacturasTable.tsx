@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2 } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2, FileStack } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,6 +71,7 @@ export function FacturasTable({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isSendingEmail, setIsSendingEmail] = useState<string | null>(null) // ID of invoice being sent
     const [isBulkSending, setIsBulkSending] = useState(false)
+    const [isConsolidatedSending, setIsConsolidatedSending] = useState(false)
 
     // Totales
     const totalVisible = facturas.reduce((sum, f) => sum + (f.total || 0), 0)
@@ -300,6 +301,64 @@ export function FacturasTable({
         }
     }
 
+    // Enviar resumen consolidado
+    const handleConsolidatedSend = async () => {
+        if (selectedIds.size === 0) return
+
+        // Verificar que todas las facturas seleccionadas son del mismo cliente
+        const selectedFacturas = facturas.filter(f => selectedIds.has(f.id))
+        const clienteIds = new Set(selectedFacturas.map(f => f.cliente_id))
+
+        if (clienteIds.size > 1) {
+            toast({
+                title: "Error",
+                description: "Para enviar un resumen consolidado, todas las facturas deben ser del mismo cliente. Selecciona solo facturas de un cliente.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const cliente = selectedFacturas[0]?.cliente
+        if (!cliente?.email) {
+            toast({
+                title: "Error",
+                description: "El cliente no tiene email configurado.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        if (!confirm(`¿Enviar resumen consolidado de ${selectedIds.size} facturas a ${cliente.email}?`)) return
+
+        setIsConsolidatedSending(true)
+        try {
+            const response = await fetch("/api/facturas/send-consolidated", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ facturaIds: Array.from(selectedIds) }),
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || "Error al enviar resumen")
+
+            toast({
+                title: "Resumen enviado",
+                description: `${data.enviadas} facturas enviadas como resumen a ${data.clienteEmail}`,
+                variant: "success",
+            })
+
+            setSelectedIds(new Set())
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al enviar resumen consolidado",
+                variant: "destructive",
+            })
+        } finally {
+            setIsConsolidatedSending(false)
+        }
+    }
+
     return (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
             {/* Barra de acciones masivas */}
@@ -313,7 +372,7 @@ export function FacturasTable({
                             size="sm"
                             variant="outline"
                             onClick={handleBulkSend}
-                            disabled={isBulkSending}
+                            disabled={isBulkSending || isConsolidatedSending}
                         >
                             {isBulkSending ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -321,6 +380,20 @@ export function FacturasTable({
                                 <Mail className="mr-2 h-4 w-4" />
                             )}
                             {isBulkSending ? "Enviando..." : "Enviar por email"}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleConsolidatedSend}
+                            disabled={isConsolidatedSending || isBulkSending}
+                            title="Envía un solo email con el resumen de todas las facturas seleccionadas (deben ser del mismo cliente)"
+                        >
+                            {isConsolidatedSending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <FileStack className="mr-2 h-4 w-4" />
+                            )}
+                            {isConsolidatedSending ? "Enviando resumen..." : "Enviar resumen al cliente"}
                         </Button>
                         <Button
                             size="sm"

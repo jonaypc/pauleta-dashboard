@@ -171,6 +171,173 @@ export async function sendInvoiceEmail({
 }
 
 // ===========================================
+// EMAIL CONSOLIDADO DE FACTURAS
+// ===========================================
+
+interface FacturaResumen {
+  numero: string
+  fecha: string
+  total: number
+}
+
+interface SendConsolidatedEmailParams {
+  to: string
+  clienteNombre: string
+  empresaNombre: string
+  facturas: FacturaResumen[]
+  totalGlobal: number
+  trackingId?: string
+  pdfAttachments: { filename: string; content: Buffer }[]
+}
+
+export async function sendConsolidatedInvoiceEmail({
+  to,
+  clienteNombre,
+  empresaNombre,
+  facturas,
+  totalGlobal,
+  trackingId,
+  pdfAttachments,
+}: SendConsolidatedEmailParams) {
+  const formattedTotal = new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  }).format(totalGlobal)
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const trackingPixel = trackingId
+    ? `<img src="${baseUrl}/api/track/${trackingId}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />`
+    : ''
+
+  // Determinar periodo desde las fechas de las facturas
+  const fechas = facturas.map(f => new Date(f.fecha))
+  const mesMin = fechas.reduce((min, d) => d < min ? d : min, fechas[0])
+  const mesMax = fechas.reduce((max, d) => d > max ? d : max, fechas[0])
+
+  const periodoLabel = mesMin.getMonth() === mesMax.getMonth() && mesMin.getFullYear() === mesMax.getFullYear()
+    ? mesMin.toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+    : `${mesMin.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} - ${mesMax.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}`
+
+  // Generar filas de la tabla
+  const tableRows = facturas.map(f => {
+    const formattedFecha = new Date(f.fecha).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+    const formattedImporte = new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: "EUR",
+    }).format(f.total)
+    return `
+      <tr>
+        <td style="padding: 10px 12px; color: #1e293b; font-size: 13px; font-weight: 600; border-bottom: 1px solid #f1f5f9;">${f.numero}</td>
+        <td style="padding: 10px 12px; color: #64748b; font-size: 13px; border-bottom: 1px solid #f1f5f9;">${formattedFecha}</td>
+        <td style="padding: 10px 12px; color: #1e293b; font-size: 13px; font-weight: 600; text-align: right; border-bottom: 1px solid #f1f5f9;">${formattedImporte}</td>
+      </tr>`
+  }).join('')
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <tr>
+      <td>
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 12px 12px 0 0; padding: 32px;">
+          <tr>
+            <td align="center">
+              <h1 style="margin: 0; color: white; font-size: 24px; font-weight: 700;">${empresaNombre}</h1>
+              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Resumen de facturas · ${periodoLabel}</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Content -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: white; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <tr>
+            <td>
+              <p style="margin: 0 0 24px; color: #1e293b; font-size: 16px;">
+                Hola <strong>${clienteNombre}</strong>,
+              </p>
+              <p style="margin: 0 0 24px; color: #64748b; font-size: 14px; line-height: 1.6;">
+                Te enviamos el resumen de las <strong>${facturas.length} facturas</strong> correspondientes al periodo <strong>${periodoLabel}</strong>. Encontrarás los PDFs adjuntos a este email.
+              </p>
+
+              <!-- Invoice Table -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border-radius: 8px; margin-bottom: 24px; overflow: hidden;">
+                <tr>
+                  <td>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr style="background-color: #e2e8f0;">
+                        <td style="padding: 10px 12px; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase;">Factura</td>
+                        <td style="padding: 10px 12px; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase;">Fecha</td>
+                        <td style="padding: 10px 12px; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: right;">Importe</td>
+                      </tr>
+                      ${tableRows}
+                      <tr style="background-color: #e2e8f0;">
+                        <td colspan="2" style="padding: 12px; color: #1e293b; font-size: 14px; font-weight: 700;">TOTAL</td>
+                        <td style="padding: 12px; text-align: right; color: #2563eb; font-size: 18px; font-weight: 700;">${formattedTotal}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+                Si tienes alguna pregunta sobre estas facturas, no dudes en contactarnos.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 24px;">
+          <tr>
+            <td align="center">
+              <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                ${empresaNombre} · Helados artesanales de fruta
+              </p>
+              <p style="margin: 8px 0 0; color: #cbd5e1; font-size: 11px;">
+                Este email fue enviado automáticamente desde nuestro sistema de facturación.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  ${trackingPixel}
+</body>
+</html>
+  `
+
+  const resend = getResendClient()
+
+  const subject = `Resumen de facturas - ${periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1)} - ${empresaNombre}`
+
+  const { data, error } = await resend.emails.send({
+    from: `${empresaNombre} <facturas@pauletacanaria.es>`,
+    to: [to],
+    reply_to: 'contacto@pauletacanaria.es',
+    subject,
+    html,
+    attachments: pdfAttachments,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+// ===========================================
 // EMAIL DE PRESUPUESTO
 // ===========================================
 

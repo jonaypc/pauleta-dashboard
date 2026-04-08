@@ -360,6 +360,279 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
 }
 
 // ===========================================
+// PDF RESUMEN CONSOLIDADO DE FACTURAS
+// ===========================================
+
+interface ConsolidatedPDFData {
+  facturas: {
+    numero: string
+    fecha: string
+    base_imponible: number
+    igic: number
+    total: number
+  }[]
+  cliente: Cliente
+  empresa: Empresa
+}
+
+export async function generateConsolidatedPDF(data: ConsolidatedPDFData): Promise<Buffer> {
+  const { facturas, cliente, empresa } = data
+  const color = empresa.color_primario || "#1e40af"
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  })
+
+  const pageWidth = 210
+  const margin = 20
+  const contentWidth = pageWidth - margin * 2
+  let y = 20
+
+  function hexToRgb(hex: string): [number, number, number] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+      : [30, 64, 175]
+  }
+
+  const [r, g, b] = hexToRgb(color)
+
+  // === HEADER: Company logo + name ===
+  const mostrarLogo = empresa.mostrar_logo ?? true
+  let logoAdded = false
+
+  if (mostrarLogo && empresa.logo_url) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const logoUrl = empresa.logo_url.startsWith('http') ? empresa.logo_url : `${baseUrl}${empresa.logo_url}`
+      const response = await fetch(logoUrl)
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const contentType = response.headers.get('content-type') || 'image/png'
+        const url = empresa.logo_url.toLowerCase()
+        let ext: 'JPEG' | 'PNG' = 'PNG'
+        if (contentType.includes('jpeg') || contentType.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
+          ext = 'JPEG'
+        }
+        const dataUrl = `data:${contentType};base64,${base64}`
+
+        const dims = getImageDimensions(arrayBuffer, ext)
+        const maxHeightMm = 18
+        const maxWidthMm = 60
+        let logoWidthMm: number
+        let logoHeightMm: number
+
+        if (dims && dims.width > 0 && dims.height > 0) {
+          const aspect = dims.width / dims.height
+          logoHeightMm = maxHeightMm
+          logoWidthMm = logoHeightMm * aspect
+          if (logoWidthMm > maxWidthMm) {
+            logoWidthMm = maxWidthMm
+            logoHeightMm = logoWidthMm / aspect
+          }
+        } else {
+          logoHeightMm = maxHeightMm
+          logoWidthMm = maxHeightMm * 2
+        }
+
+        doc.addImage(dataUrl, ext, margin, y - 3, logoWidthMm, logoHeightMm)
+        y += logoHeightMm + 3
+        logoAdded = true
+      }
+    } catch (logoError) {
+      console.error('[PDF Consolidado] Error fetching logo:', logoError)
+    }
+  }
+
+  if (!logoAdded) {
+    doc.setFontSize(20)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  } else {
+    doc.setFontSize(14)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  }
+
+  // Company details
+  y += 6
+  doc.setFontSize(9)
+  doc.setTextColor(100, 116, 139)
+  doc.setFont('helvetica', 'normal')
+  if (empresa.cif) { doc.text(`CIF: ${empresa.cif}`, margin, y); y += 4 }
+  if (empresa.direccion) { doc.text(empresa.direccion, margin, y); y += 4 }
+  if (empresa.ciudad || empresa.codigo_postal) {
+    doc.text(`${empresa.ciudad || ''}${empresa.provincia ? `, ${empresa.provincia}` : ''} ${empresa.codigo_postal || ''}`.trim(), margin, y)
+    y += 4
+  }
+
+  // === Title box (right side) ===
+  const fechas = facturas.map(f => new Date(f.fecha))
+  const mesMin = fechas.reduce((min, d) => d < min ? d : min, fechas[0])
+  const mesMax = fechas.reduce((max, d) => d > max ? d : max, fechas[0])
+  const periodoLabel = mesMin.getMonth() === mesMax.getMonth() && mesMin.getFullYear() === mesMax.getFullYear()
+    ? mesMin.toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+    : `${mesMin.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} - ${mesMax.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}`
+
+  const boxW = 70
+  const boxX = pageWidth - margin - boxW
+  const boxY = 15
+  const boxH = 22
+
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(boxX, boxY, boxW, boxH, 3, 3, 'F')
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.text('RESUMEN DE FACTURAS', boxX + boxW / 2, boxY + 9, { align: 'center' })
+
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text(periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1), boxX + boxW / 2, boxY + 18, { align: 'center' })
+
+  // === Separator ===
+  y = Math.max(y, boxY + boxH) + 8
+  doc.setDrawColor(226, 232, 240)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 8
+
+  // === Client info ===
+  doc.setFontSize(9)
+  doc.setTextColor(r, g, b)
+  doc.setFont('helvetica', 'bold')
+  doc.text('CLIENTE', margin, y)
+  y += 5
+
+  doc.setFontSize(12)
+  doc.setTextColor(30, 41, 59)
+  doc.text(cliente.nombre, margin, y)
+  y += 5
+
+  doc.setFontSize(9)
+  doc.setTextColor(100, 116, 139)
+  doc.setFont('helvetica', 'normal')
+  if (cliente.cif) { doc.text(`CIF: ${cliente.cif}`, margin, y); y += 4 }
+  if (cliente.direccion) { doc.text(cliente.direccion, margin, y); y += 4 }
+
+  // === Separator ===
+  y += 4
+  doc.setDrawColor(226, 232, 240)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 8
+
+  // === Invoice summary table ===
+  const colWidths = [contentWidth * 0.30, contentWidth * 0.20, contentWidth * 0.20, contentWidth * 0.15, contentWidth * 0.15]
+  const colX = [margin]
+  for (let i = 1; i < colWidths.length; i++) {
+    colX.push(colX[i - 1] + colWidths[i - 1])
+  }
+
+  // Table header
+  doc.setFillColor(r, g, b)
+  doc.rect(margin, y - 4, contentWidth, 10, 'F')
+
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.text('FACTURA', colX[0] + 4, y + 2)
+  doc.text('FECHA', colX[1] + 4, y + 2)
+  doc.text('BASE IMP.', colX[2] + colWidths[2] - 4, y + 2, { align: 'right' })
+  doc.text('IGIC', colX[3] + colWidths[3] - 4, y + 2, { align: 'right' })
+  doc.text('TOTAL', colX[4] + colWidths[4] - 4, y + 2, { align: 'right' })
+
+  y += 10
+
+  // Table rows
+  let totalBase = 0
+  let totalIgic = 0
+  let totalGeneral = 0
+
+  for (const factura of facturas) {
+    if (y > 255) {
+      doc.addPage()
+      y = 20
+    }
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 41, 59)
+    doc.text(factura.numero, colX[0] + 4, y)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 116, 139)
+    doc.text(formatFechaCorta(factura.fecha), colX[1] + 4, y)
+
+    doc.setTextColor(51, 65, 81)
+    doc.text(formatPrecio(factura.base_imponible), colX[2] + colWidths[2] - 4, y, { align: 'right' })
+    doc.text(formatPrecio(factura.igic), colX[3] + colWidths[3] - 4, y, { align: 'right' })
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 41, 59)
+    doc.text(formatPrecio(factura.total), colX[4] + colWidths[4] - 4, y, { align: 'right' })
+
+    totalBase += factura.base_imponible
+    totalIgic += factura.igic
+    totalGeneral += factura.total
+
+    y += 4
+    doc.setDrawColor(241, 245, 249)
+    doc.setLineWidth(0.2)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 5
+  }
+
+  // === Totals row ===
+  y += 2
+  doc.setFillColor(248, 250, 252)
+  doc.roundedRect(margin, y - 4, contentWidth, 14, 2, 2, 'F')
+  doc.setDrawColor(r, g, b)
+  doc.setLineWidth(0.8)
+  doc.line(margin, y - 4, pageWidth - margin, y - 4)
+
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(30, 41, 59)
+  doc.text(`TOTAL (${facturas.length} facturas)`, colX[0] + 4, y + 3)
+
+  doc.setFontSize(9)
+  doc.text(formatPrecio(totalBase), colX[2] + colWidths[2] - 4, y + 3, { align: 'right' })
+  doc.text(formatPrecio(totalIgic), colX[3] + colWidths[3] - 4, y + 3, { align: 'right' })
+
+  doc.setFontSize(12)
+  doc.setTextColor(r, g, b)
+  doc.text(formatPrecio(totalGeneral), colX[4] + colWidths[4] - 4, y + 3, { align: 'right' })
+
+  // === Footer ===
+  const footerY = 270
+
+  if (empresa.cuenta_bancaria) {
+    doc.setFontSize(8)
+    doc.setTextColor(148, 163, 184)
+    doc.setFont('helvetica', 'normal')
+    doc.text('CUENTA BANCARIA', pageWidth / 2, footerY, { align: 'center' })
+    doc.setFontSize(11)
+    doc.setTextColor(30, 41, 59)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.cuenta_bancaria, pageWidth / 2, footerY + 5, { align: 'center' })
+  }
+
+  doc.setFontSize(9)
+  doc.setTextColor(r, g, b)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Gracias por su compra.', pageWidth / 2, footerY + 13, { align: 'center' })
+
+  const arrayBuffer = doc.output('arraybuffer')
+  return Buffer.from(arrayBuffer)
+}
+
+// ===========================================
 // PDF DE PRESUPUESTO
 // ===========================================
 
