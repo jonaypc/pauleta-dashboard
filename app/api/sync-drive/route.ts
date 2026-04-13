@@ -42,12 +42,26 @@ export async function GET(request: NextRequest) {
         const allFiles = scanResult.files
         const scanLogs = scanResult.logs
 
-        // Obtener archivos ya procesados
+        // Obtener archivos ya procesados exitosamente (ignorar errores para reintentar)
         const { data: processedFiles } = await supabase
             .from('drive_sync_log')
             .select('drive_file_id')
+            .in('status', ['processed', 'duplicate', 'skipped'])
 
         const processedIds = new Set((processedFiles || []).map(f => f.drive_file_id))
+
+        // Limpiar registros de error previos para permitir reintento
+        const errorFileIds = (allFiles as any[])
+            .map(f => f.file.id)
+            .filter(id => !processedIds.has(id))
+
+        if (errorFileIds.length > 0) {
+            await supabase
+                .from('drive_sync_log')
+                .delete()
+                .in('drive_file_id', errorFileIds)
+                .eq('status', 'error')
+        }
 
         // Filtrar solo archivos nuevos
         const newFiles = (allFiles as any[]).filter(f => !processedIds.has(f.file.id))
