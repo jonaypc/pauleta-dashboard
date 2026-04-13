@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Plus, Search, FileText } from "lucide-react"
 import { FacturasFilter } from "@/components/facturas/FacturasFilter"
 import { ClientFilter } from "@/components/facturas/ClientFilter"
+import { ExportButton } from "@/components/facturas/ExportButton"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import type { EstadoFactura } from "@/types"
 
@@ -97,7 +98,8 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                         Gestiona las facturas de Pauleta Canaria
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    <ExportButton />
                     <Button asChild variant="outline">
                         <Link href="/facturas/importar">
                             Importar Excel
