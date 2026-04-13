@@ -115,27 +115,7 @@ export function FacturaForm({
 
         try {
             if (isEditing) {
-                // Actualizar factura existente
-                const { error: facturaError } = await supabase
-                    .from("facturas")
-                    .update({
-                        numero: numero, // Permitir actualizar número
-                        cliente_id: clienteId,
-                        fecha,
-                        fecha_vencimiento: fechaVencimiento || null,
-                        notas: notas || null,
-                    })
-                    .eq("id", factura.id)
-
-                if (facturaError) throw facturaError
-
-                // Eliminar líneas existentes
-                await supabase
-                    .from("lineas_factura")
-                    .delete()
-                    .eq("factura_id", factura.id)
-
-                // Insertar nuevas líneas
+                // Preparar nuevas líneas ANTES de borrar las anteriores
                 const lineasData = lineas.map((l) => ({
                     factura_id: factura.id,
                     producto_id: l.producto_id || null,
@@ -150,11 +130,42 @@ export function FacturaForm({
                     fecha_servicio: l.fecha_servicio || null,
                 }))
 
-                const { error: lineasError } = await supabase
+                // Primero insertar las nuevas líneas para validar que no hay errores
+                // Luego borrar las antiguas y actualizar la factura
+                const { error: lineasInsertError } = await supabase
                     .from("lineas_factura")
                     .insert(lineasData)
 
-                if (lineasError) throw lineasError
+                if (lineasInsertError) throw lineasInsertError
+
+                // Ahora que sabemos que las nuevas líneas se insertaron bien,
+                // borrar las líneas antiguas (las que tenían IDs previos)
+                const oldLineaIds = factura.lineas?.map((l) => l.id).filter(Boolean) || []
+                if (oldLineaIds.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from("lineas_factura")
+                        .delete()
+                        .in("id", oldLineaIds)
+
+                    if (deleteError) throw deleteError
+                }
+
+                // Actualizar factura con totales recalculados
+                const { error: facturaError } = await supabase
+                    .from("facturas")
+                    .update({
+                        numero: numero,
+                        cliente_id: clienteId,
+                        fecha,
+                        fecha_vencimiento: fechaVencimiento || null,
+                        notas: notas || null,
+                        base_imponible: baseImponible,
+                        igic,
+                        total,
+                    })
+                    .eq("id", factura.id)
+
+                if (facturaError) throw facturaError
 
                 toast({
                     title: "Factura actualizada",
