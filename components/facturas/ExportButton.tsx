@@ -8,6 +8,7 @@ import { Download, Loader2 } from "lucide-react"
 
 export function ExportButton() {
     const [isExporting, setIsExporting] = useState(false)
+    const [progress, setProgress] = useState("")
     const searchParams = useSearchParams()
     const { toast } = useToast()
 
@@ -25,6 +26,7 @@ export function ExportButton() {
         }
 
         setIsExporting(true)
+        setProgress("Generando Excel y resumen...")
 
         try {
             const params = new URLSearchParams({ from, to })
@@ -34,8 +36,17 @@ export function ExportButton() {
             const response = await fetch(`/api/facturas/export?${params}`)
 
             if (!response.ok) {
-                const err = await response.json()
-                throw new Error(err.error || "Error al exportar")
+                let errorMsg = "Error al exportar"
+                try {
+                    const err = await response.json()
+                    errorMsg = err.error || errorMsg
+                } catch {
+                    // Response wasn't JSON (e.g. timeout HTML page)
+                    errorMsg = response.status === 504
+                        ? "Timeout del servidor. Prueba con un rango de fechas más corto."
+                        : `Error del servidor (${response.status})`
+                }
+                throw new Error(errorMsg)
             }
 
             // Download the ZIP
@@ -59,6 +70,7 @@ export function ExportButton() {
         }
 
         setIsExporting(false)
+        setProgress("")
     }
 
     return (
@@ -68,7 +80,7 @@ export function ExportButton() {
             ) : (
                 <Download className="mr-2 h-4 w-4" />
             )}
-            Exportar para asesoría
+            {isExporting ? progress || "Exportando..." : "Exportar para asesoría"}
         </Button>
     )
 }

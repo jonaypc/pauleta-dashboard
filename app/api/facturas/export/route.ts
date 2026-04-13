@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
     const from = request.nextUrl.searchParams.get("from")
     const to = request.nextUrl.searchParams.get("to")
     const estado = request.nextUrl.searchParams.get("estado")
+    const includePdfs = request.nextUrl.searchParams.get("pdfs") === "true"
+    const pdfOffset = Number(request.nextUrl.searchParams.get("pdfOffset")) || 0
+    const pdfBatchSize = 5
 
     if (!from || !to) {
         return NextResponse.json(
@@ -56,6 +59,8 @@ export async function GET(request: NextRequest) {
             .select("*")
             .single()
 
+        const zip = new JSZip()
+
         // --- Generate Excel ---
         const excelRows = facturas.map((f: any) => ({
             "Nº Factura": f.numero,
@@ -94,28 +99,18 @@ export async function GET(request: NextRequest) {
         const wb = XLSX.utils.book_new()
         const ws = XLSX.utils.json_to_sheet(excelRows)
 
-        // Set column widths
         ws["!cols"] = [
-            { wch: 15 }, // Nº Factura
-            { wch: 12 }, // Fecha
-            { wch: 30 }, // Cliente
-            { wch: 14 }, // CIF
-            { wch: 15 }, // Base
-            { wch: 8 },  // % IGIC
-            { wch: 12 }, // IGIC
-            { wch: 12 }, // Total
-            { wch: 12 }, // Estado
+            { wch: 15 }, { wch: 12 }, { wch: 30 }, { wch: 14 },
+            { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
         ]
 
         XLSX.utils.book_append_sheet(wb, ws, "Facturas")
         const excelBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
+        zip.file("facturas.xlsx", excelBuffer)
 
-        // --- Generate PDFs ---
+        // --- Generate Quarterly Report PDF ---
         const { generateInvoicePDF, generateQuarterlyReportPDF } = await import("@/lib/pdf-generator")
-        const zip = new JSZip()
-        const pdfsFolder = zip.folder("PDFs")!
 
-        // Generate quarterly summary report PDF
         try {
             const reportBuffer = await generateQuarterlyReportPDF({
                 facturas: facturas.map((f: any) => ({
@@ -135,29 +130,43 @@ export async function GET(request: NextRequest) {
             console.error("Error generating quarterly report PDF:", reportErr)
         }
 
-        zip.file("facturas.xlsx", excelBuffer)
+        // --- Generate individual PDFs (only if requested, in batches) ---
+        if (includePdfs) {
+            const pdfsFolder = zip.folder("PDFs")!
+            const batch = facturas.slice(pdfOffset, pdfOffset + pdfBatchSize)
 
-        for (const factura of facturas) {
-            try {
-                const pdfBuffer = await generateInvoicePDF({
-                    factura: {
-                        ...factura,
-                        lineas: factura.lineas || [],
-                    },
-                    cliente: factura.cliente || { nombre: "Sin cliente" } as any,
-                    empresa: empresa || { nombre: "Pauleta Canaria S.L." } as any,
-                })
+            for (const factura of batch) {
+                try {
+                    const pdfBuffer = await generateInvoicePDF({
+                        factura: {
+                            ...factura,
+                            lineas: factura.lineas || [],
+                        },
+                        cliente: factura.cliente || { nombre: "Sin cliente" } as any,
+                        empresa: empresa || { nombre: "Pauleta Canaria S.L." } as any,
+                    })
 
-                const safeName = (factura.numero || factura.id).replace(/[/\\?%*:|"<>]/g, "-")
-                pdfsFolder.file(`${safeName}.pdf`, pdfBuffer)
-            } catch (pdfErr) {
-                console.error(`Error generating PDF for ${factura.numero}:`, pdfErr)
+                    const safeName = (factura.numero || factura.id).replace(/[/\\?%*:|"<>]/g, "-")
+                    pdfsFolder.file(`${safeName}.pdf`, pdfBuffer)
+                } catch (pdfErr) {
+                    console.error(`Error generating PDF for ${factura.numero}:`, pdfErr)
+                }
             }
+
+            const remaining = facturas.length - (pdfOffset + pdfBatchSize)
+            const zipBuffer = await zip.generateAsync({ type: "nodebuffer" })
+
+            // Return as JSON with base64 zip + metadata for batching
+            return NextResponse.json({
+                zipBase64: Buffer.from(zipBuffer).toString("base64"),
+                total: facturas.length,
+                processed: Math.min(pdfOffset + pdfBatchSize, facturas.length),
+                remaining: Math.max(remaining, 0),
+            })
         }
 
+        // --- No PDFs: return ZIP directly (fast) ---
         const zipBuffer = await zip.generateAsync({ type: "nodebuffer" })
-
-        // Build filename
         const fileName = `facturas-${from}-a-${to}.zip`
 
         return new NextResponse(new Uint8Array(zipBuffer), {
