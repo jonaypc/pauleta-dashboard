@@ -126,6 +126,11 @@ export async function GET(request: NextRequest) {
                     console.log(`[SYNC] Parse failed for ${file.name}, status: ${parseResponse.status}`)
                 }
 
+                // Determinar si necesita revisión manual (no se pudo extraer datos)
+                const tieneImporte = parsedData.importe || parsedData.total
+                const tieneProveedor = parsedData.nombre_proveedor || parsedData.proveedor
+                const needsReview = !tieneImporte && !tieneProveedor
+
                 // Subir archivo a Supabase Storage
                 const fileName = `${Date.now()}-${file.name}`
                 const filePath = `facturas_gastos/${year}/${month}/${fileName}`
@@ -233,6 +238,11 @@ export async function GET(request: NextRequest) {
                 }
 
                 // Crear gasto con todos los datos extraídos
+                const notaBase = `Importado desde Drive: ${year}/${month}/${file.name}`
+                const nota = needsReview
+                    ? `⚠️ REVISIÓN NECESARIA - No se pudo leer el archivo automáticamente. ${notaBase}`
+                    : notaBase
+
                 const { data: gasto, error: gastoError } = await supabase
                     .from('gastos')
                     .insert({
@@ -242,10 +252,10 @@ export async function GET(request: NextRequest) {
                         importe: parsedData.importe || parsedData.total || 0,
                         base_imponible: parsedData.base_imponible || 0,
                         impuestos: parsedData.iva || parsedData.impuestos || 0,
-                        tipo_impuesto: parsedData.tipo_impuesto ?? 7, // Allow 0, default 7 only if undefined
+                        tipo_impuesto: parsedData.tipo_impuesto ?? 7,
                         estado: 'pendiente',
                         archivo_url: archivoUrl,
-                        notas: `Importado desde Drive: ${year}/${month}/${file.name}`,
+                        notas: nota,
                     })
                     .select('id')
                     .single()

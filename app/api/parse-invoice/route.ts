@@ -96,12 +96,22 @@ export async function POST(request: NextRequest) {
                 console.log(`PDF Text extracted length: ${text.length} chars`)
 
                 // Si hay muy poco texto, probablemente sea una imagen escaneada
+                // Devolver datos parciales para que se cree el gasto con el archivo adjunto
                 if (text.length < 50) {
+                    console.log(`PDF has insufficient text (${text.length} chars), returning partial data`)
                     return NextResponse.json({
-                        success: false,
-                        error: "El PDF parece ser una imagen escaneada (sin texto seleccionable). Por favor, sube una foto (JPG/PNG) de la factura.",
-                        debug: { reason: "insufficient_text", textLength: text.length }
-                    }, { status: 422 })
+                        success: true,
+                        text: "[PDF escaneado - sin texto extraíble]",
+                        parsed: {
+                            nombre_proveedor: null,
+                            fecha: null,
+                            importe: null,
+                            numero: null,
+                            confidence: 0,
+                            _scanned: true,
+                        },
+                        method: "pdf-scanned-partial"
+                    })
                 }
 
                 // Analizar texto extraído
