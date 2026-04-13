@@ -909,3 +909,344 @@ export async function generatePresupuestoPDF(data: PresupuestoPDFData): Promise<
   const arrayBuffer2 = doc.output('arraybuffer')
   return Buffer.from(arrayBuffer2)
 }
+
+// ==================== QUARTERLY REPORT PDF ====================
+
+interface QuarterlyReportData {
+  facturas: {
+    numero: string
+    fecha: string
+    base_imponible: number
+    igic: number
+    total: number
+    estado: string
+  }[]
+  empresa: Empresa
+  dateFrom: string
+  dateTo: string
+}
+
+export async function generateQuarterlyReportPDF(data: QuarterlyReportData): Promise<Buffer> {
+  const { facturas, empresa, dateFrom, dateTo } = data
+  const color = empresa.color_primario || "#1e40af"
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  })
+
+  const pageWidth = 210
+  const margin = 20
+  const contentWidth = pageWidth - margin * 2
+  let y = 20
+
+  function hexToRgb(hex: string): [number, number, number] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+      : [30, 64, 175]
+  }
+
+  const [r, g, b] = hexToRgb(color)
+
+  // === HEADER: Logo ===
+  const mostrarLogo = empresa.mostrar_logo ?? true
+  let logoAdded = false
+
+  if (mostrarLogo && empresa.logo_url) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const logoUrl = empresa.logo_url.startsWith('http') ? empresa.logo_url : `${baseUrl}${empresa.logo_url}`
+      const response = await fetch(logoUrl)
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const contentType = response.headers.get('content-type') || 'image/png'
+        const url = empresa.logo_url.toLowerCase()
+        let ext: 'JPEG' | 'PNG' = 'PNG'
+        if (contentType.includes('jpeg') || contentType.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
+          ext = 'JPEG'
+        }
+        const dataUrl = `data:${contentType};base64,${base64}`
+        const dims = getImageDimensions(arrayBuffer, ext)
+        const maxHeightMm = 18
+        const maxWidthMm = 60
+        let logoWidthMm: number
+        let logoHeightMm: number
+
+        if (dims && dims.width > 0 && dims.height > 0) {
+          const aspect = dims.width / dims.height
+          logoHeightMm = maxHeightMm
+          logoWidthMm = logoHeightMm * aspect
+          if (logoWidthMm > maxWidthMm) {
+            logoWidthMm = maxWidthMm
+            logoHeightMm = logoWidthMm / aspect
+          }
+        } else {
+          logoHeightMm = maxHeightMm
+          logoWidthMm = maxHeightMm * 2
+        }
+
+        doc.addImage(dataUrl, ext, margin, y - 3, logoWidthMm, logoHeightMm)
+        y += logoHeightMm + 3
+        logoAdded = true
+      }
+    } catch (logoError) {
+      console.error('[PDF Reporte] Error fetching logo:', logoError)
+    }
+  }
+
+  if (!logoAdded) {
+    doc.setFontSize(20)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  } else {
+    doc.setFontSize(14)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
+  }
+
+  // Company details
+  y += 6
+  doc.setFontSize(9)
+  doc.setTextColor(100, 116, 139)
+  doc.setFont('helvetica', 'normal')
+  if (empresa.cif) { doc.text(`CIF: ${empresa.cif}`, margin, y); y += 4 }
+  if (empresa.direccion) { doc.text(empresa.direccion, margin, y); y += 4 }
+  if (empresa.ciudad || empresa.codigo_postal) {
+    doc.text(`${empresa.ciudad || ''}${empresa.provincia ? `, ${empresa.provincia}` : ''} ${empresa.codigo_postal || ''}`.trim(), margin, y)
+    y += 4
+  }
+
+  // === Title box (right side) ===
+  const fromDate = new Date(dateFrom)
+  const toDate = new Date(dateTo)
+  const periodoLabel = `${fromDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} - ${toDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}`
+
+  const boxW = 75
+  const boxX = pageWidth - margin - boxW
+  const boxY = 15
+  const boxH = 22
+
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(boxX, boxY, boxW, boxH, 3, 3, 'F')
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.text('RESUMEN TRIMESTRAL', boxX + boxW / 2, boxY + 9, { align: 'center' })
+
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text(periodoLabel, boxX + boxW / 2, boxY + 18, { align: 'center' })
+
+  // === Separator ===
+  y = Math.max(y, boxY + boxH) + 10
+  doc.setDrawColor(226, 232, 240)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 10
+
+  // === Group invoices by month ===
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+  const monthlyData: Record<string, { label: string; count: number; base: number; igic: number; total: number }> = {}
+
+  for (const f of facturas) {
+    const d = new Date(f.fecha)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
+        count: 0,
+        base: 0,
+        igic: 0,
+        total: 0,
+      }
+    }
+    monthlyData[key].count++
+    monthlyData[key].base += f.base_imponible || 0
+    monthlyData[key].igic += f.igic || 0
+    monthlyData[key].total += f.total || 0
+  }
+
+  const months = Object.keys(monthlyData).sort()
+
+  // === Monthly breakdown table ===
+  doc.setFontSize(12)
+  doc.setTextColor(30, 41, 59)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Desglose por mes', margin, y)
+  y += 8
+
+  // Table header
+  const colX = {
+    mes: margin,
+    facturas: margin + 55,
+    base: margin + 80,
+    igic: margin + 115,
+    total: margin + 145,
+  }
+
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(margin, y - 5, contentWidth, 8, 1.5, 1.5, 'F')
+  doc.setFontSize(9)
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Mes', colX.mes + 3, y)
+  doc.text('Facturas', colX.facturas, y, { align: 'center' })
+  doc.text('Base Imponible', colX.base, y, { align: 'right' })
+  doc.text('IGIC', colX.igic, y, { align: 'right' })
+  doc.text('Total', colX.total, y, { align: 'right' })
+  y += 7
+
+  // Table rows
+  let totalBase = 0, totalIgic = 0, totalTotal = 0, totalCount = 0
+
+  for (const key of months) {
+    const m = monthlyData[key]
+    totalBase += m.base
+    totalIgic += m.igic
+    totalTotal += m.total
+    totalCount += m.count
+
+    // Alternate row background
+    if (months.indexOf(key) % 2 === 0) {
+      doc.setFillColor(248, 250, 252)
+      doc.rect(margin, y - 4.5, contentWidth, 8, 'F')
+    }
+
+    doc.setFontSize(10)
+    doc.setTextColor(30, 41, 59)
+    doc.setFont('helvetica', 'normal')
+    doc.text(m.label, colX.mes + 3, y)
+    doc.text(String(m.count), colX.facturas, y, { align: 'center' })
+    doc.text(formatPrecio(m.base), colX.base, y, { align: 'right' })
+    doc.text(formatPrecio(m.igic), colX.igic, y, { align: 'right' })
+    doc.setFont('helvetica', 'bold')
+    doc.text(formatPrecio(m.total), colX.total, y, { align: 'right' })
+    y += 8
+  }
+
+  // Totals row
+  y += 2
+  doc.setDrawColor(r, g, b)
+  doc.setLineWidth(0.8)
+  doc.line(margin, y - 5, pageWidth - margin, y - 5)
+
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(margin, y - 4, contentWidth, 10, 1.5, 1.5, 'F')
+  doc.setFontSize(10)
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.text('TOTAL PERÍODO', colX.mes + 3, y + 2)
+  doc.text(String(totalCount), colX.facturas, y + 2, { align: 'center' })
+  doc.text(formatPrecio(totalBase), colX.base, y + 2, { align: 'right' })
+  doc.text(formatPrecio(totalIgic), colX.igic, y + 2, { align: 'right' })
+  doc.text(formatPrecio(totalTotal), colX.total, y + 2, { align: 'right' })
+  y += 18
+
+  // === Summary cards ===
+  const cardW = contentWidth / 3 - 3
+  const cardH = 28
+  const cards = [
+    { label: 'Base Imponible', value: formatPrecio(totalBase) },
+    { label: 'IGIC Repercutido', value: formatPrecio(totalIgic) },
+    { label: 'Total Facturado', value: formatPrecio(totalTotal) },
+  ]
+
+  for (let i = 0; i < cards.length; i++) {
+    const cx = margin + i * (cardW + 4.5)
+
+    doc.setFillColor(248, 250, 252)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(cx, y, cardW, cardH, 2, 2, 'FD')
+
+    doc.setFontSize(8)
+    doc.setTextColor(100, 116, 139)
+    doc.setFont('helvetica', 'normal')
+    doc.text(cards[i].label, cx + cardW / 2, y + 10, { align: 'center' })
+
+    doc.setFontSize(14)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(cards[i].value, cx + cardW / 2, y + 22, { align: 'center' })
+  }
+
+  y += cardH + 12
+
+  // === Invoice detail list ===
+  doc.setFontSize(12)
+  doc.setTextColor(30, 41, 59)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Detalle de facturas', margin, y)
+  y += 8
+
+  // Detail table header
+  const dColX = {
+    num: margin,
+    fecha: margin + 30,
+    base: margin + 70,
+    igic: margin + 105,
+    total: margin + 140,
+  }
+
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(margin, y - 5, contentWidth, 8, 1.5, 1.5, 'F')
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Nº Factura', dColX.num + 3, y)
+  doc.text('Fecha', dColX.fecha, y)
+  doc.text('Base Imponible', dColX.base, y, { align: 'right' })
+  doc.text('IGIC', dColX.igic, y, { align: 'right' })
+  doc.text('Total', dColX.total, y, { align: 'right' })
+  y += 7
+
+  // Sort by date then by number
+  const sortedFacturas = [...facturas].sort((a, b) => {
+    const dateComp = a.fecha.localeCompare(b.fecha)
+    return dateComp !== 0 ? dateComp : a.numero.localeCompare(b.numero)
+  })
+
+  for (let i = 0; i < sortedFacturas.length; i++) {
+    // Check if we need a new page
+    if (y > 270) {
+      doc.addPage()
+      y = 20
+    }
+
+    const f = sortedFacturas[i]
+
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 252)
+      doc.rect(margin, y - 4, contentWidth, 7, 'F')
+    }
+
+    doc.setFontSize(8)
+    doc.setTextColor(30, 41, 59)
+    doc.setFont('helvetica', 'normal')
+    doc.text(f.numero || '-', dColX.num + 3, y)
+    doc.text(formatFechaCorta(f.fecha), dColX.fecha, y)
+    doc.text(formatPrecio(f.base_imponible || 0), dColX.base, y, { align: 'right' })
+    doc.text(formatPrecio(f.igic || 0), dColX.igic, y, { align: 'right' })
+    doc.setFont('helvetica', 'bold')
+    doc.text(formatPrecio(f.total || 0), dColX.total, y, { align: 'right' })
+    y += 7
+  }
+
+  // Footer
+  const footerY = 282
+  doc.setFontSize(8)
+  doc.setTextColor(148, 163, 184)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Generado el ${new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" })}`, pageWidth / 2, footerY, { align: 'center' })
+
+  const arrayBufferOut = doc.output('arraybuffer')
+  return Buffer.from(arrayBufferOut)
+}

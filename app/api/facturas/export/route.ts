@@ -111,9 +111,29 @@ export async function GET(request: NextRequest) {
         const excelBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
 
         // --- Generate PDFs ---
-        const { generateInvoicePDF } = await import("@/lib/pdf-generator")
+        const { generateInvoicePDF, generateQuarterlyReportPDF } = await import("@/lib/pdf-generator")
         const zip = new JSZip()
         const pdfsFolder = zip.folder("PDFs")!
+
+        // Generate quarterly summary report PDF
+        try {
+            const reportBuffer = await generateQuarterlyReportPDF({
+                facturas: facturas.map((f: any) => ({
+                    numero: f.numero,
+                    fecha: f.fecha,
+                    base_imponible: f.base_imponible || 0,
+                    igic: f.igic || 0,
+                    total: f.total || 0,
+                    estado: f.estado,
+                })),
+                empresa: empresa || { nombre: "Pauleta Canaria S.L." } as any,
+                dateFrom: from,
+                dateTo: to,
+            })
+            zip.file("resumen-trimestral.pdf", reportBuffer)
+        } catch (reportErr) {
+            console.error("Error generating quarterly report PDF:", reportErr)
+        }
 
         zip.file("facturas.xlsx", excelBuffer)
 
