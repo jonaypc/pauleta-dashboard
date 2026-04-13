@@ -220,22 +220,44 @@ export async function GET(request: NextRequest) {
                     .select('id')
                     .single()
 
-                // Registrar en sync log
+                if (gastoError) {
+                    console.error(`[SYNC] Error creating gasto for ${file.name}:`, gastoError)
+
+                    // Registrar error en sync log
+                    await supabase.from('drive_sync_log').insert({
+                        drive_file_id: file.id,
+                        file_name: file.name,
+                        file_path: `${year}/${month}/${file.name}`,
+                        year,
+                        month,
+                        gasto_id: null,
+                        status: 'error',
+                        error_message: gastoError.message,
+                    })
+
+                    results.errors.push({
+                        file: file.name,
+                        error: `Error al crear gasto: ${gastoError.message}`,
+                    })
+                    continue
+                }
+
+                // Registrar éxito en sync log
                 await supabase.from('drive_sync_log').insert({
                     drive_file_id: file.id,
                     file_name: file.name,
                     file_path: `${year}/${month}/${file.name}`,
                     year,
                     month,
-                    gasto_id: gasto?.id || null,
-                    status: gastoError ? 'error' : 'processed',
-                    error_message: gastoError?.message || null,
+                    gasto_id: gasto.id,
+                    status: 'processed',
+                    error_message: null,
                 })
 
                 results.processed.push({
                     file: file.name,
                     path: `${year}/${month}`,
-                    gasto_id: gasto?.id,
+                    gasto_id: gasto.id,
                 })
 
             } catch (fileError: any) {

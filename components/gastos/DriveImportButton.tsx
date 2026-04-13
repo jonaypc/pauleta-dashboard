@@ -24,10 +24,27 @@ export function DriveImportButton() {
                 throw new Error(data.error || "Error al sincronizar")
             }
 
-            toast({
-                title: "Sincronización completada",
-                description: data.message || `Procesados ${data.processed_count} archivos`,
-            })
+            const errCount = data.errors?.length || 0
+            const procCount = data.processed?.length || 0
+
+            if (errCount > 0 && procCount === 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Errores al importar",
+                    description: `${errCount} archivo(s) con error: ${data.errors[0]?.error || 'Error desconocido'}`,
+                })
+            } else if (errCount > 0) {
+                toast({
+                    title: "Importación parcial",
+                    description: `${procCount} procesados, ${errCount} con error`,
+                    variant: "destructive",
+                })
+            } else {
+                toast({
+                    title: "Sincronización completada",
+                    description: data.message || `${procCount} archivos procesados`,
+                })
+            }
 
             router.refresh()
         } catch (error: any) {
@@ -46,7 +63,7 @@ export function DriveImportButton() {
             variant="outline"
             onClick={handleSync}
             disabled={isLoading}
-            className="hidden sm:flex"
+            className="flex"
         >
             {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
