@@ -214,9 +214,10 @@ export async function scanAllInvoices(rootFolderId: string): Promise<{
                 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
             }
             if (isNaN(parseInt(monthNum))) {
-                // Es nombre de mes
-                if (monthNames[cleanMonthName]) {
-                    monthNum = monthNames[cleanMonthName]
+                // Es nombre de mes - usar lo capturado por la regex, no el nombre completo
+                const captured = monthMatch[1].toLowerCase()
+                if (monthNames[captured]) {
+                    monthNum = monthNames[captured]
                 }
             }
 

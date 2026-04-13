@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { scanAllInvoices, downloadFile, DriveFile } from '@/lib/google-drive'
 
+export const maxDuration = 120 // 2 minutos para procesar muchos archivos
+
 // Secret para proteger el endpoint (debe coincidir con Vercel Cron)
 const CRON_SECRET = process.env.CRON_SECRET
 
 // Máximo de archivos a procesar por ejecución (evitar timeouts)
-const MAX_FILES_PER_RUN = 20
+const MAX_FILES_PER_RUN = 50
 
 export async function GET(request: NextRequest) {
     // Verificar autorización
@@ -43,12 +45,26 @@ export async function GET(request: NextRequest) {
             }, { status: 400 })
         }
 
-        // SIEMPRE limpiar TODOS los registros de error antes de escanear
-        // Esto garantiza que los archivos que fallaron se reintenten
+        // SIEMPRE limpiar registros de error antes de escanear (permite reintento)
         await supabase
             .from('drive_sync_log')
             .delete()
             .eq('status', 'error')
+
+        // Limpiar registros "processed" huérfanos (sin gasto real asociado)
+        // Esto corrige el bug anterior donde se contaban como procesados sin crear gasto
+        const { data: orphanLogs } = await supabase
+            .from('drive_sync_log')
+            .select('id, gasto_id')
+            .eq('status', 'processed')
+            .is('gasto_id', null)
+
+        if (orphanLogs && orphanLogs.length > 0) {
+            await supabase
+                .from('drive_sync_log')
+                .delete()
+                .in('id', orphanLogs.map(l => l.id))
+        }
 
         // Escanear todos los archivos en la estructura año/mes
         const scanResult = await scanAllInvoices(configFolderId)
