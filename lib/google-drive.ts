@@ -154,7 +154,7 @@ export async function validateFolderAccess(folderId: string): Promise<boolean> {
 /**
  * Recorre toda la estructura año/mes y devuelve todos los archivos
  */
-export async function scanAllInvoices(rootFolderId: string): Promise<{
+export async function scanAllInvoices(rootFolderId: string, filterYear?: string): Promise<{
     files: { file: DriveFile; year: string; month: string }[];
     logs: string[]
 }> {
@@ -188,6 +188,13 @@ export async function scanAllInvoices(rootFolderId: string): Promise<{
         }
 
         const year = yearMatch[1]
+
+        // Si se especificó un año, solo procesar ese año
+        if (filterYear && year !== filterYear) {
+            addLog(`[DRIVE_SCAN] Skipping year ${year} (filtering for ${filterYear})`)
+            continue
+        }
+
         addLog(`[DRIVE_SCAN] Processing year: ${year} (Folder: ${yearFolder.name})`)
 
         // Listar carpetas de meses dentro del año

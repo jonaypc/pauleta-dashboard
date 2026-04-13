@@ -66,8 +66,11 @@ export async function GET(request: NextRequest) {
                 .in('id', orphanLogs.map(l => l.id))
         }
 
-        // Escanear todos los archivos en la estructura año/mes
-        const scanResult = await scanAllInvoices(configFolderId)
+        // Filtrar por año si se especifica (por defecto: año actual)
+        const yearFilter = request.nextUrl.searchParams.get('year') || new Date().getFullYear().toString()
+
+        // Escanear archivos en la estructura año/mes
+        const scanResult = await scanAllInvoices(configFolderId, yearFilter)
         const allFiles = scanResult.files
         const scanLogs = scanResult.logs
 
