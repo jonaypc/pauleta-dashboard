@@ -18,8 +18,14 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient()
+    const forceReset = request.nextUrl.searchParams.get('reset') === 'true'
 
     try {
+        // Si se pide reset, limpiar TODO el sync log
+        if (forceReset) {
+            await supabase.from('drive_sync_log').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+        }
+
         // Obtener configuración de Drive (DB)
         const { data: config } = await supabase
             .from('drive_config')
@@ -37,12 +43,19 @@ export async function GET(request: NextRequest) {
             }, { status: 400 })
         }
 
+        // SIEMPRE limpiar TODOS los registros de error antes de escanear
+        // Esto garantiza que los archivos que fallaron se reintenten
+        await supabase
+            .from('drive_sync_log')
+            .delete()
+            .eq('status', 'error')
+
         // Escanear todos los archivos en la estructura año/mes
         const scanResult = await scanAllInvoices(configFolderId)
         const allFiles = scanResult.files
         const scanLogs = scanResult.logs
 
-        // Obtener archivos ya procesados exitosamente (ignorar errores para reintentar)
+        // Obtener archivos ya procesados exitosamente
         const { data: processedFiles } = await supabase
             .from('drive_sync_log')
             .select('drive_file_id')
@@ -50,20 +63,7 @@ export async function GET(request: NextRequest) {
 
         const processedIds = new Set((processedFiles || []).map(f => f.drive_file_id))
 
-        // Limpiar registros de error previos para permitir reintento
-        const errorFileIds = (allFiles as any[])
-            .map(f => f.file.id)
-            .filter(id => !processedIds.has(id))
-
-        if (errorFileIds.length > 0) {
-            await supabase
-                .from('drive_sync_log')
-                .delete()
-                .in('drive_file_id', errorFileIds)
-                .eq('status', 'error')
-        }
-
-        // Filtrar solo archivos nuevos
+        // Filtrar solo archivos nuevos (no procesados exitosamente)
         const newFiles = (allFiles as any[]).filter(f => !processedIds.has(f.file.id))
 
         // Limitar cantidad por ejecución

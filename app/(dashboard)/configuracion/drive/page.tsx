@@ -91,11 +91,13 @@ export default function DriveConfigPage() {
         setIsSaving(false)
     }
 
-    const triggerSync = async () => {
+    const triggerSync = async (reset = false) => {
         setIsSyncing(true)
         setSyncResult(null)
         try {
-            const response = await fetch('/api/sync-drive?manual=true')
+            const params = new URLSearchParams({ manual: 'true' })
+            if (reset) params.set('reset', 'true')
+            const response = await fetch(`/api/sync-drive?${params}`)
             const result = await response.json()
             setSyncResult(result)
             loadRecentLogs()
@@ -103,7 +105,7 @@ export default function DriveConfigPage() {
 
             if (result.success) {
                 toast({
-                    title: "Sincronización completada",
+                    title: reset ? "Log reseteado y sincronizado" : "Sincronización completada",
                     description: `${result.processed?.length || 0} archivos procesados`
                 })
             } else {
@@ -208,14 +210,28 @@ export default function DriveConfigPage() {
                                     </p>
                                 </div>
                             </div>
-                            <Button onClick={triggerSync} disabled={isSyncing}>
-                                {isSyncing ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                )}
-                                Sincronizar Ahora
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={() => triggerSync(false)} disabled={isSyncing}>
+                                    {isSyncing ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                    )}
+                                    Sincronizar Ahora
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        if (confirm('Esto borrará todo el historial de sincronización y reprocesará todos los archivos. ¿Continuar?')) {
+                                            triggerSync(true)
+                                        }
+                                    }}
+                                    disabled={isSyncing}
+                                    title="Borra el historial y vuelve a procesar todo desde cero"
+                                >
+                                    Resetear y Sincronizar
+                                </Button>
+                            </div>
                         </div>
 
                         {syncResult && (
