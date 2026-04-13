@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         const { data: processedFiles } = await supabase
             .from('drive_sync_log')
             .select('drive_file_id')
-            .in('status', ['processed', 'duplicate', 'skipped'])
+            .in('status', ['processed', 'duplicate', 'skipped', 'deleted'])
 
         const processedIds = new Set((processedFiles || []).map(f => f.drive_file_id))
 
