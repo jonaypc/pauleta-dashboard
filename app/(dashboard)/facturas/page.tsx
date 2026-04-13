@@ -22,14 +22,15 @@ interface PageProps {
 export default async function FacturasPage({ searchParams }: PageProps) {
     const supabase = await createClient()
     const busqueda = searchParams.q || ""
-    const estadoFiltro = searchParams.estado
+    // Default to "emitida" when no estado param is in URL; empty string means "Todos" explicitly
+    const estadoFiltro = searchParams.estado === undefined ? "emitida" : searchParams.estado
     const dateFrom = searchParams.from
     const dateTo = searchParams.to
     const clienteFiltro = searchParams.cliente
 
     // Paginación
     const page = Number(searchParams.page) || 1
-    const limit = Number(searchParams.limit) || 10
+    const limit = Number(searchParams.limit) || 100
     const from = (page - 1) * limit
     const to = from + limit - 1
 
@@ -143,13 +144,12 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                             href={
                                 estado.value
                                     ? `/facturas?estado=${estado.value}`
-                                    : "/facturas"
+                                    : "/facturas?estado="
                             }
                         >
                             <Badge
                                 variant={
-                                    estadoFiltro === estado.value ||
-                                        (!estadoFiltro && estado.value === "")
+                                    estadoFiltro === estado.value
                                         ? "default"
                                         : "outline"
                                 }
