@@ -94,29 +94,64 @@ export default function DriveConfigPage() {
     const triggerSync = async (reset = false) => {
         setIsSyncing(true)
         setSyncResult(null)
+
+        let totalProcessed = 0
+        let totalErrors = 0
+        let lastResult: any = null
+
         try {
-            const params = new URLSearchParams({ manual: 'true' })
-            if (reset) params.set('reset', 'true')
-            const response = await fetch(`/api/sync-drive?${params}`)
-            const result = await response.json()
-            setSyncResult(result)
+            let isFirstCall = true
+            while (true) {
+                const params = new URLSearchParams({ manual: 'true' })
+                // Solo enviar reset en la primera llamada
+                if (reset && isFirstCall) params.set('reset', 'true')
+                isFirstCall = false
+
+                const response = await fetch(`/api/sync-drive?${params}`)
+                const result = await response.json()
+                lastResult = result
+
+                if (!result.success) {
+                    setSyncResult(result)
+                    toast({
+                        title: "Error en sincronización",
+                        description: result.error,
+                        variant: "destructive"
+                    })
+                    break
+                }
+
+                totalProcessed += result.processed?.length || 0
+                totalErrors += result.errors?.length || 0
+
+                // Acumular resultados para mostrar
+                setSyncResult({
+                    ...result,
+                    processed: Array(totalProcessed).fill({}),
+                    errors: Array(totalErrors).fill({}),
+                    total_processed_all_batches: totalProcessed,
+                    total_errors_all_batches: totalErrors,
+                })
+
+                // Si no quedan pendientes, terminar
+                if (result.remaining === 0 || result.new_files === 0) {
+                    toast({
+                        title: reset ? "Log reseteado y sincronizado" : "Sincronización completada",
+                        description: `${totalProcessed} archivos procesados${totalErrors > 0 ? `, ${totalErrors} con error` : ''}`
+                    })
+                    break
+                }
+
+                // Si no se procesó nada, evitar bucle infinito
+                if ((result.processed?.length || 0) === 0 && (result.errors?.length || 0) === 0) {
+                    break
+                }
+            }
+
             loadRecentLogs()
             loadConfig()
-
-            if (result.success) {
-                toast({
-                    title: reset ? "Log reseteado y sincronizado" : "Sincronización completada",
-                    description: `${result.processed?.length || 0} archivos procesados`
-                })
-            } else {
-                toast({
-                    title: "Error en sincronización",
-                    description: result.error,
-                    variant: "destructive"
-                })
-            }
         } catch (error: any) {
-            toast({ title: "Error de conexión", variant: "destructive" })
+            toast({ title: "Error de conexión", description: error.message, variant: "destructive" })
         }
         setIsSyncing(false)
     }

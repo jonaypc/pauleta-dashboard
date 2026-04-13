@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { scanAllInvoices, downloadFile, DriveFile } from '@/lib/google-drive'
 
-export const maxDuration = 120 // 2 minutos para procesar muchos archivos
+export const maxDuration = 60
 
 // Secret para proteger el endpoint (debe coincidir con Vercel Cron)
 const CRON_SECRET = process.env.CRON_SECRET
 
-// Máximo de archivos a procesar por ejecución (evitar timeouts)
-const MAX_FILES_PER_RUN = 50
+// Procesar pocos archivos por llamada para no exceder timeout de Vercel Hobby (10s)
+const MAX_FILES_PER_RUN = 3
 
 export async function GET(request: NextRequest) {
     // Verificar autorización
