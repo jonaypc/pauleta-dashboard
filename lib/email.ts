@@ -146,7 +146,7 @@ export async function sendInvoiceEmail({
   const emailOptions: Parameters<typeof resend.emails.send>[0] = {
     from: `${empresaNombre} <facturas@pauletacanaria.es>`,
     to: [to],
-    reply_to: 'contacto@pauletacanaria.es',
+    reply_to: 'jonaypc@gmail.com',
     subject: `Factura ${facturaNumero} - ${empresaNombre}`,
     html,
   }
@@ -352,7 +352,7 @@ export async function sendConsolidatedInvoiceEmail({
   const payload = {
     from: `${empresaNombre} <facturas@pauletacanaria.es>`,
     to: [to],
-    reply_to: 'contacto@pauletacanaria.es',
+    reply_to: 'jonaypc@gmail.com',
     subject,
     html,
     attachments: pdfAttachments.map(att => ({
@@ -520,7 +520,7 @@ export async function sendPresupuestoEmail({
   const emailOptions: Parameters<typeof resend.emails.send>[0] = {
     from: `${empresaNombre} <facturas@pauletacanaria.es>`,
     to: [to],
-    reply_to: 'contacto@pauletacanaria.es',
+    reply_to: 'jonaypc@gmail.com',
     subject: `Presupuesto ${presupuestoNumero} - ${empresaNombre}`,
     html,
   }
