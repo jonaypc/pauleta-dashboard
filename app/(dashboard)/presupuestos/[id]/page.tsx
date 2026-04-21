@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { PresupuestoForm } from "@/components/presupuestos/PresupuestoForm"
 import { SendPresupuestoEmailButton } from "@/components/presupuestos/SendPresupuestoEmailButton"
 import { ConvertirAFacturaButton } from "@/components/presupuestos/ConvertirAFacturaButton"
+import { DownloadPresupuestoPDFButton } from "@/components/presupuestos/DownloadPresupuestoPDFButton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -177,12 +178,10 @@ export default async function PresupuestoDetailPage({
                         presupuestoId={id}
                         clienteEmail={presupuesto.cliente?.email}
                     />
-                    <Button variant="outline" asChild>
-                        <a href={`/api/presupuestos/${id}/pdf`} download={`${presupuesto.numero}.pdf`}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Descargar PDF
-                        </a>
-                    </Button>
+                    <DownloadPresupuestoPDFButton
+                        presupuestoId={id}
+                        presupuestoNumero={presupuesto.numero}
+                    />
                     {(presupuesto.estado === "borrador" || presupuesto.estado === "enviado") && (
                         <Button variant="outline" asChild>
                             <Link href={`/presupuestos/${id}?editar=true`}>
