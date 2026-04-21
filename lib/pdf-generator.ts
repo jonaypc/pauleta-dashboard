@@ -892,19 +892,37 @@ export async function generatePresupuestoPDF(data: PresupuestoPDFData): Promise<
   doc.text(formatPrecio(presupuesto.total), totalsX + totalsW - 4, y + 2, { align: 'right' })
 
   // === Footer ===
-  const footerY = 270
+  const footerY = 255
+  let currentY = footerY
+
+  // Texto de aceptación
+  doc.setFontSize(8)
+  doc.setTextColor(51, 65, 81)
+  doc.setFont('helvetica', 'normal')
+  const textoAceptacion = [
+    'Para la aceptación de este presupuesto, rogamos nos lo devuelvan firmado y sellado.',
+    'La aceptación del mismo supone la conformidad con las condiciones y precios indicados.',
+    'Este presupuesto tiene validez hasta la fecha indicada.'
+  ]
+  for (const linea of textoAceptacion) {
+    doc.text(linea, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 4
+  }
+
+  currentY += 4
 
   if (presupuesto.fecha_validez) {
     doc.setFontSize(9)
     doc.setTextColor(100, 116, 139)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Este presupuesto es válido hasta el ${formatFecha(presupuesto.fecha_validez)}`, pageWidth / 2, footerY, { align: 'center' })
+    doc.setFont('helvetica', 'bold')
+    doc.text(`Válido hasta: ${formatFecha(presupuesto.fecha_validez)}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 6
   }
 
   doc.setFontSize(9)
   doc.setTextColor(r, g, b)
   doc.setFont('helvetica', 'normal')
-  doc.text('Gracias por su confianza.', pageWidth / 2, footerY + (presupuesto.fecha_validez ? 7 : 0), { align: 'center' })
+  doc.text('Gracias por su confianza.', pageWidth / 2, currentY, { align: 'center' })
 
   const arrayBuffer2 = doc.output('arraybuffer')
   return Buffer.from(arrayBuffer2)
