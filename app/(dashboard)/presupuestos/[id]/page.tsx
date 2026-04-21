@@ -17,6 +17,7 @@ import {
     Calendar,
     Calculator,
     Printer,
+    Download,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import type { EstadoPresupuesto } from "@/types"
@@ -176,6 +177,12 @@ export default async function PresupuestoDetailPage({
                         presupuestoId={id}
                         clienteEmail={presupuesto.cliente?.email}
                     />
+                    <Button variant="outline" asChild>
+                        <a href={`/api/presupuestos/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+                            <Download className="mr-2 h-4 w-4" />
+                            Descargar PDF
+                        </a>
+                    </Button>
                     {(presupuesto.estado === "borrador" || presupuesto.estado === "enviado") && (
                         <Button variant="outline" asChild>
                             <Link href={`/presupuestos/${id}?editar=true`}>
