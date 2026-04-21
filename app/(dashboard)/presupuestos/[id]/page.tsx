@@ -178,7 +178,7 @@ export default async function PresupuestoDetailPage({
                         clienteEmail={presupuesto.cliente?.email}
                     />
                     <Button variant="outline" asChild>
-                        <a href={`/api/presupuestos/${id}/pdf`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/api/presupuestos/${id}/pdf`} download={`${presupuesto.numero}.pdf`}>
                             <Download className="mr-2 h-4 w-4" />
                             Descargar PDF
                         </a>

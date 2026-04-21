@@ -45,7 +45,7 @@ export async function GET(
         return new NextResponse(new Uint8Array(pdfBuffer), {
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `inline; filename="${safeName}.pdf"`,
+                "Content-Disposition": `attachment; filename="${safeName}.pdf"`,
             },
         })
     } catch (error: any) {
