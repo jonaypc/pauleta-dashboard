@@ -1,8 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server"
 import { PrintButton } from "@/components/facturas/PrintButton"
-import NextImage from "next/image"
-
-export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   return {
@@ -12,17 +8,23 @@ export async function generateMetadata() {
   }
 }
 
-export default async function PlantillaAlbaranPage() {
-  const supabase = await createAdminClient()
-
-  const { data: empresa } = await supabase
-    .from("empresa")
-    .select("*")
-    .single()
+export default function PlantillaAlbaranPage() {
+  // Datos fijos de Pauleta Canaria para la plantilla en blanco
+  const empresa = {
+    nombre: "Pauleta Canaria S.L.",
+    cif: "B70853163",
+    direccion: "C/ Ejemplo, 123",
+    ciudad: "Las Palmas de Gran Canaria",
+    provincia: "Las Palmas",
+    codigo_postal: "35001",
+    telefono: "928 XXX XXX",
+    logo_url: null,
+    mostrar_logo: false
+  }
 
   const color = "#059669" // Verde esmeralda para albaranes
-  const mostrarLogo = empresa?.mostrar_logo ?? true
-  const logoWidth = empresa?.logo_width || 80
+  const mostrarLogo = false
+  const logoWidth = 80
 
   // 15 líneas en blanco para productos
   const lineasVacias = Array.from({ length: 15 }, (_, i) => i + 1)
