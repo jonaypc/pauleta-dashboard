@@ -1,4 +1,10 @@
 import { PrintButton } from "@/components/facturas/PrintButton"
+import { createAdminClient } from "@/lib/supabase/server"
+import NextImage from "next/image"
+
+interface PageProps {
+  searchParams: { cliente_id?: string }
+}
 
 export async function generateMetadata() {
   return {
@@ -8,23 +14,29 @@ export async function generateMetadata() {
   }
 }
 
-export default function PlantillaAlbaranPage() {
-  // Datos fijos de Pauleta Canaria para la plantilla en blanco
-  const empresa = {
-    nombre: "Pauleta Canaria S.L.",
-    cif: "B70853163",
-    direccion: "C/ Ejemplo, 123",
-    ciudad: "Las Palmas de Gran Canaria",
-    provincia: "Las Palmas",
-    codigo_postal: "35001",
-    telefono: "928 XXX XXX",
-    logo_url: null,
-    mostrar_logo: false
+export default async function PlantillaAlbaranPage({ searchParams }: PageProps) {
+  const supabase = await createAdminClient()
+
+  // Obtener datos de la empresa
+  const { data: empresa } = await supabase
+    .from("empresa")
+    .select("*")
+    .single()
+
+  // Si hay cliente_id, obtener sus datos
+  let cliente = null
+  if (searchParams.cliente_id) {
+    const { data } = await supabase
+      .from("clientes")
+      .select("*")
+      .eq("id", searchParams.cliente_id)
+      .single()
+    cliente = data
   }
 
   const color = "#059669" // Verde esmeralda para albaranes
-  const mostrarLogo = false
-  const logoWidth = 80
+  const mostrarLogo = empresa?.mostrar_logo ?? false
+  const logoWidth = empresa?.logo_width || 80
 
   // 15 líneas en blanco para productos
   const lineasVacias = Array.from({ length: 15 }, (_, i) => i + 1)
@@ -386,11 +398,12 @@ export default function PlantillaAlbaranPage() {
 
       {/* Instrucciones (solo en pantalla) */}
       <div className="instructions no-print">
-        <h2>📋 Plantilla de Albarán en Blanco</h2>
+        <h2>📋 Plantilla de Albarán {cliente ? `para ${cliente.nombre}` : 'en Blanco'}</h2>
         <ul>
           <li>Esta plantilla está lista para imprimir y rellenar a mano</li>
+          {cliente && <li><strong>Los datos del cliente ya están pre-rellenados</strong></li>}
           <li>Imprime varias copias para llevar en el móvil/guagua</li>
-          <li>Rellena los datos del cliente, fecha, productos y cantidades a mano</li>
+          <li>Rellena a mano: fecha, número de albarán, productos y cantidades</li>
           <li>El cliente firma en el espacio izquierdo</li>
           <li>Pon el sello de la empresa en el círculo de la derecha</li>
           <li>Puedes imprimir varias hojas de una vez (Ctrl+P)</li>
@@ -439,9 +452,33 @@ export default function PlantillaAlbaranPage() {
           <div className="parties-section">
             <div className="party-box">
               <div className="party-label">Entregar a</div>
-              <div className="blank-field">Nombre:</div>
-              <div className="blank-field">CIF/NIF:</div>
-              <div className="blank-field-tall">Dirección:</div>
+              {cliente ? (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '2px' }}>
+                    {cliente.nombre}
+                  </div>
+                  {cliente.cif && (
+                    <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace', marginBottom: '4px' }}>
+                      {cliente.cif}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.5 }}>
+                    {cliente.direccion && <div>{cliente.direccion}</div>}
+                    {(cliente.ciudad || cliente.codigo_postal) && (
+                      <div>
+                        {cliente.codigo_postal} {cliente.ciudad}
+                        {cliente.provincia && ` (${cliente.provincia})`}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="blank-field">Nombre:</div>
+                  <div className="blank-field">CIF/NIF:</div>
+                  <div className="blank-field-tall">Dirección:</div>
+                </>
+              )}
             </div>
           </div>
 

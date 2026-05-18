@@ -15,7 +15,8 @@ import {
   FileText,
   User,
   Truck,
-  ClipboardList
+  ClipboardList,
+  FileCheck
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { SendConsolidatedButton } from "@/components/clientes/SendConsolidatedButton"
@@ -106,7 +107,13 @@ export default async function ClienteDetailPage({ params, searchParams }: PagePr
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/print/plantilla-albaran?cliente_id=${params.id}`} target="_blank">
+              <FileCheck className="mr-2 h-4 w-4" />
+              Plantilla Albarán
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/print/control-cambios/${params.id}`} target="_blank">
               <ClipboardList className="mr-2 h-4 w-4" />
