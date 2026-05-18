@@ -23,12 +23,15 @@ export function GenerarInformeProduccionButton({ facturasSeleccionadas }: Props)
 
     setLoading(true)
     try {
-      const result = await generarInformeProduccionFacturas(facturasSeleccionadas)
+      // Generar y guardar informe en BD
+      const result = await generarInformeProduccionFacturas(facturasSeleccionadas, true)
 
       if (result.error) {
         toast.error(result.error)
         return
       }
+
+      toast.success(`Informe ${result.data?.numero} generado correctamente`)
 
       // Guardar en sessionStorage para la página de impresión
       sessionStorage.setItem('informe_produccion', JSON.stringify(result.data))

@@ -1,0 +1,16 @@
+{
+  "model": "claude-sonnet-4-5",
+  "env": {
+    "MAX_THINKING_TOKENS": "10000",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-haiku-4-5"
+  },
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/34677/Desktop/pauleta-dashboard/**)",
+      "Bash(tr:*)",
+      "Bash(./node_modules/.bin/next build:*)",
+      "Bash(npx:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
