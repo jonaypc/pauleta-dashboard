@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
       "Bash(netstat:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(curl -s http://localhost:3000/facturas)"
     ]
   }
 }

@@ -13,6 +13,7 @@ import type { EstadoFactura } from "@/types"
 
 export const metadata = {
     title: "Facturas",
+    description: "Gestión de facturas con selección múltiple",
 }
 
 interface PageProps {
