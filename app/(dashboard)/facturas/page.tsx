@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { FacturasTable } from "@/components/facturas/FacturasTable"
+import { FacturasTableWithSelection } from "@/components/facturas/FacturasTableWithSelection"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -165,7 +165,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
             {/* Tabla o estado vacío */}
             {facturas && facturas.length > 0 ? (
                 <>
-                    <FacturasTable facturas={facturas} />
+                    <FacturasTableWithSelection facturas={facturas} />
                     <PaginationControls
                         currentPage={page}
                         totalCount={totalCount}
