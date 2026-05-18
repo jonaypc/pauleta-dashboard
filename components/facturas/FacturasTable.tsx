@@ -122,11 +122,12 @@ export function FacturasTable({
         .reduce((sum, f) => sum + (f.total || 0), 0)
 
     const handleSelectAll = (checked: boolean) => {
-        if (checked) {
-            setSelectedIds(new Set(facturas.map(f => f.id)))
-        } else {
-            setSelectedIds(new Set())
-        }
+        const newSelected = checked ? new Set(facturas.map(f => f.id)) : new Set()
+        setSelectedIds(newSelected)
+        // Emitir evento para el wrapper
+        window.dispatchEvent(new CustomEvent('facturas-selection-change', {
+            detail: { selectedIds: newSelected }
+        }))
     }
 
     const handleSelectOne = (id: string, checked: boolean) => {
@@ -137,6 +138,10 @@ export function FacturasTable({
             newSelected.delete(id)
         }
         setSelectedIds(newSelected)
+        // Emitir evento para el wrapper
+        window.dispatchEvent(new CustomEvent('facturas-selection-change', {
+            detail: { selectedIds: newSelected }
+        }))
     }
 
     const handleEmitir = async (factura: Factura) => {
