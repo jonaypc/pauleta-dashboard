@@ -184,7 +184,7 @@ export function FacturaForm({
                     finalNumero = numeroData;
                 }
 
-                // Crear nueva factura
+                // Crear nueva factura (directamente en estado emitida)
                 const { data: nuevaFactura, error: facturaError } = await supabase
                     .from("facturas")
                     .insert({
@@ -193,7 +193,7 @@ export function FacturaForm({
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
                         notas: notas || null,
-                        estado: "borrador",
+                        estado: "emitida",
                         base_imponible: baseImponible,
                         igic,
                         total,

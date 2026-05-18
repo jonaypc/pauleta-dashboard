@@ -53,7 +53,7 @@ export function ConvertirAFacturaButton({
             )
             if (numError) throw numError
 
-            // 3. Crear factura
+            // 3. Crear factura (directamente emitida)
             const { data: nuevaFactura, error: facturaError } = await supabase
                 .from("facturas")
                 .insert({
@@ -61,7 +61,7 @@ export function ConvertirAFacturaButton({
                     cliente_id: presupuesto.cliente_id,
                     fecha: new Date().toISOString().split("T")[0],
                     notas: presupuesto.notas ? `Desde presupuesto ${presupuestoNumero}. ${presupuesto.notas}` : `Desde presupuesto ${presupuestoNumero}`,
-                    estado: "borrador",
+                    estado: "emitida",
                     base_imponible: presupuesto.base_imponible,
                     igic: presupuesto.igic,
                     total: presupuesto.total,
