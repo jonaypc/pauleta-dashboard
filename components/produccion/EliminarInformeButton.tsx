@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Trash2, Loader2 } from 'lucide-react'
 import { eliminarInformeProduccion } from '@/lib/actions/informes-produccion'
-import { toast } from 'sonner'
+import { toast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -34,11 +34,19 @@ export function EliminarInformeButton({ informeId, redirectAfterDelete = false }
       const result = await eliminarInformeProduccion(informeId)
 
       if (result.error) {
-        toast.error(result.error)
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        })
         return
       }
 
-      toast.success('Informe eliminado correctamente')
+      toast({
+        title: 'Informe eliminado',
+        description: 'El informe se eliminó correctamente',
+        variant: 'success',
+      })
       setOpen(false)
 
       if (redirectAfterDelete) {
@@ -48,7 +56,11 @@ export function EliminarInformeButton({ informeId, redirectAfterDelete = false }
       }
     } catch (error) {
       console.error(error)
-      toast.error('Error al eliminar el informe')
+      toast({
+        title: 'Error',
+        description: 'Error al eliminar el informe',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }

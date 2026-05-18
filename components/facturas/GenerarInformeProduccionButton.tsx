@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Factory, Loader2 } from 'lucide-react'
 import { generarInformeProduccionFacturas } from '@/lib/actions/informes-produccion'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { toast } from '@/hooks/use-toast'
 
 interface Props {
   facturasSeleccionadas: string[]
@@ -17,7 +17,11 @@ export function GenerarInformeProduccionButton({ facturasSeleccionadas }: Props)
 
   const handleGenerar = async () => {
     if (facturasSeleccionadas.length === 0) {
-      toast.error('Selecciona al menos una factura')
+      toast({
+        title: 'Error',
+        description: 'Selecciona al menos una factura',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -27,11 +31,19 @@ export function GenerarInformeProduccionButton({ facturasSeleccionadas }: Props)
       const result = await generarInformeProduccionFacturas(facturasSeleccionadas, true)
 
       if (result.error) {
-        toast.error(result.error)
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        })
         return
       }
 
-      toast.success(`Informe ${result.data?.numero} generado correctamente`)
+      toast({
+        title: 'Informe generado',
+        description: `Informe ${result.data?.numero} creado correctamente`,
+        variant: 'success',
+      })
 
       // Guardar en sessionStorage para la página de impresión
       sessionStorage.setItem('informe_produccion', JSON.stringify(result.data))
@@ -40,7 +52,11 @@ export function GenerarInformeProduccionButton({ facturasSeleccionadas }: Props)
       router.push('/print/informe-produccion')
     } catch (error) {
       console.error(error)
-      toast.error('Error al generar informe')
+      toast({
+        title: 'Error',
+        description: 'Error al generar informe',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
