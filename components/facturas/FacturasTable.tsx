@@ -348,6 +348,62 @@ export function FacturasTable({
         }
     }
 
+    // Marcar como cobrada en masa
+    const handleBulkMarkAsPaid = async () => {
+        if (selectedIds.size === 0) return
+        if (!confirm(`¿Marcar ${selectedIds.size} factura(s) como cobrada(s)?`)) return
+
+        setIsActionLoading(true)
+        try {
+            const ids = Array.from(selectedIds)
+
+            // Actualizar estado de todas las facturas seleccionadas
+            const { error } = await supabase
+                .from("facturas")
+                .update({ estado: "cobrada" })
+                .in("id", ids)
+                .eq("estado", "emitida") // Solo las emitidas
+
+            if (error) throw error
+
+            toast({
+                title: "Facturas marcadas como cobradas",
+                description: `${selectedIds.size} factura(s) actualizada(s)`,
+                variant: "success",
+            })
+
+            setSelectedIds(new Set())
+            router.refresh()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al actualizar facturas",
+                variant: "destructive",
+            })
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
+
+    // Imprimir múltiples facturas
+    const handleBulkPrint = () => {
+        if (selectedIds.size === 0) return
+
+        const ids = Array.from(selectedIds)
+        // Abrir cada factura en una nueva pestaña para imprimir
+        ids.forEach((id, index) => {
+            setTimeout(() => {
+                window.open(`/print/facturas/${id}`, '_blank')
+            }, index * 500) // Delay para evitar bloqueo de popups
+        })
+
+        toast({
+            title: "Abriendo facturas",
+            description: `Se abrirán ${ids.length} ventana(s) para imprimir`,
+            variant: "success",
+        })
+    }
+
     // Enviar resumen consolidado
     const handleConsolidatedSend = async () => {
         if (selectedIds.size === 0) return
@@ -419,6 +475,29 @@ export function FacturasTable({
                         <Button
                             size="sm"
                             variant="outline"
+                            onClick={handleBulkMarkAsPaid}
+                            disabled={isActionLoading}
+                            title="Marcar facturas seleccionadas como cobradas"
+                        >
+                            {isActionLoading ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                            )}
+                            Marcar cobradas
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleBulkPrint}
+                            title="Imprimir todas las facturas seleccionadas"
+                        >
+                            <Printer className="mr-2 h-4 w-4" />
+                            Imprimir
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
                             onClick={handleBulkSend}
                             disabled={isBulkSending || isConsolidatedSending}
                         >
@@ -427,7 +506,7 @@ export function FacturasTable({
                             ) : (
                                 <Mail className="mr-2 h-4 w-4" />
                             )}
-                            {isBulkSending ? "Enviando..." : "Enviar por email"}
+                            {isBulkSending ? "Enviando..." : "Enviar emails"}
                         </Button>
                         <Button
                             size="sm"
@@ -441,31 +520,14 @@ export function FacturasTable({
                             ) : (
                                 <FileStack className="mr-2 h-4 w-4" />
                             )}
-                            {isConsolidatedSending ? "Enviando resumen..." : "Enviar resumen al cliente"}
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Previsualizar email consolidado"
-                            onClick={() => handlePreview("email")}
-                        >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver email
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Previsualizar PDF resumen"
-                            onClick={() => handlePreview("pdf")}
-                        >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Ver PDF
+                            Resumen consolidado
                         </Button>
                         <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setSelectedIds(new Set())}
                         >
+                            <X className="mr-2 h-4 w-4" />
                             Cancelar
                         </Button>
                     </div>
