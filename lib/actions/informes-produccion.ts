@@ -38,12 +38,12 @@ export async function generarInformeProduccionFacturas(facturaIds: string[], gua
         numero,
         fecha,
         cliente:clientes(nombre),
-        lineas:lineas_factura(
+        lineas:lineas_factura!lineas_factura_factura_id_fkey(
           id,
           producto_id,
           descripcion,
           cantidad,
-          producto:productos(nombre, unidad)
+          producto:productos!lineas_factura_producto_id_fkey(nombre, unidad)
         )
       `)
       .in('id', facturaIds)
