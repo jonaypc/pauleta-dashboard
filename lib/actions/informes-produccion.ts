@@ -38,7 +38,7 @@ export async function generarInformeProduccionFacturas(facturaIds: string[], gua
         numero,
         fecha,
         cliente:clientes(nombre),
-        lineas:lineas_facturas(
+        lineas:lineas_factura(
           id,
           producto_id,
           descripcion,
