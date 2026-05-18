@@ -36,10 +36,10 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
 
   const color = "#059669" // Verde esmeralda para albaranes
   const mostrarLogo = empresa?.mostrar_logo ?? false
-  const logoWidth = empresa?.logo_width || 80
+  const logoWidth = empresa?.logo_width || 60
 
-  // 15 líneas en blanco para productos
-  const lineasVacias = Array.from({ length: 15 }, (_, i) => i + 1)
+  // 10 líneas en blanco para productos (ajustado para caber en A4)
+  const lineasVacias = Array.from({ length: 10 }, (_, i) => i + 1)
 
   return (
     <div className="print-container">
@@ -74,7 +74,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         .albaran {
           width: 210mm;
           height: 297mm;
-          padding: 10mm 18mm;
+          padding: 8mm 15mm;
           margin: 0 auto 10mm;
           display: flex;
           flex-direction: column;
@@ -88,7 +88,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 5mm;
+          margin-bottom: 3mm;
         }
 
         .company-info {
@@ -100,7 +100,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         }
 
         .company-name {
-          font-size: 22px;
+          font-size: 18px;
           font-weight: 700;
           color: ${color};
           margin-bottom: 4px;
@@ -114,7 +114,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
 
         .albaran-title-box {
           text-align: right;
-          padding: 8px 16px;
+          padding: 6px 12px;
           background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
           border-radius: 8px;
           color: white;
@@ -128,10 +128,10 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         }
 
         .albaran-number-blank {
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 800;
           margin: 4px 0;
-          min-height: 36px;
+          min-height: 28px;
           border-bottom: 2px solid rgba(255,255,255,0.5);
           display: flex;
           align-items: center;
@@ -141,7 +141,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         .albaran-date-blank {
           font-size: 11px;
           opacity: 0.9;
-          min-height: 20px;
+          min-height: 18px;
           border-bottom: 2px solid rgba(255,255,255,0.5);
           margin-top: 4px;
         }
@@ -150,8 +150,8 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         .parties-section {
           display: flex;
           gap: 15mm;
-          margin-bottom: 5mm;
-          padding: 8px 0;
+          margin-bottom: 3mm;
+          padding: 6px 0;
           border-top: 2px solid #e2e8f0;
           border-bottom: 2px solid #e2e8f0;
         }
@@ -161,15 +161,15 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         }
 
         .party-label {
-          font-size: 9px;
+          font-size: 8px;
           text-transform: uppercase;
           color: ${color};
           font-weight: 700;
-          letter-spacing: 1px;
-          margin-bottom: 8px;
+          letter-spacing: 0.8px;
+          margin-bottom: 6px;
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 4px;
         }
 
         .party-label::before {
@@ -181,20 +181,20 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         }
 
         .blank-field {
-          min-height: 18px;
+          min-height: 16px;
           border-bottom: 1px solid #cbd5e1;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
           color: #94a3b8;
-          font-size: 10px;
+          font-size: 9px;
           padding: 2px 0;
         }
 
         .blank-field-tall {
-          min-height: 38px;
+          min-height: 30px;
           border-bottom: 1px solid #cbd5e1;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
           color: #94a3b8;
-          font-size: 10px;
+          font-size: 9px;
           padding: 2px 0;
         }
 
@@ -202,7 +202,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 5mm;
+          margin-bottom: 3mm;
         }
 
         .items-table thead {
@@ -224,7 +224,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
 
         .items-table tbody tr {
           border-bottom: 1px solid #e2e8f0;
-          height: 10mm;
+          height: 8mm;
         }
 
         .items-table tbody tr:nth-child(even) {
@@ -246,7 +246,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         .summary-section {
           display: flex;
           justify-content: flex-end;
-          margin-bottom: 5mm;
+          margin-bottom: 3mm;
         }
 
         .summary-box {
@@ -295,7 +295,7 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
         }
 
         .signature-space {
-          height: 20mm;
+          height: 15mm;
           border: 2px dashed #cbd5e1;
           border-radius: 8px;
           margin-bottom: 8px;
@@ -365,9 +365,9 @@ export default async function PlantillaAlbaranPage({ searchParams }: PageProps) 
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%) rotate(-30deg);
-          font-size: 120px;
+          font-size: 100px;
           font-weight: 900;
-          color: rgba(5, 150, 105, 0.03);
+          color: rgba(5, 150, 105, 0.02);
           pointer-events: none;
           white-space: nowrap;
         }
