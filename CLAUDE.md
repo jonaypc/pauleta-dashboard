@@ -16,9 +16,9 @@
 ## EMPRESA
 - **Nombre:** Pauleta Canaria S.L.
 - **CIF:** B70853163
-- **Régimen:** IGIC Canarias 7%
+- **Régimen:** IGIC Canarias 3%
 - **Cuenta:** ES96 3058 6109 1427 2001 9948 (Cajamar)
-- **Productos:** Mango, Fresa, Frutos Rojos, Pera Piña, Kiwi Manzana Uva, Melón
+- **Productos:** Mango, Fresa, Frutos Rojos, Pera Piña, Kiwi Manzana Uva, Melón, platano 
 
 ---
 

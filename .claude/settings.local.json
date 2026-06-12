@@ -8,7 +8,8 @@
       "Bash(netstat:*)",
       "Bash(pnpm install:*)",
       "Bash(curl -s http://localhost:3000/facturas)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }

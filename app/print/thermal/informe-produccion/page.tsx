@@ -255,7 +255,7 @@ export default function InformeProduccionThermalPage() {
           Productos a Producir
         </div>
 
-        {informe.productos_agregados.map((producto, idx) => (
+        {informe.productos.map((producto, idx) => (
           <div key={idx} className="producto-row">
             <div className="producto-header">
               <div className="producto-nombre">{producto.nombre}</div>
@@ -273,7 +273,7 @@ export default function InformeProduccionThermalPage() {
         <div className="total-section">
           <div className="total-label">Total Unidades</div>
           <div className="total-value">
-            {informe.productos_agregados.reduce((sum, p) => sum + p.cantidad_total, 0)} uds.
+            {informe.productos.reduce((sum, p) => sum + p.cantidad_total, 0)} uds.
           </div>
         </div>
 
