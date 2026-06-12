@@ -261,8 +261,10 @@ export default function InformeProduccionThermalPage() {
               <div className="producto-nombre">{producto.nombre}</div>
               <div className="producto-cantidad">{producto.cantidad_total} ud.</div>
             </div>
-            {producto.codigo_barras && (
-              <div className="producto-codigo">Cód: {producto.codigo_barras}</div>
+            {producto.descripcion && producto.descripcion !== producto.nombre && (
+              <div className="producto-codigo" style={{ fontSize: '8px', color: '#666' }}>
+                {producto.descripcion}
+              </div>
             )}
           </div>
         ))}
