@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2, FileStack, FileText, X } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, Send, XCircle, CheckCircle, Trash2, ArrowLeftRight, CreditCard, MessageCircle, Printer, Mail, MailCheck, EyeIcon, Loader2, FileStack, FileText, X, Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -385,23 +385,52 @@ export function FacturasTable({
         }
     }
 
-    // Imprimir múltiples facturas
-    const handleBulkPrint = () => {
+    // Descargar múltiples facturas como PDF combinado
+    const handleBulkPrint = async () => {
         if (selectedIds.size === 0) return
 
         const ids = Array.from(selectedIds)
-        // Abrir cada factura en una nueva pestaña para imprimir
-        ids.forEach((id, index) => {
-            setTimeout(() => {
-                window.open(`/print/facturas/${id}`, '_blank')
-            }, index * 500) // Delay para evitar bloqueo de popups
-        })
 
         toast({
-            title: "Abriendo facturas",
-            description: `Se abrirán ${ids.length} ventana(s) para imprimir`,
-            variant: "success",
+            title: "Generando PDF",
+            description: `Descargando ${ids.length} factura(s)...`,
         })
+
+        try {
+            const response = await fetch("/api/facturas/bulk-pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ facturaIds: ids }),
+            })
+
+            if (!response.ok) {
+                const data = await response.json()
+                throw new Error(data.error || "Error al generar PDF")
+            }
+
+            // Descargar el PDF
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `facturas_${new Date().toISOString().split('T')[0]}_${ids.length}docs.pdf`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+
+            toast({
+                title: "PDF generado",
+                description: `${ids.length} factura(s) descargadas correctamente`,
+                variant: "success",
+            })
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al generar PDF",
+                variant: "destructive",
+            })
+        }
     }
 
     // Enviar resumen consolidado
@@ -490,10 +519,10 @@ export function FacturasTable({
                             size="sm"
                             variant="outline"
                             onClick={handleBulkPrint}
-                            title="Imprimir todas las facturas seleccionadas"
+                            title="Descargar todas las facturas seleccionadas en un PDF"
                         >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Imprimir
+                            <Download className="mr-2 h-4 w-4" />
+                            Descargar PDF
                         </Button>
                         <Button
                             size="sm"
