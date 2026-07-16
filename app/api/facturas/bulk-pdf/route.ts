@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { generateInvoicePDF } from "@/lib/pdf-generator"
-import { PDFDocument } from 'pdf-lib'
+import { generateBulkInvoicePDF } from "@/lib/pdf-generator"
 
 export const maxDuration = 60
 
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Obtener facturas
-    const { data: facturas, error: facturasError } = await supabase
+    const { data: facturasRaw, error: facturasError } = await supabase
       .from("facturas")
       .select(`
         *,
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
       .order("fecha", { ascending: true })
       .order("numero", { ascending: true })
 
-    if (facturasError || !facturas || facturas.length === 0) {
+    if (facturasError || !facturasRaw || facturasRaw.length === 0) {
       return NextResponse.json(
         { error: "No se encontraron facturas" },
         { status: 404 }
@@ -45,38 +44,25 @@ export async function POST(request: NextRequest) {
 
     const empresaData = empresa || { nombre: "Pauleta Canaria S.L." } as any
 
-    // Generar PDF individual para cada factura usando la función existente
-    const pdfBuffers: Buffer[] = []
-    for (const factura of facturas) {
-      const pdfBuffer = await generateInvoicePDF({
-        factura: {
-          ...factura,
-          lineas: factura.lineas || [],
-        },
-        cliente: factura.cliente || { nombre: "Sin cliente" } as any,
-        empresa: empresaData,
-      })
-      pdfBuffers.push(pdfBuffer)
-    }
+    // Transformar datos al formato esperado
+    const facturas = facturasRaw.map(f => ({
+      factura: {
+        ...f,
+        lineas: f.lineas || [],
+      },
+      cliente: f.cliente || { nombre: "Sin cliente" } as any,
+    }))
 
-    // Combinar todos los PDFs en uno solo usando pdf-lib
-    const mergedPdf = await PDFDocument.create()
-
-    for (const pdfBuffer of pdfBuffers) {
-      const pdf = await PDFDocument.load(pdfBuffer)
-      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices())
-      copiedPages.forEach((page) => {
-        mergedPdf.addPage(page)
-      })
-    }
-
-    const mergedPdfBytes = await mergedPdf.save()
-    const mergedPdfBuffer = Buffer.from(mergedPdfBytes)
+    // Generar PDF optimizado con todas las facturas en un solo documento
+    const pdfBuffer = await generateBulkInvoicePDF({
+      facturas,
+      empresa: empresaData,
+    })
 
     const timestamp = new Date().toISOString().split('T')[0]
     const filename = `facturas_${timestamp}_${facturas.length}docs.pdf`
 
-    return new NextResponse(mergedPdfBuffer, {
+    return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
