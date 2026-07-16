@@ -1305,49 +1305,9 @@ export async function generateBulkInvoicePDF(data: BulkInvoiceData): Promise<Buf
 
   const [r, g, b] = hexToRgb(color)
 
-  // Cargar el logo UNA SOLA VEZ si existe
-  let logoDataUrl: string | null = null
-  let logoExt: 'JPEG' | 'PNG' = 'PNG'
-  let logoWidthMm = 0
-  let logoHeightMm = 0
-  const mostrarLogo = empresa.mostrar_logo ?? true
-
-  if (mostrarLogo && empresa.logo_url) {
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const logoUrl = empresa.logo_url.startsWith('http') ? empresa.logo_url : `${baseUrl}${empresa.logo_url}`
-      const response = await fetch(logoUrl)
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        const contentType = response.headers.get('content-type') || 'image/png'
-        const url = empresa.logo_url.toLowerCase()
-        if (contentType.includes('jpeg') || contentType.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
-          logoExt = 'JPEG'
-        }
-        logoDataUrl = `data:${contentType};base64,${base64}`
-
-        const dims = getImageDimensions(arrayBuffer, logoExt)
-        const maxHeightMm = 18
-        const maxWidthMm = 60
-
-        if (dims && dims.width > 0 && dims.height > 0) {
-          const aspect = dims.width / dims.height
-          logoHeightMm = maxHeightMm
-          logoWidthMm = logoHeightMm * aspect
-          if (logoWidthMm > maxWidthMm) {
-            logoWidthMm = maxWidthMm
-            logoHeightMm = logoWidthMm / aspect
-          }
-        } else {
-          logoHeightMm = maxHeightMm
-          logoWidthMm = maxHeightMm * 2
-        }
-      }
-    } catch (logoError) {
-      console.error('[PDF Bulk] Error fetching logo:', logoError)
-    }
-  }
+  // NOTA: No incluimos logo en PDFs bulk porque jsPDF embebe la imagen completa
+  // sin compresión en cada página, causando archivos de 100+ MB.
+  // Para facturas individuales usar generateInvoicePDF() que sí incluye logo.
 
   // Generar cada factura en el mismo documento
   for (let idx = 0; idx < facturas.length; idx++) {
@@ -1360,25 +1320,11 @@ export async function generateBulkInvoicePDF(data: BulkInvoiceData): Promise<Buf
 
     let y = 20
 
-    // === HEADER: Logo + nombre empresa ===
-    let logoAdded = false
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, logoExt, margin, y - 3, logoWidthMm, logoHeightMm)
-      y += logoHeightMm + 3
-      logoAdded = true
-    }
-
-    if (!logoAdded) {
-      doc.setFontSize(20)
-      doc.setTextColor(r, g, b)
-      doc.setFont('helvetica', 'bold')
-      doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
-    } else {
-      doc.setFontSize(14)
-      doc.setTextColor(r, g, b)
-      doc.setFont('helvetica', 'bold')
-      doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
-    }
+    // === HEADER: Nombre empresa (sin logo para optimizar tamaño) ===
+    doc.setFontSize(20)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text(empresa.nombre || 'Pauleta Canaria SL', margin, y)
 
     // Company details
     y += 6
