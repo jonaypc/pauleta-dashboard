@@ -50,11 +50,21 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock)),
-      factura_rectificada:facturas!facturas_factura_rectificada_id_fkey(numero, fecha)
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock))
     `)
     .eq("id", params.id)
     .single()
+
+  // Obtener factura rectificada manualmente si existe
+  let facturaRectificada = null
+  if (factura?.factura_rectificada_id) {
+    const { data: rectificada } = await supabase
+      .from("facturas")
+      .select("numero, fecha")
+      .eq("id", factura.factura_rectificada_id)
+      .single()
+    facturaRectificada = rectificada
+  }
 
   if (error) {
     console.error("Error fetching invoice in print page:", error)

@@ -24,6 +24,17 @@ export async function GET(
             return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 })
         }
 
+        // Obtener factura rectificada manualmente si existe
+        let facturaRectificada = null
+        if (factura.factura_rectificada_id) {
+            const { data: rectificada } = await supabase
+                .from("facturas")
+                .select("numero, fecha")
+                .eq("id", factura.factura_rectificada_id)
+                .single()
+            facturaRectificada = rectificada
+        }
+
         const { data: empresa } = await supabase
             .from("empresa")
             .select("*")
@@ -35,6 +46,7 @@ export async function GET(
             factura: {
                 ...factura,
                 lineas: factura.lineas || [],
+                factura_rectificada: facturaRectificada,
             },
             cliente: factura.cliente || { nombre: "Sin cliente" } as any,
             empresa: empresa || { nombre: "Pauleta Canaria S.L." } as any,
