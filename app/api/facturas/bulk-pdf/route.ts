@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const timestamp = new Date().toISOString().split('T')[0]
     const filename = `facturas_${timestamp}_${facturas.length}docs.pdf`
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
