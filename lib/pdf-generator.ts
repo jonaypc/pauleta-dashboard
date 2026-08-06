@@ -38,6 +38,9 @@ interface InvoicePDFData {
     igic: number
     total: number
     estado: string
+    tipo_factura?: 'ordinaria' | 'rectificativa'
+    factura_rectificada?: { numero: string; fecha: string } | null
+    motivo_rectificacion?: string | null
     notas?: string | null
     lineas?: LineaFactura[]
   }
@@ -177,10 +180,11 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   if (empresa.email) { doc.text(empresa.email, margin, y); y += 4 }
 
   // === Invoice box (right side) ===
+  const esRectificativa = factura.tipo_factura === 'rectificativa'
   const boxW = 65
   const boxX = pageWidth - margin - boxW
   const boxY = 15
-  const boxH = 28
+  const boxH = esRectificativa ? 38 : 28
 
   doc.setFillColor(r, g, b)
   doc.roundedRect(boxX, boxY, boxW, boxH, 3, 3, 'F')
@@ -188,7 +192,7 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('FACTURA', boxX + boxW / 2, boxY + 8, { align: 'center' })
+  doc.text(esRectificativa ? 'FACTURA RECTIFICATIVA' : 'FACTURA', boxX + boxW / 2, boxY + 8, { align: 'center' })
 
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
@@ -197,6 +201,13 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.text(formatFecha(factura.fecha), boxX + boxW / 2, boxY + 24, { align: 'center' })
+
+  // Si es rectificativa, mostrar referencia a factura original
+  if (esRectificativa && factura.factura_rectificada) {
+    doc.setFontSize(8)
+    doc.text(`Rectifica: ${factura.factura_rectificada.numero}`, boxX + boxW / 2, boxY + 30, { align: 'center' })
+    doc.text(formatFecha(factura.factura_rectificada.fecha), boxX + boxW / 2, boxY + 35, { align: 'center' })
+  }
 
   // === Separator ===
   y = Math.max(y, boxY + boxH) + 8
@@ -225,6 +236,21 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   if (cliente.ciudad || cliente.codigo_postal) {
     doc.text(`${cliente.codigo_postal || ''} ${cliente.ciudad || ''}${cliente.provincia ? ` (${cliente.provincia})` : ''}`.trim(), margin, y)
     y += 4
+  }
+
+  // === Motivo rectificación (si aplica) ===
+  if (esRectificativa && factura.motivo_rectificacion) {
+    y += 2
+    doc.setFontSize(9)
+    doc.setTextColor(220, 38, 38) // Rojo para destacar
+    doc.setFont('helvetica', 'bold')
+    doc.text('MOTIVO DE RECTIFICACIÓN:', margin, y)
+    y += 4
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 116, 139)
+    const motivoLines = doc.splitTextToSize(factura.motivo_rectificacion, contentWidth)
+    doc.text(motivoLines, margin, y)
+    y += motivoLines.length * 4
   }
 
   // === Separator ===

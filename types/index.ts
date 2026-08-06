@@ -5,6 +5,9 @@
 // Estados de factura
 export type EstadoFactura = 'borrador' | 'emitida' | 'cobrada' | 'anulada'
 
+// Tipos de factura
+export type TipoFactura = 'ordinaria' | 'rectificativa'
+
 // Estados de presupuesto
 export type EstadoPresupuesto = 'borrador' | 'enviado' | 'aceptado' | 'rechazado' | 'facturado'
 
@@ -103,6 +106,10 @@ export interface Factura {
   igic: number
   total: number
   estado: EstadoFactura
+  tipo_factura: TipoFactura
+  factura_rectificada_id: string | null
+  motivo_rectificacion: string | null
+  fecha_factura_rectificada: string | null
   fecha_vencimiento: string | null
   notas: string | null
   created_at: string
@@ -111,6 +118,7 @@ export interface Factura {
   cliente?: Cliente
   lineas?: LineaFactura[]
   cobros?: Cobro[]
+  factura_rectificada?: Factura
 }
 
 export interface LineaFactura {
@@ -336,6 +344,9 @@ export interface FacturaFormData {
   fecha: string
   fecha_vencimiento?: string
   notas?: string
+  tipo_factura?: TipoFactura
+  factura_rectificada_id?: string
+  motivo_rectificacion?: string
   lineas: LineaFacturaFormData[]
 }
 

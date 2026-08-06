@@ -50,7 +50,8 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
     .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre, multiplicador_stock)),
+      factura_rectificada:facturas!facturas_factura_rectificada_id_fkey(numero, fecha)
     `)
     .eq("id", params.id)
     .single()

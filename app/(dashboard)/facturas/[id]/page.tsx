@@ -25,6 +25,7 @@ import { formatDate } from "@/lib/utils"
 import type { EstadoFactura, EmailTracking } from "@/types"
 import { CambiarClienteButton } from "@/components/facturas/CambiarClienteButton"
 import { EmailTrackingTimeline } from "@/components/facturas/EmailTrackingTimeline"
+import { CrearRectificativaDialog } from "@/components/facturas/CrearRectificativaDialog"
 
 interface PageProps {
     params: { id: string }
@@ -66,7 +67,8 @@ export default async function FacturaDetailPage({
         .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(nombre)),
+      factura_rectificada:facturas!facturas_factura_rectificada_id_fkey(numero, fecha)
     `)
         .eq("id", id)
         .single()
@@ -172,10 +174,23 @@ export default async function FacturaDetailPage({
                             >
                                 {factura.estado.charAt(0).toUpperCase() + factura.estado.slice(1)}
                             </Badge>
+                            {factura.tipo_factura === "rectificativa" && (
+                                <Badge variant="destructive">
+                                    Rectificativa
+                                </Badge>
+                            )}
                         </div>
                         <p className="text-muted-foreground">
                             Fecha: {formatDate(factura.fecha)}
+                            {factura.tipo_factura === "rectificativa" && factura.factura_rectificada && (
+                                <> • Rectifica: {factura.factura_rectificada.numero}</>
+                            )}
                         </p>
+                        {factura.motivo_rectificacion && (
+                            <p className="text-sm text-red-600 mt-1">
+                                <strong>Motivo:</strong> {factura.motivo_rectificacion}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -201,6 +216,9 @@ export default async function FacturaDetailPage({
                             Albarán
                         </Link>
                     </Button>
+                    {(factura.estado === "emitida" || factura.estado === "cobrada") && factura.tipo_factura === "ordinaria" && (
+                        <CrearRectificativaDialog factura={factura} />
+                    )}
                     {factura.estado === "borrador" && (
                         <>
                             <Button variant="outline" asChild>

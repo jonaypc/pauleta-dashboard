@@ -619,12 +619,19 @@ export function FacturasTable({
                                     />
                                 </td>
                                 <td className="px-4 py-3">
-                                    <Link
-                                        href={`/facturas/${factura.id}`}
-                                        className="font-medium text-primary hover:underline"
-                                    >
-                                        {factura.numero}
-                                    </Link>
+                                    <div className="flex items-center gap-2">
+                                        <Link
+                                            href={`/facturas/${factura.id}`}
+                                            className="font-medium text-primary hover:underline"
+                                        >
+                                            {factura.numero}
+                                        </Link>
+                                        {(factura as any).tipo_factura === 'rectificativa' && (
+                                            <Badge variant="destructive" className="text-xs">
+                                                Rect.
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">
                                     {formatFecha(factura.fecha)}
