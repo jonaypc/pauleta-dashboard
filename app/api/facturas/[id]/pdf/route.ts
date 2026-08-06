@@ -15,24 +15,14 @@ export async function GET(
             .select(`
                 *,
                 cliente:clientes(*),
-                lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre))
+                lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(codigo_barras, nombre)),
+                factura_rectificada:facturas!facturas_factura_rectificada_id_fkey(numero, fecha)
             `)
             .eq("id", params.id)
             .single()
 
         if (error || !factura) {
             return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 })
-        }
-
-        // Obtener factura rectificada manualmente si existe
-        let facturaRectificada = null
-        if (factura.factura_rectificada_id) {
-            const { data: rectificada } = await supabase
-                .from("facturas")
-                .select("numero, fecha")
-                .eq("id", factura.factura_rectificada_id)
-                .single()
-            facturaRectificada = rectificada
         }
 
         const { data: empresa } = await supabase
@@ -46,7 +36,6 @@ export async function GET(
             factura: {
                 ...factura,
                 lineas: factura.lineas || [],
-                factura_rectificada: facturaRectificada,
             },
             cliente: factura.cliente || { nombre: "Sin cliente" } as any,
             empresa: empresa || { nombre: "Pauleta Canaria S.L." } as any,

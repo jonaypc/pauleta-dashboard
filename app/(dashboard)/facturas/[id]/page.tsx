@@ -67,21 +67,11 @@ export default async function FacturaDetailPage({
         .select(`
       *,
       cliente:clientes(*),
-      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(nombre))
+      lineas:lineas_factura(*, producto:productos!lineas_factura_producto_id_fkey(nombre)),
+      factura_rectificada:facturas!facturas_factura_rectificada_id_fkey(numero, fecha)
     `)
         .eq("id", id)
         .single()
-
-    // Obtener factura rectificada manualmente si existe
-    let facturaRectificada = null
-    if (factura?.factura_rectificada_id) {
-        const { data: rectificada } = await supabase
-            .from("facturas")
-            .select("numero, fecha")
-            .eq("id", factura.factura_rectificada_id)
-            .single()
-        facturaRectificada = rectificada
-    }
 
     // DIAGNÓSTICO: Mostrar error en pantalla en vez de 404
     if (error) {
@@ -200,8 +190,8 @@ export default async function FacturaDetailPage({
                         </div>
                         <p className="text-muted-foreground">
                             Fecha: {formatDate(factura.fecha)}
-                            {factura.tipo_factura === "rectificativa" && facturaRectificada && (
-                                <> • Rectifica: {facturaRectificada.numero}</>
+                            {factura.tipo_factura === "rectificativa" && factura.factura_rectificada && (
+                                <> • Rectifica: {factura.factura_rectificada.numero}</>
                             )}
                         </p>
                         {factura.motivo_rectificacion && (
