@@ -213,13 +213,13 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
                         <Input
                           type="number"
                           step="0.01"
-                          placeholder="0"
+                          placeholder="ej: -24"
                           className="text-right"
                           value={lineasModificadas[linea.id]?.cantidad || ''}
                           onChange={(e) => actualizarLinea(linea.id, 'cantidad', parseFloat(e.target.value) || 0)}
                         />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Negativo = devolución
+                        <p className="text-xs text-red-600 font-medium mt-1">
+                          ⚠️ Usa SIGNO NEGATIVO: -24
                         </p>
                       </td>
                       <td className="p-2">
@@ -238,14 +238,18 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
               </table>
             </div>
 
-            <div className="bg-muted p-4 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">
-                <strong>Nota:</strong> Las cantidades negativas representan devoluciones.
-                Por ejemplo, -10 unidades significa que el cliente devuelve 10 unidades.
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+              <p className="text-sm text-red-900 font-semibold mb-2">
+                ⚠️ IMPORTANTE: Para devoluciones, usa cantidades NEGATIVAS
+              </p>
+              <p className="text-sm text-red-800 mb-2">
+                <strong>Ejemplo correcto:</strong> Si devuelven 10 polos → escribe <code className="bg-red-100 px-1 rounded">-10</code>
+              </p>
+              <p className="text-sm text-red-800 mb-2">
+                <strong>Ejemplo INCORRECTO:</strong> NO escribas <code className="bg-red-100 px-1 rounded line-through">10</code> (sin signo negativo)
               </p>
               <p className="text-sm text-muted-foreground">
-                La factura rectificativa se generará con importes negativos y se descontará
-                del total facturado al cliente.
+                El precio unitario siempre es positivo. Solo la cantidad lleva signo negativo.
               </p>
             </div>
           </div>
