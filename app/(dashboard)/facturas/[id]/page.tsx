@@ -98,6 +98,14 @@ export default async function FacturaDetailPage({
         )
     }
 
+    // DEBUG: Log para verificar tipo_factura
+    console.log('DEBUG Factura:', {
+        numero: factura.numero,
+        estado: factura.estado,
+        tipo_factura: (factura as any).tipo_factura,
+        tiene_tipo: 'tipo_factura' in factura,
+    })
+
     // Cargar tracking de email
     const { data: emailTrackings } = await supabase
         .from("email_tracking")
@@ -216,7 +224,7 @@ export default async function FacturaDetailPage({
                             Albarán
                         </Link>
                     </Button>
-                    {(factura.estado === "emitida" || factura.estado === "cobrada") && factura.tipo_factura === "ordinaria" && (
+                    {(factura.estado === "emitida" || factura.estado === "cobrada") && (!factura.tipo_factura || factura.tipo_factura === "ordinaria") && (
                         <CrearRectificativaDialog factura={factura} />
                     )}
                     {factura.estado === "borrador" && (
