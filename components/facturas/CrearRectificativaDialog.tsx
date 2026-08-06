@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { FileX, Loader2 } from 'lucide-react'
 import { crearFacturaRectificativa } from '@/lib/actions/facturas'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { toast } from '@/hooks/use-toast'
 import type { Factura, LineaFactura } from '@/types'
 
 interface CrearRectificativaDialogProps {
@@ -51,7 +51,11 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
     const motivo = motivoPersonalizado || motivoSeleccionado
 
     if (!motivo.trim()) {
-      toast.error('Debes especificar el motivo de la rectificación')
+      toast({
+        title: 'Error',
+        description: 'Debes especificar el motivo de la rectificación',
+        variant: 'destructive',
+      })
       setLoading(false)
       return
     }
@@ -64,7 +68,11 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
     }))
 
     if (lineasArray.length === 0) {
-      toast.error('Debes especificar al menos una línea a rectificar')
+      toast({
+        title: 'Error',
+        description: 'Debes especificar al menos una línea a rectificar',
+        variant: 'destructive',
+      })
       setLoading(false)
       return
     }
@@ -77,15 +85,27 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
       })
 
       if (result.error) {
-        toast.error(result.error)
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        })
       } else {
-        toast.success('Factura rectificativa creada correctamente')
+        toast({
+          title: 'Éxito',
+          description: 'Factura rectificativa creada correctamente',
+          variant: 'success',
+        })
         setOpen(false)
         router.push(`/facturas/${result.id}`)
         router.refresh()
       }
     } catch (error) {
-      toast.error('Error al crear la factura rectificativa')
+      toast({
+        title: 'Error',
+        description: 'Error al crear la factura rectificativa',
+        variant: 'destructive',
+      })
       console.error(error)
     } finally {
       setLoading(false)
