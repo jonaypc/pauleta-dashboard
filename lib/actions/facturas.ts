@@ -37,7 +37,7 @@ export async function crearFacturaRectificativa(params: CrearRectificativaParams
     // 2. Obtener configuración de empresa para numeración
     const { data: empresa } = await supabase
       .from('empresa')
-      .select('serie_factura, ultimo_num_factura')
+      .select('id, serie_factura, ultimo_num_factura')
       .single()
 
     if (!empresa) {
