@@ -38,7 +38,7 @@
 |--------|------|--------|
 | Dashboard | `app/(dashboard)/page.tsx` | ✅ |
 | Clientes | `app/(dashboard)/clientes/` | ✅ CRUD completo |
-| Facturas | `app/(dashboard)/facturas/` | ✅ + PDF + email + importar |
+| Facturas | `app/(dashboard)/facturas/` | ✅ + PDF + email + importar + **rectificativas** |
 | Albaranes | `app/(dashboard)/facturas/[id]/albaran/` | ✅ |
 | Presupuestos | `app/(dashboard)/presupuestos/` | ✅ + convertir a factura |
 | Cobros | `app/(dashboard)/cobros/` | ✅ |
@@ -124,9 +124,31 @@ Todos en `types/index.ts` — antes de crear un tipo nuevo, revisa si ya existe 
 
 ---
 
+## FACTURAS RECTIFICATIVAS (ABONOS/DEVOLUCIONES)
+Implementado según Real Decreto 1619/2012:
+- **Server Action**: `lib/actions/facturas.ts` → `crearFacturaRectificativa()`
+- **Componente UI**: `components/facturas/CrearRectificativaDialog.tsx`
+- **Tipos**: `TipoFactura = 'ordinaria' | 'rectificativa'`
+- **Campos DB**: `tipo_factura`, `factura_rectificada_id`, `motivo_rectificacion`, `fecha_factura_rectificada`
+- **PDF**: Generador detecta tipo y muestra encabezado especial + referencia
+- **Validación**: Trigger `tr_validar_factura_rectificativa` asegura integridad
+- **Vista helper**: `v_facturas_con_rectificativas` para informes
+- **Función**: `get_total_neto_factura(uuid)` calcula total neto (original + rectificativas)
+- **Doc completa**: `docs/FACTURAS_RECTIFICATIVAS.md`
+
+Flujo:
+1. Factura emitida/cobrada → botón "Crear Rectificativa"
+2. Seleccionar motivo + líneas con cantidades negativas (devolución)
+3. Se genera factura nueva con importes negativos
+4. Stock se ajusta automáticamente (trigger existente de lineas_factura)
+5. PDF y email funcionan igual que facturas normales
+
+---
+
 ## ANTES DE EMPEZAR CUALQUIER TAREA
 1. Lee `types/index.ts` para ver los tipos existentes
 2. Si tocas Supabase: verifica la tabla exacta antes de escribir queries
 3. Si creas componente nuevo: busca en `components/` si ya existe algo similar
 4. Si generas PDF: usa `lib/pdf-generator.ts` como base
 5. Si envías email: usa `lib/email.ts`
+6. Si trabajas con facturas: considera si aplica a rectificativas también
