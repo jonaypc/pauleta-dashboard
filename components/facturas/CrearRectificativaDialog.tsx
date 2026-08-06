@@ -61,11 +61,16 @@ export function CrearRectificativaDialog({ factura }: CrearRectificativaDialogPr
     }
 
     // Validar que haya al menos una línea modificada
-    const lineasArray = Object.entries(lineasModificadas).map(([lineaId, datos]) => ({
-      linea_original_id: lineaId,
-      cantidad: datos.cantidad,
-      precio_unitario: datos.precio
-    }))
+    const lineasArray = Object.entries(lineasModificadas).map(([lineaId, datos]) => {
+      // Buscar la línea original para obtener el precio si no se especificó
+      const lineaOriginal = factura.lineas?.find(l => l.id === lineaId)
+
+      return {
+        linea_original_id: lineaId,
+        cantidad: datos.cantidad || 0,
+        precio_unitario: datos.precio || lineaOriginal?.precio_unitario || 0
+      }
+    }).filter(linea => linea.cantidad !== 0) // Solo enviar líneas con cantidad
 
     if (lineasArray.length === 0) {
       toast({
