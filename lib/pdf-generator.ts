@@ -31,6 +31,7 @@ function getImageDimensions(buffer: ArrayBuffer, format: 'PNG' | 'JPEG'): { widt
 }
 
 interface InvoicePDFData {
+  copia?: boolean
   factura: {
     numero: string
     fecha: string
@@ -72,7 +73,7 @@ function formatFechaCorta(fecha: string): string {
 }
 
 export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> {
-  const { factura, cliente, empresa } = data
+  const { factura, cliente, empresa, copia = false } = data
   const color = empresa.color_primario || "#1e40af"
 
   const doc = new jsPDF({
@@ -379,6 +380,16 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.setTextColor(r, g, b)
   doc.setFont('helvetica', 'normal')
   doc.text('Gracias por su compra.', pageWidth / 2, footerY + 13, { align: 'center' })
+
+  if (copia) {
+    for (let page = 1; page <= doc.getNumberOfPages(); page++) {
+      doc.setPage(page)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.setTextColor(220, 38, 38)
+      doc.text('COPIA', pageWidth / 2, 10, { align: 'center' })
+    }
+  }
 
   // Convert to Buffer
   const arrayBuffer = doc.output('arraybuffer')
