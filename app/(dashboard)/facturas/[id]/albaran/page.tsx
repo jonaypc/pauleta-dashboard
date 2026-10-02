@@ -456,15 +456,9 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         </div>
 
         {/* Print Button */}
-        <button className="print-button" id="print-btn">
+        <a className="print-button" href={`/print/albaran/${params.id}`}>
           Imprimir Albarán
-        </button>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-                    document.getElementById('print-btn').addEventListener('click', function() {
-                        window.print();
-                    });
-                `}} />
+        </a>
       </body>
     </html>
   )

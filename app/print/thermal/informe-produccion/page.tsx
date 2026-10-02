@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { InformeProduccionFacturas } from '@/lib/actions/informes-produccion'
 import { Button } from '@/components/ui/button'
-import { Printer, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { PrintButton } from '@/components/facturas/PrintButton'
 
 export default function InformeProduccionThermalPage() {
   const [informe, setInforme] = useState<InformeProduccionFacturas | null>(null)
@@ -17,9 +18,6 @@ export default function InformeProduccionThermalPage() {
     }
   }, [])
 
-  const handlePrint = () => {
-    window.print()
-  }
 
   const handleBack = () => {
     router.back()
@@ -213,13 +211,9 @@ export default function InformeProduccionThermalPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver
         </Button>
-        <Button onClick={handlePrint} size="sm">
-          <Printer className="h-4 w-4 mr-2" />
-          Imprimir
-        </Button>
       </div>
 
-      <div className="thermal-receipt">
+      <div className="thermal-receipt" data-print-root>
         {/* HEADER */}
         <div className="company-name">Pauleta Canaria S.L.</div>
         <div className="company-details">
@@ -286,6 +280,8 @@ export default function InformeProduccionThermalPage() {
           Pauleta Canaria S.L.
         </div>
       </div>
+
+      <PrintButton showFormatSelector={false} />
     </div>
   )
 }

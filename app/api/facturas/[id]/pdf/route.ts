@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 export const maxDuration = 60
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -41,7 +41,9 @@ export async function GET(
 
         const { generateInvoicePDF } = await import("@/lib/pdf-generator")
 
+        const isCopy = request.nextUrl.searchParams.get("copia") === "true"
         const pdfBuffer = await generateInvoicePDF({
+            copia: isCopy,
             factura: {
                 ...factura,
                 lineas: factura.lineas || [],
@@ -56,7 +58,7 @@ export async function GET(
         return new NextResponse(new Uint8Array(pdfBuffer), {
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `inline; filename="${safeName}.pdf"`,
+                "Content-Disposition": `inline; filename="${safeName}${isCopy ? "-copia" : ""}.pdf"`,
             },
         })
     } catch (error: any) {
