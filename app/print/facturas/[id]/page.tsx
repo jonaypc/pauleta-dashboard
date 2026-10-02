@@ -665,7 +665,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
       </div>
 
       <div className="print-button-container print:hidden">
-        <PrintButton color={color} />
+        <PrintButton color={color} invoiceId={params.id} invoiceNumber={factura.numero} />
       </div>
     </div>
   )
