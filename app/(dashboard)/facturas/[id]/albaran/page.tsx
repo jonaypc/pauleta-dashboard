@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { PrintButton } from "@/components/facturas/PrintButton"
 
 interface PageProps {
   params: { id: string }
@@ -456,15 +457,7 @@ export default async function AlbaranPrintPage({ params }: PageProps) {
         </div>
 
         {/* Print Button */}
-        <button className="print-button" id="print-btn">
-          Imprimir Albarán
-        </button>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-                    document.getElementById('print-btn').addEventListener('click', function() {
-                        window.print();
-                    });
-                `}} />
+        <PrintButton color={color} />
       </body>
     </html>
   )
