@@ -108,7 +108,7 @@ export function PrintButton({
     const feedback = useInvoiceShare && (
         <div className="rounded-md bg-white/95 p-2 text-xs text-gray-800 shadow-lg max-w-[240px]" role="status" aria-live="polite">
             {pdfError || (pdfFile ? "En el menú que se abre, selecciona «Imprimir»." : "Primero prepara el PDF; después toca compartir para imprimir.")}
-            {pdfError && (
+            {(pdfError || pdfFile) && (
                 <a className="block mt-1 text-blue-700 underline" href={pdfUrl} target="_blank" rel="noopener noreferrer">
                     Abrir PDF
                 </a>
