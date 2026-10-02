@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { InformeProduccionFacturas } from '@/lib/actions/informes-produccion'
 import { Button } from '@/components/ui/button'
-import { Printer, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { PrintButton } from '@/components/facturas/PrintButton'
 
 export default function InformeProduccionPrintPage() {
   const [informe, setInforme] = useState<InformeProduccionFacturas | null>(null)
@@ -17,9 +18,6 @@ export default function InformeProduccionPrintPage() {
     }
   }, [])
 
-  const handlePrint = () => {
-    window.print()
-  }
 
   const handleBack = () => {
     router.back()
@@ -49,14 +47,10 @@ export default function InformeProduccionPrintPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver
         </Button>
-        <Button onClick={handlePrint} size="sm">
-          <Printer className="h-4 w-4 mr-2" />
-          Imprimir
-        </Button>
       </div>
 
       {/* Contenido para imprimir */}
-      <div className="max-w-full mx-auto p-6 print:p-4">
+      <div className="max-w-full mx-auto p-6 print:p-4" data-print-root>
         {/* Header */}
         <div className="mb-4 border-b-2 border-gray-900 pb-2">
           <h1 className="text-2xl font-bold text-gray-900 mb-1 print:text-xl">
@@ -171,6 +165,8 @@ export default function InformeProduccionPrintPage() {
           <p>{formatDate(informe.fecha_generacion)} • Pauleta Canaria S.L.</p>
         </div>
       </div>
+
+      <PrintButton />
 
       {/* Estilos de impresión */}
       <style jsx global>{`
