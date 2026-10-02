@@ -57,7 +57,8 @@ export function PrintButton({
                     throw new Error("No se pudo preparar el PDF de la factura.")
                 }
                 const blob = await response.blob()
-                setPdfFile(new File([blob], `${invoiceNumber || "Factura"}${isCopy ? "-copia" : ""}.pdf`, {
+                const safeName = (invoiceNumber || "Factura").replace(/[/\\?%*:|"<>]/g, "-")
+                setPdfFile(new File([blob], `${safeName}${isCopy ? "-copia" : ""}.pdf`, {
                     type: "application/pdf",
                 }))
             } catch (error) {
@@ -87,14 +88,17 @@ export function PrintButton({
             : pdfFile
                 ? "Compartir PDF e imprimir"
                 : "Preparar PDF para imprimir"
-        : "Imprimir A4"
+        : showFormatSelector ? "Imprimir A4" : "Imprimir / Guardar PDF"
 
     const printControl = (
         <button
             type="button"
             onClick={handlePrintA4}
             disabled={pdfBusy}
-            className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 text-sm"
+            className={showFormatSelector
+                ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 text-sm"
+                : "text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"}
+            style={showFormatSelector ? undefined : { backgroundColor: color }}
         >
             <Printer className="h-4 w-4" />
             {printLabel}
