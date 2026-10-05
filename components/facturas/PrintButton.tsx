@@ -73,6 +73,7 @@ export function PrintButton({
             backgroundColor: "#ffffff",
             scale: Math.min(window.devicePixelRatio || 1, 2),
             useCORS: true,
+            imageTimeout: 4000,
             logging: false,
             windowWidth: Math.max(printableRoot.scrollWidth, printableRoot.clientWidth),
             windowHeight: Math.max(printableRoot.scrollHeight, printableRoot.clientHeight),
@@ -141,27 +142,28 @@ export function PrintButton({
 
         let cancelled = false
 
-        const waitForPrintableAssets = async () => {
-            if (document.fonts?.ready) {
-                await document.fonts.ready
-            }
-
-            const root = document.querySelector<HTMLElement>("[data-print-root]")
-                || document.querySelector<HTMLElement>(".print-container")
-                || document.body
-            const images = Array.from(root.querySelectorAll("img"))
-
-            await Promise.all(images.map((img) => {
-                if (img.complete) return Promise.resolve()
-                return new Promise<void>((resolve) => {
-                    const done = () => resolve()
-                    img.addEventListener("load", done, { once: true })
-                    img.addEventListener("error", done, { once: true })
-                })
-            }))
-
-            // Give iOS one paint after fonts/images settle before capturing the invoice.
+        const waitForVisibleLayout = async () => {
+            // The print view is already rendered when this component mounts.
+            // Do not await document.fonts.ready or individual image events here:
+            // iOS standalone PWAs can leave those promises pending indefinitely.
             await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 250))
+        }
+
+        const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number) => {
+            let timeoutId: number | undefined
+            const timeout = new Promise<never>((_, reject) => {
+                timeoutId = window.setTimeout(
+                    () => reject(new Error("La preparación del PDF tardó demasiado. Pulsa para reintentar.")),
+                    milliseconds,
+                )
+            })
+
+            try {
+                return await Promise.race([promise, timeout])
+            } finally {
+                if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+            }
         }
 
         const preloadPdf = async () => {
@@ -170,8 +172,8 @@ export function PrintButton({
             setPdfFile(null)
 
             try {
-                await waitForPrintableAssets()
-                const blob = await preparePdf()
+                await waitForVisibleLayout()
+                const blob = await withTimeout(preparePdf(), 12000)
                 if (!cancelled) storePdf(blob)
             } catch (error) {
                 console.error("Error preloading print PDF:", error)
