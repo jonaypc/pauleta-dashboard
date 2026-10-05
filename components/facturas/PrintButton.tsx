@@ -26,10 +26,14 @@ function safeFileName(value: string) {
 export function PrintButton({
     color = "#2563EB",
     showFormatSelector = true,
+    invoiceId,
     invoiceNumber,
 }: PrintButtonProps) {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [standalone, setStandalone] = useState(false)
+    const [serverPdf, setServerPdf] = useState<File | null>(null)
+    const [pdfLoading, setPdfLoading] = useState(false)
+    const [pdfError, setPdfError] = useState("")
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -53,34 +57,89 @@ export function PrintButton({
         ? safeFileName(`${invoiceNumber}${isCopy ? "-copia" : ""}`)
         : fallbackFileName
 
+    const invoicePdfUrl = invoiceId && !isThermal
+        ? `/api/facturas/${invoiceId}/pdf${isCopy ? "?copia=true" : ""}`
+        : ""
+
+    useEffect(() => {
+        if (!standalone || !invoicePdfUrl) {
+            setServerPdf(null)
+            setPdfLoading(false)
+            setPdfError("")
+            return
+        }
+
+        const controller = new AbortController()
+        const timeoutId = window.setTimeout(() => controller.abort(), 12000)
+        let cancelled = false
+
+        const loadPdf = async () => {
+            setPdfLoading(true)
+            setPdfError("")
+            setServerPdf(null)
+            try {
+                const response = await fetch(invoicePdfUrl, {
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    signal: controller.signal,
+                })
+                if (!response.ok) throw new Error("No se pudo generar el PDF.")
+                const blob = await response.blob()
+                if (!cancelled) {
+                    setServerPdf(new File([blob], `${fileName}.pdf`, { type: "application/pdf" }))
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error("Error loading server PDF:", error)
+                    setPdfError("No se pudo precargar el PDF. Toca imprimir para abrirlo directamente.")
+                }
+            } finally {
+                window.clearTimeout(timeoutId)
+                if (!cancelled) setPdfLoading(false)
+            }
+        }
+
+        void loadPdf()
+        return () => {
+            cancelled = true
+            window.clearTimeout(timeoutId)
+            controller.abort()
+        }
+    }, [standalone, invoicePdfUrl, fileName])
+
     const handlePrint = async () => {
         if (!standalone) {
             window.print()
             return
         }
 
-        // iOS standalone mode: avoid window.print() and client-side PDF rendering,
-        // both of which are unreliable after the iOS update. Sharing the current
-        // printable URL opens the native iOS share sheet without re-rendering the invoice.
-        if (navigator.share) {
+        if (serverPdf && navigator.share && (!navigator.canShare || navigator.canShare({ files: [serverPdf] }))) {
             try {
                 await navigator.share({
+                    files: [serverPdf],
                     title: fileName,
-                    url: window.location.href,
                 })
                 return
             } catch (error) {
                 if (error instanceof DOMException && error.name === "AbortError") return
-                console.error("Error opening iOS share sheet:", error)
+                console.error("Error sharing PDF:", error)
             }
         }
 
-        // Last-resort fallback: open the same printable view in a new browser context.
+        if (invoicePdfUrl) {
+            window.open(invoicePdfUrl, "_blank", "noopener,noreferrer")
+            return
+        }
+
+        // For non-invoice printable views, open a fresh browser context.
+        // Safari/iOS can print the already-rendered page from there.
         window.open(window.location.href, "_blank", "noopener,noreferrer")
     }
 
     const printLabel = standalone
-        ? "Imprimir / compartir"
+        ? pdfLoading && invoicePdfUrl
+            ? "Cargando PDF…"
+            : "Imprimir / compartir"
         : showFormatSelector
             ? "Imprimir A4"
             : "Imprimir / Guardar PDF"
@@ -90,8 +149,8 @@ export function PrintButton({
             type="button"
             onClick={() => void handlePrint()}
             className={showFormatSelector
-                ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 text-sm"
-                : "text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"}
+                ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 text-sm"
+                : "text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90"}
             style={showFormatSelector ? undefined : { backgroundColor: color }}
         >
             <Printer className="h-4 w-4" />
@@ -103,8 +162,13 @@ export function PrintButton({
         <div
             className="rounded-md bg-white/95 p-2 text-xs text-gray-800 shadow-lg max-w-[250px]"
             role="status"
+            aria-live="polite"
         >
-            Toca «Imprimir / compartir» y después selecciona «Imprimir» en el menú de iOS.
+            {pdfError || (serverPdf
+                ? "PDF listo. Toca «Imprimir / compartir» y selecciona «Imprimir» en iOS."
+                : invoicePdfUrl && pdfLoading
+                    ? "Preparando el PDF desde el servidor…"
+                    : "Toca «Imprimir / compartir» para abrir las opciones de impresión.")}
         </div>
     )
 
