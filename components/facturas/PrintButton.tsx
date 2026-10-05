@@ -136,6 +136,62 @@ export function PrintButton({
         setPdfObjectUrl(URL.createObjectURL(blob))
     }
 
+    useEffect(() => {
+        if (!standalone) return
+
+        let cancelled = false
+
+        const waitForPrintableAssets = async () => {
+            if (document.fonts?.ready) {
+                await document.fonts.ready
+            }
+
+            const root = document.querySelector<HTMLElement>("[data-print-root]")
+                || document.querySelector<HTMLElement>(".print-container")
+                || document.body
+            const images = Array.from(root.querySelectorAll("img"))
+
+            await Promise.all(images.map((img) => {
+                if (img.complete) return Promise.resolve()
+                return new Promise<void>((resolve) => {
+                    const done = () => resolve()
+                    img.addEventListener("load", done, { once: true })
+                    img.addEventListener("error", done, { once: true })
+                })
+            }))
+
+            // Give iOS one paint after fonts/images settle before capturing the invoice.
+            await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        }
+
+        const preloadPdf = async () => {
+            setPdfBusy(true)
+            setPdfError("")
+            setPdfFile(null)
+
+            try {
+                await waitForPrintableAssets()
+                const blob = await preparePdf()
+                if (!cancelled) storePdf(blob)
+            } catch (error) {
+                console.error("Error preloading print PDF:", error)
+                if (!cancelled) {
+                    setPdfError(error instanceof Error ? error.message : "No se pudo preparar el documento para imprimir.")
+                }
+            } finally {
+                if (!cancelled) setPdfBusy(false)
+            }
+        }
+
+        void preloadPdf()
+
+        return () => {
+            cancelled = true
+        }
+        // Rebuild when the printable route or copy/original mode changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [standalone, pathname, isCopy, fileName])
+
     const handlePrint = async () => {
         if (!standalone) {
             window.print()
@@ -182,7 +238,7 @@ export function PrintButton({
             ? "Preparando para imprimir…"
             : pdfFile
                 ? "Imprimir / compartir"
-                : "Preparar para imprimir"
+                : "Reintentar preparar PDF"
         : showFormatSelector
             ? "Imprimir A4"
             : "Imprimir / Guardar PDF"
@@ -210,8 +266,8 @@ export function PrintButton({
         >
             {pdfError || (
                 pdfFile
-                    ? "Toca «Imprimir / compartir» y selecciona «Imprimir» en el menú de iOS."
-                    : "Toca una vez para preparar el documento y otra para abrir las opciones de impresión."
+                    ? "Documento listo. Toca «Imprimir / compartir» y selecciona «Imprimir» en iOS."
+                    : "Preparando el documento para imprimir…"
             )}
             {pdfObjectUrl && (
                 <a
