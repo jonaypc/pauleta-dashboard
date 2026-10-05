@@ -8,11 +8,10 @@ export const metadata = {
 export default async function RelacionFacturasPage() {
     const supabase = await createClient()
 
-    // Cargar clientes activos (filtrar por los que tienen facturas)
+    // Incluir también clientes inactivos para no perder su historial de facturas.
     const { data: clientes } = await supabase
         .from("clientes")
         .select("id, nombre, cif, persona_contacto")
-        .eq("activo", true)
         .order("nombre")
 
     // Cargar datos de empresa

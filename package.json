@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:security": "node --test tests/print-security.test.cjs"
+    "test:security": "node --test tests/print-security.test.cjs",
+    "test:reports": "node --test tests/relacion-facturas.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

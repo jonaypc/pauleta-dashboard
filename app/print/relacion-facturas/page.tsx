@@ -1,3 +1,5 @@
+import { obtenerFacturasRelacion, etiquetaPeriodo, sumarImportes, validarRango } from "@/lib/relacion-facturas"
+import { ResumenMensualPrint } from "@/components/informes/ResumenMensualPrint"
 import { createAuthenticatedClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
@@ -38,6 +40,8 @@ export default async function RelacionFacturasPrintPage({
         notFound()
     }
 
+    try { validarRango(desde, hasta) } catch { notFound() }
+
     // Obtener datos de la empresa
     const { data: empresa } = await supabase
         .from("empresa")
@@ -68,27 +72,17 @@ export default async function RelacionFacturasPrintPage({
     })
 
     // Obtener facturas del período
-    const { data: facturas } = await supabase
-        .from("facturas")
-        .select(`
-            id, numero, fecha, total,
-            cliente:clientes(nombre, persona_contacto, cif)
-        `)
-        .in("cliente_id", clienteIds)
-        .gte("fecha", desde)
-        .lte("fecha", hasta)
-        .neq("estado", "anulada")
-        .order("fecha", { ascending: true })
+    const facturas = await obtenerFacturasRelacion(supabase, clienteIds, desde, hasta)
 
-    const total = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
-    const periodoLabel = periodo === "mensual" ? "Mes completo" : periodo === "1" ? "1ª quincena" : "2ª quincena"
+    const total = sumarImportes(facturas)
+    const periodoLabel = etiquetaPeriodo(periodo)
 
     // Agrupar facturas por empresa
     const facturasPorEmpresa = empresasPorCIF.map(emp => ({
         ...emp,
         facturas: facturas?.filter(f => emp.clienteIds.includes((f as any).cliente_id) || (f.cliente as any)?.cif === emp.cif) || [],
-        total: (facturas?.filter(f => (f.cliente as any)?.cif === emp.cif) || []).reduce((sum, f) => sum + (f.total || 0), 0)
-    })).filter(g => g.facturas.length > 0)
+        total: sumarImportes(facturas.filter(f => f.cliente?.cif === emp.cif))
+    }))
 
     const formatFecha = (f: string) => new Date(f).toLocaleDateString("es-ES")
     const formatFechaISO = (f: string) => f
@@ -296,6 +290,7 @@ export default async function RelacionFacturasPrintPage({
                                 {grupo.nombre} ({grupo.cif})
                             </div>
                         )}
+                        <ResumenMensualPrint facturas={grupo.facturas} desde={desde} hasta={hasta} />
                         <table>
                             <thead>
                                 <tr>

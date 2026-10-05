@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "@/hooks/use-toast"
-import { FileText, Printer, Download, Loader2, Calendar, Building2, Check } from "lucide-react"
+import { FileText, Printer, Loader2, Building2 } from "lucide-react"
+
+import { calcularRango, ultimosDoceMeses, resumenMensual, sumarImportes, obtenerFacturasRelacion, type PeriodoRelacion, type RangoRelacion } from "@/lib/relacion-facturas"
 
 interface Cliente {
     id: string
@@ -49,11 +51,19 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
     const [selectedCIFs, setSelectedCIFs] = useState<string[]>([])
-    const [periodo, setPeriodo] = useState<"1" | "2" | "mensual">("1")
+    const [periodo, setPeriodo] = useState<PeriodoRelacion>("1")
     const [mes, setMes] = useState(() => {
         const now = new Date()
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     })
+    const [anio, setAnio] = useState(() => String(new Date().getFullYear()))
+    const [fechaDesde, setFechaDesde] = useState(() => ultimosDoceMeses().desde)
+    const [fechaHasta, setFechaHasta] = useState(() => ultimosDoceMeses().hasta)
+    const [rangoConsultado, setRangoConsultado] = useState<RangoRelacion | null>(null)
+    const filtros = JSON.stringify([selectedCIFs, periodo, mes, anio, fechaDesde, fechaHasta])
+    const filtrosActuales = useRef(filtros)
+    filtrosActuales.current = filtros
+    useEffect(() => { setShowPreview(false) }, [filtros])
     const [entregadoPor, setEntregadoPor] = useState("Jonay Pérez Carreño")
     const [facturas, setFacturas] = useState<FacturaRelacion[]>([])
     const [showPreview, setShowPreview] = useState(false)
@@ -88,30 +98,13 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
         }
     }
 
-    // Calcular fechas del período
-    const calcularFechas = () => {
-        const [year, month] = mes.split('-').map(Number)
-        const ultimoDia = new Date(year, month, 0)
+    const calcularFechas = () => calcularRango({ periodo, mes, anio, desde: fechaDesde, hasta: fechaHasta })
 
-        if (periodo === "mensual") {
-            return {
-                desde: `${year}-${String(month).padStart(2, '0')}-01`,
-                hasta: `${year}-${String(month).padStart(2, '0')}-${ultimoDia.getDate()}`,
-                label: "Mes completo"
-            }
-        } else if (periodo === "1") {
-            return {
-                desde: `${year}-${String(month).padStart(2, '0')}-01`,
-                hasta: `${year}-${String(month).padStart(2, '0')}-15`,
-                label: "1ª quincena"
-            }
-        } else {
-            return {
-                desde: `${year}-${String(month).padStart(2, '0')}-16`,
-                hasta: `${year}-${String(month).padStart(2, '0')}-${ultimoDia.getDate()}`,
-                label: "2ª quincena"
-            }
-        }
+    const seleccionarUltimosDoceMeses = () => {
+        const rango = ultimosDoceMeses()
+        setPeriodo("personalizado")
+        setFechaDesde(rango.desde)
+        setFechaHasta(rango.hasta)
     }
 
     const buscarFacturas = async () => {
@@ -121,27 +114,18 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
         }
 
         setIsLoading(true)
+        setShowPreview(false)
+        const filtrosSolicitud = filtros
         try {
-            const { desde, hasta } = calcularFechas()
+            const rango = calcularFechas()
+            const { desde, hasta } = rango
 
             // Obtener IDs de clientes con los CIFs seleccionados
             const clientesSeleccionados = clientes.filter(c => c.cif && selectedCIFs.includes(c.cif))
             const clienteIds = clientesSeleccionados.map(c => c.id)
 
-            // Buscar facturas de estos clientes en el período
-            const { data, error } = await supabase
-                .from("facturas")
-                .select(`
-                    id, numero, fecha, total,
-                    cliente:clientes(nombre, persona_contacto, cif)
-                `)
-                .in("cliente_id", clienteIds)
-                .gte("fecha", desde)
-                .lte("fecha", hasta)
-                .neq("estado", "anulada")
-                .order("fecha", { ascending: true })
-
-            if (error) throw error
+            const data = await obtenerFacturasRelacion(supabase, clienteIds, desde, hasta)
+            if (filtrosActuales.current !== filtrosSolicitud) return
 
             const facturasFormateadas = data?.map(f => ({
                 id: f.id,
@@ -152,6 +136,7 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                 cliente_cif: (f.cliente as any)?.cif || ""
             })) || []
 
+            setRangoConsultado(rango)
             setFacturas(facturasFormateadas)
             setShowPreview(true)
 
@@ -167,15 +152,15 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
     }
 
     const formatFecha = (fecha: string) => {
-        return new Date(fecha).toLocaleDateString("es-ES")
+        return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-ES")
     }
 
     const formatMoney = (amount: number) => {
         return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(amount)
     }
 
-    const totalFacturas = facturas.reduce((sum, f) => sum + f.total, 0)
-    const { desde, hasta, label } = calcularFechas()
+    const totalFacturas = sumarImportes(facturas)
+    const { desde, hasta, label } = rangoConsultado || { desde: "", hasta: "", label: "" }
 
     const imprimirRelacion = () => {
         const cifsParam = selectedCIFs.join(",")
@@ -190,9 +175,9 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
             cif,
             nombre: empresa?.nombre || cif,
             facturas: facturasEmpresa,
-            total: facturasEmpresa.reduce((sum, f) => sum + f.total, 0)
+            total: sumarImportes(facturasEmpresa)
         }
-    }).filter(g => g.facturas.length > 0)
+    })
 
     return (
         <div className="space-y-6">
@@ -240,41 +225,51 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                         )}
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {/* Selector de mes */}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div className="space-y-2">
-                            <Label>Mes</Label>
-                            <Input
-                                type="month"
-                                value={mes}
-                                onChange={(e) => setMes(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Selector de quincena */}
-                        <div className="space-y-2">
-                            <Label>Período</Label>
-                            <Select value={periodo} onValueChange={(v) => setPeriodo(v as "1" | "2" | "mensual")}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
+                            <Label htmlFor="periodo-relacion">Período</Label>
+                            <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoRelacion)}>
+                                <SelectTrigger id="periodo-relacion"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="1">1ª Quincena (1-15)</SelectItem>
                                     <SelectItem value="2">2ª Quincena (16-fin)</SelectItem>
                                     <SelectItem value="mensual">Mes completo</SelectItem>
+                                    <SelectItem value="anual">Año completo</SelectItem>
+                                    <SelectItem value="personalizado">Intervalo de fechas</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-
-                        {/* Botón buscar */}
-                        <div className="space-y-2">
-                            <Label>&nbsp;</Label>
-                            <Button onClick={buscarFacturas} disabled={isLoading || selectedCIFs.length === 0} className="w-full">
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-                                Buscar Facturas
-                            </Button>
-                        </div>
+                        {periodo === "anual" ? (
+                            <div className="space-y-2">
+                                <Label htmlFor="anio-relacion">Año</Label>
+                                <Input id="anio-relacion" type="number" min="1900" max="9999" step="1" value={anio} onChange={e => setAnio(e.target.value)} />
+                            </div>
+                        ) : periodo === "personalizado" ? (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="desde-relacion">Desde</Label>
+                                    <Input id="desde-relacion" type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="hasta-relacion">Hasta</Label>
+                                    <Input id="hasta-relacion" type="date" min={fechaDesde} value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label htmlFor="mes-relacion">Mes</Label>
+                                <Input id="mes-relacion" type="month" value={mes} onChange={e => setMes(e.target.value)} />
+                            </div>
+                        )}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" onClick={seleccionarUltimosDoceMeses}>Últimos 12 meses completos</Button>
+                        <Button onClick={buscarFacturas} disabled={isLoading || selectedCIFs.length === 0}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                            Buscar Facturas
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Importes con IGIC, agrupados por CIF. Incluye abonos y excluye facturas anuladas.</p>
 
                     {/* Campos adicionales */}
                     <div className="grid gap-4 md:grid-cols-2">
@@ -299,9 +294,9 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
             </Card>
 
             {/* Vista previa */}
-            {showPreview && (
+            {showPreview && rangoConsultado && (
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <CardTitle>Vista Previa</CardTitle>
                             <CardDescription>
@@ -316,17 +311,28 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                         </div>
                     </CardHeader>
                     <CardContent>
-                        {facturas.length > 0 ? (
+                        {selectedCIFs.length > 0 ? (
                             <>
                                 {facturasPorEmpresa.map(grupo => (
                                     <div key={grupo.cif} className="mb-6">
-                                        {selectedCIFs.length > 1 && (
+                                        {(
                                             <div className="flex items-center gap-2 mb-2 pb-2 border-b">
                                                 <Building2 className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-semibold">{grupo.nombre}</span>
                                                 <span className="text-xs text-muted-foreground">({grupo.cif})</span>
                                             </div>
                                         )}
+                                        <h3 className="font-semibold mb-2">Resumen mensual</h3>
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Mes</TableHead><TableHead className="text-right">Facturas</TableHead><TableHead className="text-right">Total con IGIC</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {resumenMensual(grupo.facturas, desde, hasta).map(mes => (
+                                                    <TableRow key={mes.mes}><TableCell className="capitalize">{mes.label}</TableCell><TableCell className="text-right">{mes.cantidad}</TableCell><TableCell className="text-right">{formatMoney(mes.total)}</TableCell></TableRow>
+                                                ))}
+                                                <TableRow className="font-bold bg-muted/50"><TableCell>Total del periodo</TableCell><TableCell className="text-right">{grupo.facturas.length}</TableCell><TableCell className="text-right">{formatMoney(grupo.total)}</TableCell></TableRow>
+                                            </TableBody>
+                                        </Table>
+                                        <h3 className="font-semibold mt-6 mb-2">Detalle de facturas</h3>
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -359,7 +365,7 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
                                     </div>
                                 ))}
 
-                                <div className="mt-4 flex justify-between text-sm text-muted-foreground border-t pt-4">
+                                <div className="mt-4 flex flex-wrap gap-3 justify-between text-sm text-muted-foreground border-t pt-4">
                                     <span>{facturas.length} facturas encontradas{selectedCIFs.length > 1 ? ` de ${facturasPorEmpresa.length} empresas` : ""}</span>
                                     <Badge variant="outline" className="text-lg px-4 py-1">
                                         Total General: {formatMoney(totalFacturas)}

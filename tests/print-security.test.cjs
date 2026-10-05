@@ -22,6 +22,8 @@ function load(file, mocks = {}) {
   const module = { exports: {} }
   const requireMock = name => {
     if (name in mocks) return mocks[name]
+    if (name === '@/lib/relacion-facturas') return load('lib/relacion-facturas.ts', mocks)
+    if (name === '@/components/informes/ResumenMensualPrint') return load('components/informes/ResumenMensualPrint.tsx', mocks)
     if (name.startsWith('@/components/')) return { PrintButton: () => null }
     return require(name)
   }
@@ -101,9 +103,9 @@ for (const thermal of [false, true]) {
       auth: { getUser: async () => ({ data: { user: { id: 'staff' } }, error: null }) },
       from(table) {
         calls.push(['from', table])
-        const result = { data: table === 'empresa' ? company : table === 'clientes' ? [customer] : invoices, error: null }
+        const result = { data: table === 'empresa' ? company : table === 'clientes' ? [customer] : invoices, error: null, count: table === 'facturas' ? invoices.length : null }
         const query = { then: (resolve, reject) => Promise.resolve(result).then(resolve, reject) }
-        for (const method of ['select', 'single', 'in', 'gte', 'lte', 'neq', 'order']) {
+        for (const method of ['select', 'single', 'in', 'gte', 'lte', 'neq', 'order', 'range']) {
           query[method] = (...args) => { calls.push([method, ...args]); return query }
         }
         return query

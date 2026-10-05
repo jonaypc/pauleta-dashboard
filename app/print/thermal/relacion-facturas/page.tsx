@@ -1,3 +1,5 @@
+import { obtenerFacturasRelacion, etiquetaPeriodo, sumarImportes, validarRango } from "@/lib/relacion-facturas"
+import { ResumenMensualPrint } from "@/components/informes/ResumenMensualPrint"
 import { createAuthenticatedClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
@@ -52,6 +54,8 @@ export default async function RelacionFacturasThermalPage({
     notFound()
   }
 
+  try { validarRango(desde, hasta) } catch { notFound() }
+
   const { data: empresa } = await supabase
     .from("empresa")
     .select("*")
@@ -77,26 +81,16 @@ export default async function RelacionFacturasThermalPage({
     }
   })
 
-  const { data: facturas } = await supabase
-    .from("facturas")
-    .select(`
-      id, numero, fecha, total,
-      cliente:clientes(nombre, persona_contacto, cif)
-    `)
-    .in("cliente_id", clienteIds)
-    .gte("fecha", desde)
-    .lte("fecha", hasta)
-    .neq("estado", "anulada")
-    .order("fecha", { ascending: true })
+  const facturas = await obtenerFacturasRelacion(supabase, clienteIds, desde, hasta)
 
-  const total = facturas?.reduce((sum, f) => sum + (f.total || 0), 0) || 0
-  const periodoLabel = periodo === "mensual" ? "Mes completo" : periodo === "1" ? "1ª quincena" : "2ª quincena"
+  const total = sumarImportes(facturas)
+  const periodoLabel = etiquetaPeriodo(periodo)
 
   const facturasPorEmpresa = empresasPorCIF.map(emp => ({
     ...emp,
     facturas: facturas?.filter(f => (f.cliente as any)?.cif === emp.cif) || [],
-    total: (facturas?.filter(f => (f.cliente as any)?.cif === emp.cif) || []).reduce((sum, f) => sum + (f.total || 0), 0)
-  })).filter(g => g.facturas.length > 0)
+    total: sumarImportes(facturas.filter(f => f.cliente?.cif === emp.cif))
+  }))
 
   const color = empresa?.color_primario || "#1e40af"
 
@@ -281,7 +275,7 @@ export default async function RelacionFacturasThermalPage({
           <div className="doc-type">Relación de Facturas</div>
           <div className="doc-info">
             <div>Período: {formatFecha(desde)} - {formatFecha(hasta)}</div>
-            {mes && <div>Mes: {mes}</div>}
+            {mes && periodo !== "anual" && periodo !== "personalizado" && <div>Mes: {mes}</div>}
             {periodo && <div>{periodoLabel}</div>}
             {entregado === 'true' && <div>✓ Entregado</div>}
             {fecha && <div>Entrega: {formatFecha(fecha)}</div>}
@@ -298,6 +292,7 @@ export default async function RelacionFacturasThermalPage({
             </div>
             <div className="client-cif">CIF: {grupo.cif}</div>
 
+            <ResumenMensualPrint facturas={grupo.facturas} desde={desde} hasta={hasta} />
             {grupo.facturas.map((factura: any) => (
               <div key={factura.id} className="invoice-row">
                 <span className="invoice-number">{factura.numero}</span>
