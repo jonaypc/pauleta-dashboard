@@ -28,7 +28,6 @@ function safeFileName(value: string) {
 export function PrintButton({
     color = "#2563EB",
     showFormatSelector = true,
-    invoiceId,
     invoiceNumber,
 }: PrintButtonProps) {
     const [dialogOpen, setDialogOpen] = useState(false)
