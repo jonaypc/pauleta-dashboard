@@ -1,7 +1,5 @@
 "use client"
 
-import html2canvas from "html2canvas"
-import { jsPDF } from "jspdf"
 import { Printer, Settings } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -32,10 +30,6 @@ export function PrintButton({
 }: PrintButtonProps) {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [standalone, setStandalone] = useState(false)
-    const [pdfFile, setPdfFile] = useState<File | null>(null)
-    const [pdfObjectUrl, setPdfObjectUrl] = useState("")
-    const [pdfBusy, setPdfBusy] = useState(false)
-    const [pdfError, setPdfError] = useState("")
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -43,12 +37,6 @@ export function PrintButton({
     useEffect(() => {
         setStandalone(isStandaloneMode())
     }, [])
-
-    useEffect(() => {
-        return () => {
-            if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl)
-        }
-    }, [pdfObjectUrl])
 
     const isCopy = searchParams.get("copia") === "true"
     const isThermal = pathname.includes("/print/thermal/")
@@ -65,182 +53,34 @@ export function PrintButton({
         ? safeFileName(`${invoiceNumber}${isCopy ? "-copia" : ""}`)
         : fallbackFileName
 
-    const buildPdfFromCurrentDocument = async () => {
-        const explicitRoot = document.querySelector<HTMLElement>("[data-print-root]")
-        const printableRoot = explicitRoot || document.querySelector<HTMLElement>(".print-container") || document.body
-
-        const canvas = await html2canvas(printableRoot, {
-            backgroundColor: "#ffffff",
-            scale: Math.min(window.devicePixelRatio || 1, 2),
-            useCORS: true,
-            imageTimeout: 4000,
-            logging: false,
-            windowWidth: Math.max(printableRoot.scrollWidth, printableRoot.clientWidth),
-            windowHeight: Math.max(printableRoot.scrollHeight, printableRoot.clientHeight),
-            ignoreElements: (element) => {
-                const node = element as HTMLElement
-                return (
-                    node.classList?.contains("print-button") ||
-                    node.classList?.contains("print-button-container") ||
-                    node.classList?.contains("no-print") ||
-                    node.classList?.contains("instructions") ||
-                    node.hasAttribute?.("data-print-controls")
-                )
-            },
-        })
-
-        const imageData = canvas.toDataURL("image/jpeg", 0.94)
-
-        if (isThermal) {
-            const pageWidthMm = 80
-            const pageHeightMm = Math.max(40, (canvas.height * pageWidthMm) / canvas.width)
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: [pageWidthMm, pageHeightMm],
-                compress: true,
-            })
-            pdf.addImage(imageData, "JPEG", 0, 0, pageWidthMm, pageHeightMm, undefined, "FAST")
-            return pdf.output("blob")
-        }
-
-        const pageWidthMm = 210
-        const pageHeightMm = 297
-        const imageHeightMm = (canvas.height * pageWidthMm) / canvas.width
-        const pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4",
-            compress: true,
-        })
-
-        let offsetY = 0
-        pdf.addImage(imageData, "JPEG", 0, offsetY, pageWidthMm, imageHeightMm, undefined, "FAST")
-        let remaining = imageHeightMm - pageHeightMm
-
-        while (remaining > 0) {
-            offsetY -= pageHeightMm
-            pdf.addPage()
-            pdf.addImage(imageData, "JPEG", 0, offsetY, pageWidthMm, imageHeightMm, undefined, "FAST")
-            remaining -= pageHeightMm
-        }
-
-        return pdf.output("blob")
-    }
-
-    const preparePdf = async () => buildPdfFromCurrentDocument()
-
-    const storePdf = (blob: Blob) => {
-        if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl)
-        const file = new File([blob], `${fileName}.pdf`, { type: "application/pdf" })
-        setPdfFile(file)
-        setPdfObjectUrl(URL.createObjectURL(blob))
-    }
-
-    useEffect(() => {
-        if (!standalone) return
-
-        let cancelled = false
-
-        const waitForVisibleLayout = async () => {
-            // The print view is already rendered when this component mounts.
-            // Do not await document.fonts.ready or individual image events here:
-            // iOS standalone PWAs can leave those promises pending indefinitely.
-            await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-            await new Promise<void>((resolve) => window.setTimeout(resolve, 250))
-        }
-
-        const withTimeout = async <T,>(promise: Promise<T>, milliseconds: number) => {
-            let timeoutId: number | undefined
-            const timeout = new Promise<never>((_, reject) => {
-                timeoutId = window.setTimeout(
-                    () => reject(new Error("La preparación del PDF tardó demasiado. Pulsa para reintentar.")),
-                    milliseconds,
-                )
-            })
-
-            try {
-                return await Promise.race([promise, timeout])
-            } finally {
-                if (timeoutId !== undefined) window.clearTimeout(timeoutId)
-            }
-        }
-
-        const preloadPdf = async () => {
-            setPdfBusy(true)
-            setPdfError("")
-            setPdfFile(null)
-
-            try {
-                await waitForVisibleLayout()
-                const blob = await withTimeout(preparePdf(), 12000)
-                if (!cancelled) storePdf(blob)
-            } catch (error) {
-                console.error("Error preloading print PDF:", error)
-                if (!cancelled) {
-                    setPdfError(error instanceof Error ? error.message : "No se pudo preparar el documento para imprimir.")
-                }
-            } finally {
-                if (!cancelled) setPdfBusy(false)
-            }
-        }
-
-        void preloadPdf()
-
-        return () => {
-            cancelled = true
-        }
-        // Rebuild when the printable route or copy/original mode changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [standalone, pathname, isCopy, fileName])
-
     const handlePrint = async () => {
         if (!standalone) {
             window.print()
             return
         }
 
-        // iOS requires the Share Sheet to be opened by a fresh user gesture.
-        // We therefore prepare the PDF on the first tap and share it on the next.
-        if (!pdfFile) {
-            setPdfBusy(true)
-            setPdfError("")
-            try {
-                const blob = await preparePdf()
-                storePdf(blob)
-            } catch (error) {
-                console.error("Error preparing print PDF:", error)
-                setPdfError(error instanceof Error ? error.message : "No se pudo preparar el documento para imprimir.")
-            } finally {
-                setPdfBusy(false)
-            }
-            return
-        }
-
-        if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [pdfFile] }))) {
+        // iOS standalone mode: avoid window.print() and client-side PDF rendering,
+        // both of which are unreliable after the iOS update. Sharing the current
+        // printable URL opens the native iOS share sheet without re-rendering the invoice.
+        if (navigator.share) {
             try {
                 await navigator.share({
-                    files: [pdfFile],
                     title: fileName,
+                    url: window.location.href,
                 })
-                setPdfError("")
+                return
             } catch (error) {
                 if (error instanceof DOMException && error.name === "AbortError") return
-                console.error("Error sharing print PDF:", error)
-                setPdfError("No se pudo abrir el menú de compartir. Usa «Abrir PDF» e imprime desde ahí.")
+                console.error("Error opening iOS share sheet:", error)
             }
-            return
         }
 
-        setPdfError("Este dispositivo no permite compartir el PDF. Usa «Abrir PDF» e imprime desde ahí.")
+        // Last-resort fallback: open the same printable view in a new browser context.
+        window.open(window.location.href, "_blank", "noopener,noreferrer")
     }
 
     const printLabel = standalone
-        ? pdfBusy
-            ? "Preparando para imprimir…"
-            : pdfFile
-                ? "Imprimir / compartir"
-                : "Reintentar preparar PDF"
+        ? "Imprimir / compartir"
         : showFormatSelector
             ? "Imprimir A4"
             : "Imprimir / Guardar PDF"
@@ -249,7 +89,6 @@ export function PrintButton({
         <button
             type="button"
             onClick={() => void handlePrint()}
-            disabled={pdfBusy}
             className={showFormatSelector
                 ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 text-sm"
                 : "text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"}
@@ -264,23 +103,8 @@ export function PrintButton({
         <div
             className="rounded-md bg-white/95 p-2 text-xs text-gray-800 shadow-lg max-w-[250px]"
             role="status"
-            aria-live="polite"
         >
-            {pdfError || (
-                pdfFile
-                    ? "Documento listo. Toca «Imprimir / compartir» y selecciona «Imprimir» en iOS."
-                    : "Preparando el documento para imprimir…"
-            )}
-            {pdfObjectUrl && (
-                <a
-                    className="block mt-1 text-blue-700 underline"
-                    href={pdfObjectUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    Abrir PDF
-                </a>
-            )}
+            Toca «Imprimir / compartir» y después selecciona «Imprimir» en el menú de iOS.
         </div>
     )
 
