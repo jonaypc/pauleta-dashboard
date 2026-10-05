@@ -470,7 +470,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         }
       `}} />
 
-      <div className="invoice">
+      <div className="invoice" data-print-root>
         {isCopia && (
           <div className="copy-label">COPIA</div>
         )}
