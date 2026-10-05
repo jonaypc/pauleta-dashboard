@@ -363,7 +363,7 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
   doc.text(formatPrecio(factura.total), totalsX + totalsW - 4, y + 2, { align: 'right' })
 
   // === Footer ===
-  const footerY = 270
+  const footerY = 252
 
   if (empresa.cuenta_bancaria) {
     doc.setFontSize(8)
@@ -376,10 +376,16 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
     doc.text(empresa.cuenta_bancaria, pageWidth / 2, footerY + 5, { align: 'center' })
   }
 
-  doc.setFontSize(9)
+  doc.setFontSize(8)
   doc.setTextColor(r, g, b)
   doc.setFont('helvetica', 'normal')
-  doc.text('Gracias por su compra.', pageWidth / 2, footerY + 13, { align: 'center' })
+  doc.text('Gracias por su compra. Para cualquier consulta sobre esta factura, no dude en contactarnos.', pageWidth / 2, footerY + 12, { align: 'center' })
+
+  const legalText = `De conformidad con lo establecido en el Reglamento (UE) 2016/679, de Protección de Datos (RGPD) y en la Ley Orgánica 3/2018, de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), le informamos que sus datos personales forman parte de un fichero responsabilidad de ${empresa.nombre || 'Pauleta Canaria SL'}, con la finalidad de gestionar la relación comercial.`
+  doc.setFontSize(6.5)
+  doc.setTextColor(100, 116, 139)
+  const legalLines = doc.splitTextToSize(legalText, contentWidth)
+  doc.text(legalLines, pageWidth / 2, footerY + 19, { align: 'center' })
 
   if (copia) {
     for (let page = 1; page <= doc.getNumberOfPages(); page++) {
