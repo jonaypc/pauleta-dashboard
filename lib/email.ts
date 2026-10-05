@@ -16,7 +16,6 @@ interface SendInvoiceEmailParams {
   total: number
   fecha: string
   empresaNombre: string
-  printUrl: string
   trackingId?: string
   pdfBuffer?: Buffer
 }
@@ -28,10 +27,14 @@ export async function sendInvoiceEmail({
   total,
   fecha,
   empresaNombre,
-  printUrl,
   trackingId,
   pdfBuffer,
 }: SendInvoiceEmailParams) {
+  // Las páginas de impresión son internas: el cliente recibe siempre el PDF.
+  if (!pdfBuffer || pdfBuffer.length === 0) {
+    throw new Error('No se puede enviar la factura sin el PDF adjunto. Inténtalo de nuevo.')
+  }
+
   const formattedTotal = new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: "EUR",
@@ -98,17 +101,6 @@ export async function sendInvoiceEmail({
                         <td style="padding: 16px 0 8px; border-top: 1px solid #e2e8f0; text-align: right; color: #2563eb; font-size: 20px; font-weight: 700;">${formattedTotal}</td>
                       </tr>
                     </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 8px 0 24px;">
-                    <a href="${printUrl}" style="display: inline-block; background-color: #2563eb; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                      Ver factura completa
-                    </a>
                   </td>
                 </tr>
               </table>

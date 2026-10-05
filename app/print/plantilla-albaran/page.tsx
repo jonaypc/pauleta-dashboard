@@ -1,5 +1,5 @@
 import { PrintButton } from "@/components/facturas/PrintButton"
-import { createAdminClient } from "@/lib/supabase/server"
+import { createAuthenticatedClient } from "@/lib/supabase/server"
 import NextImage from "next/image"
 
 interface PageProps {
@@ -15,7 +15,7 @@ export async function generateMetadata() {
 }
 
 export default async function PlantillaAlbaranPage({ searchParams }: PageProps) {
-  const supabase = await createAdminClient()
+  const supabase = await createAuthenticatedClient()
 
   // Obtener datos de la empresa
   const { data: empresa } = await supabase

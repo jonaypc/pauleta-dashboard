@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
             .single()
 
         const empresaNombre = empresa?.nombre || "Pauleta Canaria S.L."
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
         const resultados = {
             enviados: 0,
@@ -86,7 +85,6 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Send email
-                const printUrl = `${baseUrl}/print/facturas/${factura.id}`
                 const emailResult = await sendInvoiceEmail({
                     to: factura.cliente.email,
                     facturaNumero: factura.numero,
@@ -94,7 +92,6 @@ export async function POST(request: NextRequest) {
                     total: factura.total,
                     fecha: factura.fecha,
                     empresaNombre,
-                    printUrl,
                     trackingId,
                     pdfBuffer,
                 })

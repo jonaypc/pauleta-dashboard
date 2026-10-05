@@ -30,7 +30,7 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Refrescar la sesión si está expirada
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
 
   // Rutas públicas que no requieren autenticación
   const publicRoutes = ['/login', '/auth/callback', '/api/']
@@ -39,10 +39,12 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Si no hay usuario y no es ruta pública, redirigir a login
-  if (!user && !isPublicRoute) {
+  if ((error || !user) && !isPublicRoute) {
     const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+    response.cookies.getAll().forEach(cookie => redirectResponse.cookies.set(cookie))
+    return redirectResponse
   }
 
   // Si hay usuario y está en login, redirigir al dashboard

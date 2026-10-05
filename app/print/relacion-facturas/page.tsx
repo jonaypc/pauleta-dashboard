@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server"
+import { createAuthenticatedClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
 
@@ -28,7 +28,7 @@ export default async function RelacionFacturasPrintPage({
 }: { 
     searchParams: SearchParams 
 }) {
-    const supabase = await createAdminClient()
+    const supabase = await createAuthenticatedClient()
     const { cif, cifs, desde, hasta, periodo, mes, entregado, fecha } = searchParams
 
     // Soportar tanto un CIF individual (retrocompatible) como múltiples

@@ -1,8 +1,14 @@
-export default function PrintLayout({
+import { createAuthenticatedClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
+
+export default async function PrintLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    await createAuthenticatedClient()
+
     return (
         <div className="print-root">
             <style dangerouslySetInnerHTML={{

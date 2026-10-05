@@ -76,12 +76,8 @@ export async function POST(
             })
         } catch (pdfError: unknown) {
             const msg = pdfError instanceof Error ? pdfError.message : String(pdfError)
-            console.error("Error generating PDF (sending without attachment):", msg)
+            console.error("Error generating invoice PDF:", msg)
         }
-
-        // Construir URL de la factura
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-        const printUrl = `${baseUrl}/print/facturas/${params.id}`
 
         // Enviar email con PDF adjunto y tracking pixel
         const emailResult = await sendInvoiceEmail({
@@ -91,7 +87,6 @@ export async function POST(
             total: factura.total,
             fecha: factura.fecha,
             empresaNombre,
-            printUrl,
             trackingId,
             pdfBuffer,
         })

@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server"
+import { createAuthenticatedClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
 import NextImage from "next/image"
@@ -26,7 +26,7 @@ export async function generateMetadata() {
 }
 
 export default async function ControlCambiosRegistroPrintPage({ params }: PageProps) {
-  const supabase = await createAdminClient()
+  const supabase = await createAuthenticatedClient()
 
   const { data: registro, error } = await supabase
     .from("control_cambios")
