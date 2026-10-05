@@ -53,10 +53,6 @@ export function PrintButton({
 
     const isCopy = searchParams.get("copia") === "true"
     const isThermal = pathname.includes("/print/thermal/")
-    const serverPdfUrl = invoiceId
-        ? `/api/facturas/${encodeURIComponent(invoiceId)}/pdf${isCopy ? "?copia=true" : ""}`
-        : ""
-
     const fallbackFileName = useMemo(() => {
         const routeName = pathname
             .replace(/^\/print\/thermal\//, "")
@@ -132,20 +128,7 @@ export function PrintButton({
         return pdf.output("blob")
     }
 
-    const preparePdf = async () => {
-        if (invoiceId) {
-            const response = await fetch(serverPdfUrl, {
-                credentials: "same-origin",
-                cache: "no-store",
-            })
-            if (!response.ok || !response.headers.get("content-type")?.includes("application/pdf")) {
-                throw new Error("No se pudo preparar el PDF de la factura.")
-            }
-            return response.blob()
-        }
-
-        return buildPdfFromCurrentDocument()
-    }
+    const preparePdf = async () => buildPdfFromCurrentDocument()
 
     const storePdf = (blob: Blob) => {
         if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl)
