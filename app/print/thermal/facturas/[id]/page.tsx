@@ -292,7 +292,7 @@ export default async function FacturaThermalPage({ params, searchParams }: PageP
         }
       `}} />
 
-      <div className="thermal-receipt">
+      <div className="thermal-receipt" data-print-root>
         {/* HEADER */}
         {mostrarLogo && empresa?.logo_url && (
           <div className="company-logo">
