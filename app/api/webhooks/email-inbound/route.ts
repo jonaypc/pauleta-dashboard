@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
         }
 
         const failures = results.filter(result => result.status !== "success")
-        const status = failures.length ? 'error' : 'success'
+        const status = failures.length === results.length ? 'error' : failures.length ? 'partial_error' : 'success'
         if (logId) await supabase.from('webhook_logs').update({
             status,
             error: failures.length ? `${failures.length} attachment(s) failed` : null,
@@ -265,7 +265,9 @@ export async function POST(request: NextRequest) {
 
         if (failures.length) {
             console.error(`[Webhook] ${failures.length} of ${results.length} attachments failed.`)
-            return NextResponse.json({ success: false, results }, { status: 500 })
+            // A retry after partial success could duplicate expenses already recorded.
+            const httpStatus = failures.length === results.length ? 500 : 207
+            return NextResponse.json({ success: false, results }, { status: httpStatus })
         }
 
         console.log(`[Webhook Success] Processed ${results.length} files successfully.`)
