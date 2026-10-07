@@ -16,26 +16,24 @@ export async function POST(request: NextRequest) {
             console.error("Error parsing form data:", e)
         }
 
+        // Autenticar antes de escribir logs; nunca guardar la clave ni la URL completa.
+        const expectedApiKey = process.env.EMAIL_INBOUND_API_KEY
+        const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
+        if (!expectedApiKey || !apiKey || apiKey !== expectedApiKey) {
+            console.error("[Webhook Auth Error] Unauthorized request")
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
         const supabase = await createAdminClient()
         const { data: logEntry, error: logError } = await supabase.from('webhook_logs').insert({
             source: 'email-inbound',
             status: 'received',
             metadata: {
-                headers: Object.fromEntries(request.headers.entries()),
-                url: request.url,
                 form_keys: formData ? Array.from(formData.keys()) : []
             }
         }).select().single()
 
         const logId = logEntry?.id
-
-        // 1. Validar API Key (Seguridad básica)
-        const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key")
-        if (apiKey !== process.env.EMAIL_INBOUND_API_KEY) {
-            console.error(`[Webhook Auth Error] Received: '${apiKey}'`)
-            if (logId) await supabase.from('webhook_logs').update({ status: 'error', error: 'Unauthorized: Invalid API Key' }).eq('id', logId)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
 
         if (!formData) {
             if (logId) await supabase.from('webhook_logs').update({ status: 'error', error: 'No Form Data' }).eq('id', logId)
@@ -257,7 +255,18 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        if (logId) await supabase.from('webhook_logs').update({ status: 'success', metadata: { results } }).eq('id', logId)
+        const failures = results.filter(result => result.status !== "success")
+        const status = failures.length ? 'error' : 'success'
+        if (logId) await supabase.from('webhook_logs').update({
+            status,
+            error: failures.length ? `${failures.length} attachment(s) failed` : null,
+            metadata: { results }
+        }).eq('id', logId)
+
+        if (failures.length) {
+            console.error(`[Webhook] ${failures.length} of ${results.length} attachments failed.`)
+            return NextResponse.json({ success: false, results }, { status: 500 })
+        }
 
         console.log(`[Webhook Success] Processed ${results.length} files successfully.`)
         return NextResponse.json({ success: true, results })
