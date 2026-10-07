@@ -61,7 +61,9 @@ export async function GET(request: NextRequest) {
             "Cliente": f.cliente?.nombre || "Sin cliente",
             "CIF Cliente": f.cliente?.cif || "",
             "Base Imponible": f.base_imponible || 0,
-            "% IGIC": f.base_imponible\n                ? Math.round(((f.igic || 0) / f.base_imponible) * 100)\n                : 0,
+            "% IGIC": f.base_imponible
+                ? Math.round(((f.igic || 0) / f.base_imponible) * 100)
+                : 0,
             "IGIC": f.igic || 0,
             "Total": f.total || 0,
             "Estado": f.estado,
