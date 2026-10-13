@@ -220,57 +220,82 @@ export async function generateInvoicePDF(data: InvoicePDFData, sharedDoc?: jsPDF
   doc.line(margin, y, pageWidth - margin, y)
   y += 8
 
-  // === Client info ===
+  // === Billing and delivery information: two side-by-side columns ===
+  // Reserve the height of the taller column instead of stacking delivery
+  // under billing (important for invoices with many product lines).
+  const hasDeliveryLocation = Boolean(
+    factura.establecimiento_entrega ||
+    factura.direccion_entrega_factura ||
+    cliente.direccion_entrega ||
+    cliente.ciudad_entrega ||
+    cliente.cp_entrega ||
+    cliente.provincia_entrega
+  )
+  const columnGap = 12
+  const partyColumnWidth = hasDeliveryLocation ? (contentWidth - columnGap) / 2 : contentWidth
+  const deliveryX = margin + partyColumnWidth + columnGap
+  let billingY = y
+  let deliveryY = y
+
+  // Wrap all names and addresses inside their own column to prevent overlap.
+  function drawPartyText(value: string, x: number, atY: number, width: number, lineHeight: number): number {
+    if (!value) return atY
+    const lines = doc.splitTextToSize(value, width)
+    doc.text(lines, x, atY)
+    return atY + lines.length * lineHeight
+  }
+
   doc.setFontSize(9)
   doc.setTextColor(r, g, b)
   doc.setFont('helvetica', 'bold')
-  doc.text('FACTURAR A', margin, y)
-  y += 5
+  doc.text('FACTURAR A', margin, billingY)
+  billingY += 5
 
   doc.setFontSize(12)
   doc.setTextColor(30, 41, 59)
-  doc.text(cliente.nombre, margin, y)
-  y += 5
+  billingY = drawPartyText(cliente.nombre, margin, billingY, partyColumnWidth, 5)
 
   doc.setFontSize(9)
   doc.setTextColor(100, 116, 139)
   doc.setFont('helvetica', 'normal')
-  if (cliente.cif) { doc.text(`CIF: ${cliente.cif}`, margin, y); y += 4 }
-  if (cliente.direccion) { doc.text(cliente.direccion, margin, y); y += 4 }
+  if (cliente.cif) billingY = drawPartyText(`CIF: ${cliente.cif}`, margin, billingY, partyColumnWidth, 4)
+  if (cliente.direccion) billingY = drawPartyText(cliente.direccion, margin, billingY, partyColumnWidth, 4)
   if (cliente.ciudad || cliente.codigo_postal) {
-    doc.text(`${cliente.codigo_postal || ''} ${cliente.ciudad || ''}${cliente.provincia ? ` (${cliente.provincia})` : ''}`.trim(), margin, y)
-    y += 4
+    billingY = drawPartyText(
+      `${cliente.codigo_postal || ''} ${cliente.ciudad || ''}${cliente.provincia ? ` (${cliente.provincia})` : ''}`.trim(),
+      margin, billingY, partyColumnWidth, 4
+    )
   }
 
-  // === Delivery location / establishment ===
-  // Customer billing details remain unchanged. Show the specific delivery site
-  // when it is configured for this customer.
-  const hasDeliveryLocation = Boolean(factura.establecimiento_entrega || factura.direccion_entrega_factura || cliente.direccion_entrega || cliente.ciudad_entrega || cliente.cp_entrega || cliente.provincia_entrega)
   if (hasDeliveryLocation) {
-    y += 4
     doc.setFontSize(9)
     doc.setTextColor(r, g, b)
     doc.setFont('helvetica', 'bold')
-    doc.text('LUGAR DE ENTREGA', margin, y)
-    y += 5
+    doc.text('LUGAR DE ENTREGA', deliveryX, deliveryY)
+    deliveryY += 5
 
-    if (factura.establecimiento_entrega || cliente.persona_contacto) {
+    const deliveryName = factura.establecimiento_entrega || cliente.persona_contacto || ''
+    if (deliveryName) {
       doc.setFontSize(11)
       doc.setTextColor(30, 41, 59)
-      doc.text(doc.splitTextToSize(factura.establecimiento_entrega || cliente.persona_contacto || '', contentWidth), margin, y)
-      y += doc.splitTextToSize(factura.establecimiento_entrega || cliente.persona_contacto || '', contentWidth).length * 5
+      deliveryY = drawPartyText(deliveryName, deliveryX, deliveryY, partyColumnWidth, 5)
     }
+
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 116, 139)
-    if (factura.direccion_entrega_factura || cliente.direccion_entrega) {
-      const lines = doc.splitTextToSize(factura.direccion_entrega_factura || cliente.direccion_entrega || '', contentWidth)
-      doc.text(lines, margin, y)
-      y += lines.length * 4
+    const deliveryAddress = factura.direccion_entrega_factura || cliente.direccion_entrega || ''
+    if (deliveryAddress) {
+      deliveryY = drawPartyText(deliveryAddress, deliveryX, deliveryY, partyColumnWidth, 4)
     }
     const deliveryCity = `${cliente.cp_entrega || ''} ${cliente.ciudad_entrega || ''}${cliente.provincia_entrega ? ` (${cliente.provincia_entrega})` : ''}`.trim()
-    if (!factura.direccion_entrega_factura && deliveryCity) { doc.text(deliveryCity, margin, y); y += 4 }
+    if (!factura.direccion_entrega_factura && deliveryCity) {
+      deliveryY = drawPartyText(deliveryCity, deliveryX, deliveryY, partyColumnWidth, 4)
+    }
   }
+
+  // Continue the invoice beneath the taller column, without using extra rows.
+  y = Math.max(billingY, deliveryY)
 
   // === Motivo rectificación (si aplica) ===
   if (esRectificativa && factura.motivo_rectificacion) {
