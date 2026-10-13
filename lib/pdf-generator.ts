@@ -240,6 +240,38 @@ export async function generateInvoicePDF(data: InvoicePDFData, sharedDoc?: jsPDF
     y += 4
   }
 
+  // === Delivery location / establishment ===
+  // Customer billing details remain unchanged. Show the specific delivery site
+  // when it is configured for this customer.
+  const hasDeliveryLocation = Boolean(
+    cliente.direccion_entrega || cliente.ciudad_entrega || cliente.cp_entrega || cliente.provincia_entrega
+  )
+  if (hasDeliveryLocation) {
+    y += 4
+    doc.setFontSize(9)
+    doc.setTextColor(r, g, b)
+    doc.setFont('helvetica', 'bold')
+    doc.text('LUGAR DE ENTREGA', margin, y)
+    y += 5
+
+    if (cliente.persona_contacto) {
+      doc.setFontSize(11)
+      doc.setTextColor(30, 41, 59)
+      doc.text(doc.splitTextToSize(cliente.persona_contacto, contentWidth), margin, y)
+      y += doc.splitTextToSize(cliente.persona_contacto, contentWidth).length * 5
+    }
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 116, 139)
+    if (cliente.direccion_entrega) {
+      const lines = doc.splitTextToSize(cliente.direccion_entrega, contentWidth)
+      doc.text(lines, margin, y)
+      y += lines.length * 4
+    }
+    const deliveryCity = `${cliente.cp_entrega || ''} ${cliente.ciudad_entrega || ''}${cliente.provincia_entrega ? ` (${cliente.provincia_entrega})` : ''}`.trim()
+    if (deliveryCity) { doc.text(deliveryCity, margin, y); y += 4 }
+  }
+
   // === Motivo rectificación (si aplica) ===
   if (esRectificativa && factura.motivo_rectificacion) {
     y += 2
