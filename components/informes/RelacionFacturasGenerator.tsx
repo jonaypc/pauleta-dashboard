@@ -164,7 +164,16 @@ export function RelacionFacturasGenerator({ clientes, empresa }: RelacionFactura
 
     const imprimirRelacion = () => {
         const cifsParam = selectedCIFs.join(",")
-        window.open(`/print/relacion-facturas?cifs=${encodeURIComponent(cifsParam)}&desde=${desde}&hasta=${hasta}&periodo=${periodo}&mes=${mes}&entregado=${encodeURIComponent(entregadoPor)}&fecha=${fechaPresentacion}`, '_blank')
+        const printUrl = `/print/relacion-facturas?cifs=${encodeURIComponent(cifsParam)}&desde=${desde}&hasta=${hasta}&periodo=${periodo}&mes=${mes}&entregado=${encodeURIComponent(entregadoPor)}&fecha=${fechaPresentacion}`
+        const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+            (navigator as Navigator & { standalone?: boolean }).standalone === true
+
+        if (isStandalone) {
+            // iOS standalone PWAs can silently block new windows.
+            window.location.assign(printUrl)
+        } else {
+            window.open(printUrl, "_blank", "noopener,noreferrer")
+        }
     }
 
     // Agrupar facturas por empresa (CIF)
