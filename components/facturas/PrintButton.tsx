@@ -127,13 +127,15 @@ export function PrintButton({
         }
 
         if (invoicePdfUrl) {
-            window.open(invoicePdfUrl, "_blank", "noopener,noreferrer")
+            // iOS standalone PWAs often suppress new tabs, leaving the button inert.
+            // Same-window navigation is reliable and preserves the browser back action.
+            window.location.assign(invoicePdfUrl)
             return
         }
 
         // For non-invoice printable views, open a fresh browser context.
         // Safari/iOS can print the already-rendered page from there.
-        window.open(window.location.href, "_blank", "noopener,noreferrer")
+        window.print()
     }
 
     const printLabel = standalone
