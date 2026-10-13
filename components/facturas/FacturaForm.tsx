@@ -60,6 +60,8 @@ export function FacturaForm({
         factura?.fecha_vencimiento || ""
     )
     const [notas, setNotas] = useState(factura?.notas || "")
+    const [establecimientoEntrega, setEstablecimientoEntrega] = useState(factura?.establecimiento_entrega || "")
+    const [direccionEntrega, setDireccionEntrega] = useState(factura?.direccion_entrega_factura || "")
     const [lineas, setLineas] = useState<LineaFacturaFormData[]>(
         factura?.lineas?.map((l) => ({
             producto_id: l.producto_id || undefined,
@@ -159,6 +161,8 @@ export function FacturaForm({
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
                         notas: notas || null,
+                        establecimiento_entrega: establecimientoEntrega.trim() || null,
+                        direccion_entrega_factura: direccionEntrega.trim() || null,
                         base_imponible: baseImponible,
                         igic,
                         total,
@@ -193,6 +197,8 @@ export function FacturaForm({
                         fecha,
                         fecha_vencimiento: fechaVencimiento || null,
                         notas: notas || null,
+                        establecimiento_entrega: establecimientoEntrega.trim() || null,
+                        direccion_entrega_factura: direccionEntrega.trim() || null,
                         estado: "emitida",
                         base_imponible: baseImponible,
                         igic,
@@ -306,6 +312,7 @@ export function FacturaForm({
                 </CardContent>
             </Card>
 
+            <Card><CardHeader><CardTitle>Establecimiento de entrega</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="establecimientoEntrega">Nombre del establecimiento</Label><Input id="establecimientoEntrega" value={establecimientoEntrega} onChange={e => setEstablecimientoEntrega(e.target.value)} placeholder="SPAR Puerto Rico" /></div><div><Label htmlFor="direccionEntregaFactura">Dirección de entrega</Label><Input id="direccionEntregaFactura" value={direccionEntrega} onChange={e => setDireccionEntrega(e.target.value)} /></div></CardContent></Card>
             {/* Líneas de factura */}
             <Card>
                 <CardContent className="pt-6">
