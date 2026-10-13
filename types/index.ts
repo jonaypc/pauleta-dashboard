@@ -102,6 +102,8 @@ export interface Factura {
   numero: string
   fecha: string
   cliente_id: string
+  establecimiento_entrega: string | null
+  direccion_entrega_factura: string | null
   base_imponible: number
   igic: number
   total: number
