@@ -212,13 +212,13 @@ export default async function FacturaDetailPage({
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" asChild>
-                        <Link href={`/print/facturas/${id}`} target="_blank">
+                        <Link href={`/print/facturas/${id}`}>
                             <Printer className="mr-2 h-4 w-4" />
                             Original
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href={`/print/facturas/${id}?copia=true`} target="_blank">
+                        <Link href={`/print/facturas/${id}?copia=true`}>
                             <Printer className="mr-2 h-4 w-4" opacity={0.5} />
                             Copia
                         </Link>
@@ -228,7 +228,7 @@ export default async function FacturaDetailPage({
                         clienteEmail={factura.cliente?.email}
                     />
                     <Button variant="outline" asChild>
-                        <Link href={`/print/albaran/${id}`} target="_blank">
+                        <Link href={`/print/albaran/${id}`}>
                             <Truck className="mr-2 h-4 w-4" />
                             Albarán
                         </Link>
