@@ -102,7 +102,6 @@ export function PrintButton({
                         ".document, .thermal-receipt, .control-cambios"
                     )
                     if (!printable) throw new Error("No se ha encontrado el documento para imprimir.")
-                    // @ts-ignore - html2pdf.js does not ship TypeScript declarations.
                     const { default: html2pdf } = await import("html2pdf.js")
                     if (cancelled) return
 
@@ -118,14 +117,16 @@ export function PrintButton({
                                 format: thermal ? [80, 297] : "a4",
                                 orientation: "portrait",
                             },
+                            // pagebreak is supported at runtime but missing in html2pdf.js types.
                             pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".signature-box", ".total-row"] },
-                        })
+                        } as any)
                         .from(printable)
                         .outputPdf("blob")
                 }
 
                 if (!cancelled) {
                     if (!blob.size) throw new Error("El PDF generado está vacío.")
+                    setPdfError("")
                     setServerPdf(new File([blob], `${fileName}.pdf`, { type: "application/pdf" }))
                 }
             } catch (error) {
