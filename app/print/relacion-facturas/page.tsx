@@ -296,7 +296,7 @@ export default async function RelacionFacturasPrintPage({
                                 <tr>
                                     <th>Nº Factura</th>
                                     <th>Fecha</th>
-                                    <th>Tienda SPAR</th>
+                                    <th>Establecimiento / Cliente</th>
                                     <th>Nº Albarán</th>
                                     <th className="right">Importe (€)</th>
                                     <th>Observaciones</th>
@@ -347,7 +347,7 @@ export default async function RelacionFacturasPrintPage({
                         <div className="signature-line">________________________</div>
                     </div>
                     <div className="signature-box">
-                        <div className="signature-label">Firma y sello de CENCOSU (Departamento de Pagos):</div>
+                        <div className="signature-label">{multiEmpresa ? "Firma y sello de recepción:" : `Firma y sello de ${facturasPorEmpresa[0]?.nombre || "cliente"}:`}</div>
                         <div className="signature-line">________________________</div>
                     </div>
                 </div>
