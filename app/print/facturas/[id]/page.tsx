@@ -219,7 +219,9 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
         }
         
         .party-box {
-          flex: 1;
+          flex: 1 1 0;
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
         
         .party-label {
@@ -527,15 +529,19 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
             </div>
           </div>
 
-          {(factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega) && (
+          {(factura.establecimiento_entrega || factura.direccion_entrega_factura ||
+            factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega ||
+            factura.cliente?.cp_entrega || factura.cliente?.provincia_entrega) && (
             <div className="party-box">
-              <div className="party-label">Enviar a</div>
-              <div className="party-name">{factura.cliente?.persona_contacto || factura.cliente?.nombre}</div>
+              <div className="party-label">Lugar de entrega</div>
+              <div className="party-name">{factura.establecimiento_entrega || factura.cliente?.persona_contacto || factura.cliente?.nombre}</div>
               <div className="party-address">
-                {factura.cliente?.direccion_entrega && <div>{factura.cliente.direccion_entrega}</div>}
-                {(factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega) && (
+                {(factura.direccion_entrega_factura || factura.cliente?.direccion_entrega) && (
+                  <div>{factura.direccion_entrega_factura || factura.cliente?.direccion_entrega}</div>
+                )}
+                {!factura.direccion_entrega_factura && (factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega || factura.cliente?.provincia_entrega) && (
                   <div>
-                    {factura.cliente.cp_entrega} {factura.cliente.ciudad_entrega}
+                    {factura.cliente?.cp_entrega} {factura.cliente?.ciudad_entrega}
                     {factura.cliente?.provincia_entrega && ` (${factura.cliente.provincia_entrega})`}
                   </div>
                 )}
