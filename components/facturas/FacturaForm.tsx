@@ -17,6 +17,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { Save, X, FileText, Calculator } from "lucide-react"
 import { ClienteCombobox } from "@/components/clientes/ClienteCombobox"
+import { getInvoiceDeliveryDefaults } from "@/lib/invoice-delivery"
 import { LineasFactura } from "./LineasFactura"
 import type {
     Factura,
@@ -49,6 +50,7 @@ export function FacturaForm({
     const router = useRouter()
     const supabase = createClient()
     const isEditing = !!factura
+    const initialDelivery = getInvoiceDeliveryDefaults(clientes.find(c => c.id === factura?.cliente_id))
 
     const [isLoading, setIsLoading] = useState(false)
     const [numero, setNumero] = useState(factura?.numero || "")
@@ -60,8 +62,8 @@ export function FacturaForm({
         factura?.fecha_vencimiento || ""
     )
     const [notas, setNotas] = useState(factura?.notas || "")
-    const [establecimientoEntrega, setEstablecimientoEntrega] = useState(factura?.establecimiento_entrega || "")
-    const [direccionEntrega, setDireccionEntrega] = useState(factura?.direccion_entrega_factura || "")
+    const [establecimientoEntrega, setEstablecimientoEntrega] = useState(factura?.establecimiento_entrega || initialDelivery.establecimiento)
+    const [direccionEntrega, setDireccionEntrega] = useState(factura?.direccion_entrega_factura || initialDelivery.direccion)
     const [lineas, setLineas] = useState<LineaFacturaFormData[]>(
         factura?.lineas?.map((l) => ({
             producto_id: l.producto_id || undefined,
@@ -75,6 +77,17 @@ export function FacturaForm({
             fecha_servicio: (l as any).fecha_servicio || undefined,
         })) || []
     )
+
+    // When the customer changes, fill the delivery fields from its saved address.
+    // Users may still edit these two fields for an individual invoice.
+    const handleClienteChange = (nuevoClienteId: string) => {
+        if (nuevoClienteId !== clienteId) {
+            const delivery = getInvoiceDeliveryDefaults(clientes.find(c => c.id === nuevoClienteId))
+            setEstablecimientoEntrega(delivery.establecimiento)
+            setDireccionEntrega(delivery.direccion)
+        }
+        setClienteId(nuevoClienteId)
+    }
 
     // Calcular totales
     const calcularTotales = () => {
@@ -270,7 +283,7 @@ export function FacturaForm({
                         <ClienteCombobox
                             clientes={clientes}
                             value={clienteId}
-                            onValueChange={setClienteId}
+                            onValueChange={handleClienteChange}
                             placeholder="Buscar cliente..."
                         />
                     </div>
@@ -312,7 +325,24 @@ export function FacturaForm({
                 </CardContent>
             </Card>
 
-            <Card><CardHeader><CardTitle>Establecimiento de entrega</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="establecimientoEntrega">Nombre del establecimiento</Label><Input id="establecimientoEntrega" value={establecimientoEntrega} onChange={e => setEstablecimientoEntrega(e.target.value)} placeholder="SPAR Puerto Rico" /></div><div><Label htmlFor="direccionEntregaFactura">Dirección de entrega</Label><Input id="direccionEntregaFactura" value={direccionEntrega} onChange={e => setDireccionEntrega(e.target.value)} /></div></CardContent></Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Establecimiento de entrega</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        Se completa automáticamente desde la ficha del cliente. Puedes modificarlo solo para esta factura.
+                    </p>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="establecimientoEntrega">Nombre del establecimiento</Label>
+                        <Input id="establecimientoEntrega" value={establecimientoEntrega} onChange={e => setEstablecimientoEntrega(e.target.value)} placeholder="SPAR Puerto Rico" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="direccionEntregaFactura">Dirección de entrega</Label>
+                        <Input id="direccionEntregaFactura" value={direccionEntrega} onChange={e => setDireccionEntrega(e.target.value)} />
+                    </div>
+                </CardContent>
+            </Card>
             {/* Líneas de factura */}
             <Card>
                 <CardContent className="pt-6">
