@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { Empresa, Cliente, LineaFactura, LineaPresupuesto, Factura } from '@/types'
+import { resolveInvoiceDelivery } from '@/lib/invoice-delivery'
 
 // Parse image dimensions from binary data
 function getImageDimensions(buffer: ArrayBuffer, format: 'PNG' | 'JPEG'): { width: number; height: number } | null {
@@ -223,14 +224,10 @@ export async function generateInvoicePDF(data: InvoicePDFData, sharedDoc?: jsPDF
   // === Billing and delivery information: two side-by-side columns ===
   // Reserve the height of the taller column instead of stacking delivery
   // under billing (important for invoices with many product lines).
-  const hasDeliveryLocation = Boolean(
-    factura.establecimiento_entrega ||
-    factura.direccion_entrega_factura ||
-    cliente.direccion_entrega ||
-    cliente.ciudad_entrega ||
-    cliente.cp_entrega ||
-    cliente.provincia_entrega
-  )
+  // Read the original customer delivery fields for both existing and new
+  // invoices; invoice-specific values only override them when explicitly set.
+  const delivery = resolveInvoiceDelivery(cliente, factura)
+  const hasDeliveryLocation = delivery.visible
   const columnGap = 12
   const partyColumnWidth = hasDeliveryLocation ? (contentWidth - columnGap) / 2 : contentWidth
   const deliveryX = margin + partyColumnWidth + columnGap
@@ -274,23 +271,18 @@ export async function generateInvoicePDF(data: InvoicePDFData, sharedDoc?: jsPDF
     doc.text('LUGAR DE ENTREGA', deliveryX, deliveryY)
     deliveryY += 5
 
-    const deliveryName = factura.establecimiento_entrega || cliente.persona_contacto || ''
-    if (deliveryName) {
+    if (delivery.establecimiento) {
       doc.setFontSize(11)
       doc.setTextColor(30, 41, 59)
-      deliveryY = drawPartyText(deliveryName, deliveryX, deliveryY, partyColumnWidth, 5)
+      doc.setFont('helvetica', 'bold')
+      deliveryY = drawPartyText(delivery.establecimiento, deliveryX, deliveryY, partyColumnWidth, 5)
     }
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100, 116, 139)
-    const deliveryAddress = factura.direccion_entrega_factura || cliente.direccion_entrega || ''
-    if (deliveryAddress) {
-      deliveryY = drawPartyText(deliveryAddress, deliveryX, deliveryY, partyColumnWidth, 4)
-    }
-    const deliveryCity = `${cliente.cp_entrega || ''} ${cliente.ciudad_entrega || ''}${cliente.provincia_entrega ? ` (${cliente.provincia_entrega})` : ''}`.trim()
-    if (!factura.direccion_entrega_factura && deliveryCity) {
-      deliveryY = drawPartyText(deliveryCity, deliveryX, deliveryY, partyColumnWidth, 4)
+    if (delivery.direccion) {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(100, 116, 139)
+      deliveryY = drawPartyText(delivery.direccion, deliveryX, deliveryY, partyColumnWidth, 4)
     }
   }
 

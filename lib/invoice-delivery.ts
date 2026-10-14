@@ -6,9 +6,17 @@ type CustomerDelivery = Pick<
     "cp_entrega" | "ciudad_entrega" | "provincia_entrega"
 >
 
+type InvoiceDeliveryOverride = {
+    establecimiento_entrega?: string | null
+    direccion_entrega_factura?: string | null
+}
+
 /**
- * Default delivery data for a new invoice. The customer keeps the canonical
- * address; invoices store a snapshot that can be manually overridden.
+ * Delivery details come from the customer's original saved card. A specific
+ * invoice can override either field, without changing the customer record.
+ *
+ * Many historic invoices do not have the newer invoice-level delivery columns,
+ * so never require those columns to be populated before showing delivery.
  */
 export function getInvoiceDeliveryDefaults(cliente: CustomerDelivery | null | undefined) {
     if (!cliente) return { establecimiento: "", direccion: "" }
@@ -18,15 +26,28 @@ export function getInvoiceDeliveryDefaults(cliente: CustomerDelivery | null | un
         [cliente.cp_entrega?.trim(), cliente.ciudad_entrega?.trim()].filter(Boolean).join(" "),
         cliente.provincia_entrega?.trim() ? `(${cliente.provincia_entrega.trim()})` : "",
     ].filter(Boolean).join(" ")
-
     const direccion = [street, cityLine].filter(Boolean).join(", ")
 
     return {
-        // The establishment/contact label is meaningful only when a separate
-        // delivery location is configured on the customer.
-        establecimiento: direccion
-            ? (cliente.persona_contacto?.trim() || cliente.nombre?.trim() || "")
-            : "",
+        // In customer records, "persona_contacto" often names the delivery
+        // establishment (e.g. a SPAR store), even if no street was entered.
+        establecimiento: cliente.persona_contacto?.trim() ||
+            (direccion ? cliente.nombre?.trim() || "" : ""),
         direccion,
+    }
+}
+
+export function resolveInvoiceDelivery(
+    cliente: CustomerDelivery | null | undefined,
+    factura?: InvoiceDeliveryOverride | null
+) {
+    const defaults = getInvoiceDeliveryDefaults(cliente)
+    const establecimiento = factura?.establecimiento_entrega?.trim() || defaults.establecimiento
+    const direccion = factura?.direccion_entrega_factura?.trim() || defaults.direccion
+
+    return {
+        establecimiento,
+        direccion,
+        visible: Boolean(establecimiento || direccion),
     }
 }

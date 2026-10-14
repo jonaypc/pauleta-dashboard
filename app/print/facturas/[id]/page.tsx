@@ -1,6 +1,7 @@
 import { createAuthenticatedClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { PrintButton } from "@/components/facturas/PrintButton"
+import { resolveInvoiceDelivery } from "@/lib/invoice-delivery"
 import NextImage from "next/image"
 
 export const dynamic = 'force-dynamic'
@@ -83,6 +84,7 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
   const mostrarLogo = empresa?.mostrar_logo ?? true
   const logoWidth = empresa?.logo_width || 80
   const saldoPendiente = factura.estado !== 'cobrada' ? factura.total : 0
+  const delivery = resolveInvoiceDelivery(factura.cliente, factura)
 
   return (
     <div className="print-container">
@@ -529,23 +531,11 @@ export default async function FacturaPrintPage({ params, searchParams }: PagePro
             </div>
           </div>
 
-          {(factura.establecimiento_entrega || factura.direccion_entrega_factura ||
-            factura.cliente?.direccion_entrega || factura.cliente?.ciudad_entrega ||
-            factura.cliente?.cp_entrega || factura.cliente?.provincia_entrega) && (
+          {delivery.visible && (
             <div className="party-box">
               <div className="party-label">Lugar de entrega</div>
-              <div className="party-name">{factura.establecimiento_entrega || factura.cliente?.persona_contacto || factura.cliente?.nombre}</div>
-              <div className="party-address">
-                {(factura.direccion_entrega_factura || factura.cliente?.direccion_entrega) && (
-                  <div>{factura.direccion_entrega_factura || factura.cliente?.direccion_entrega}</div>
-                )}
-                {!factura.direccion_entrega_factura && (factura.cliente?.ciudad_entrega || factura.cliente?.cp_entrega || factura.cliente?.provincia_entrega) && (
-                  <div>
-                    {factura.cliente?.cp_entrega} {factura.cliente?.ciudad_entrega}
-                    {factura.cliente?.provincia_entrega && ` (${factura.cliente.provincia_entrega})`}
-                  </div>
-                )}
-              </div>
+              {delivery.establecimiento && <div className="party-name">{delivery.establecimiento}</div>}
+              {delivery.direccion && <div className="party-address">{delivery.direccion}</div>}
             </div>
           )}
         </div>
