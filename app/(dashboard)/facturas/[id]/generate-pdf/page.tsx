@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { resolveInvoiceDelivery } from "@/lib/invoice-delivery"
 
 export default function GeneratePDFPage() {
     const params = useParams()
@@ -178,6 +179,9 @@ export default function GeneratePDFPage() {
     }
 
     const color = empresa?.color_primario || "#1e40af"
+    // Use the same customer delivery location as the invoice print route.
+    // Historical invoices do not have the newer invoice-level fields populated.
+    const delivery = resolveInvoiceDelivery(factura?.cliente, factura)
 
     return (
         <div className="bg-gray-100 min-h-screen p-4">
@@ -239,16 +243,16 @@ export default function GeneratePDFPage() {
                     </div>
                 </div>
 
-                {/* DATOS CLIENTE */}
+                {/* FACTURACIÓN Y LUGAR DE ENTREGA EN PARALELO */}
                 <div style={{
                     display: "flex",
-                    gap: "15mm",
-                    marginBottom: "10mm",
-                    padding: "15px 0",
+                    gap: "10mm",
+                    marginBottom: "7mm",
+                    padding: "10px 0",
                     borderTop: "2px solid #e2e8f0",
                     borderBottom: "2px solid #e2e8f0",
                 }}>
-                    <div>
+                    <div style={{ flex: "1 1 0", minWidth: 0, overflowWrap: "anywhere" }}>
                         <div style={{
                             fontSize: "11px",
                             textTransform: "uppercase",
@@ -272,11 +276,45 @@ export default function GeneratePDFPage() {
                             </div>
                         )}
                         {factura.cliente?.direccion && (
-                            <div style={{ fontSize: "12px", color: "#64748b" }}>
+                            <div style={{ fontSize: "12px", color: "#64748b", lineHeight: 1.5 }}>
                                 {factura.cliente.direccion}
                             </div>
                         )}
+                        {(factura.cliente?.codigo_postal || factura.cliente?.ciudad) && (
+                            <div style={{ fontSize: "12px", color: "#64748b", lineHeight: 1.5 }}>
+                                {[factura.cliente?.codigo_postal, factura.cliente?.ciudad].filter(Boolean).join(" ")}
+                                {factura.cliente?.provincia && ` (${factura.cliente.provincia})`}
+                            </div>
+                        )}
                     </div>
+                    {delivery.visible && (
+                        <div style={{ flex: "1 1 0", minWidth: 0, overflowWrap: "anywhere" }}>
+                            <div style={{
+                                fontSize: "11px",
+                                textTransform: "uppercase",
+                                color,
+                                fontWeight: "700",
+                                letterSpacing: "1px",
+                                marginBottom: "8px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px",
+                            }}>
+                                <span style={{ width: "3px", height: "12px", background: color, borderRadius: "2px" }}></span>
+                                Lugar de entrega
+                            </div>
+                            {delivery.establecimiento && (
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b", marginBottom: "2px" }}>
+                                    {delivery.establecimiento}
+                                </div>
+                            )}
+                            {delivery.direccion && (
+                                <div style={{ fontSize: "12px", color: "#64748b", lineHeight: 1.5 }}>
+                                    {delivery.direccion}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* TABLA DE PRODUCTOS */}
