@@ -1,0 +1,175 @@
+{
+  "name": "Pauleta · solicitudes de WhatsApp",
+  "active": false,
+  "nodes": [
+    {
+      "id": "incoming-meta",
+      "name": "WhatsApp entrante",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "pauleta-whatsapp-incoming",
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": []
+        }
+      }
+    },
+    {
+      "id": "normalize",
+      "name": "Solo mensajes de clientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// n8n Code node: run once for all items. Only inbound messages, never receipts/echoes.\nconst supported = new Set(['text', 'image', 'audio', 'document', 'video', 'sticker', 'location', 'contacts', 'interactive', 'button', 'order']);\nconst result = [];\nfor (const item of $input.all()) {\n  const value = item.json;\n  for (const message of value.messages || []) {\n    if (!message.id || !message.from || !value.metadata?.phone_number_id) continue;\n    const contact = (value.contacts || []).find(c => c.wa_id === message.from);\n    result.push({ json: {\n      message_id: message.id,\n      phone_number_id: value.metadata.phone_number_id,\n      from: message.from,\n      name: contact?.profile?.name || '',\n      type: supported.has(message.type) ? message.type : 'unsupported',\n      text: message.text?.body || message.button?.text || message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '',\n      timestamp: String(message.timestamp),\n    } });\n  }\n}\nreturn result;\n"
+      }
+    },
+    {
+      "id": "save-message",
+      "name": "Guardar mensaje",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.PAULETA_CRM_URL + \"/api/webhooks/whatsapp\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 65000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "worker-clock",
+      "name": "Cada minuto",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        340
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "process-message",
+      "name": "Interpretar solicitud",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.PAULETA_CRM_URL + \"/api/webhooks/whatsapp/process\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 65000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "send-notification",
+      "name": "Avisar a Jonay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        440
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.PAULETA_CRM_URL + \"/api/webhooks/whatsapp/notify\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 65000
+        }
+      },
+      "retryOnFail": false,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "WhatsApp entrante": {
+      "main": [
+        [
+          {
+            "node": "Solo mensajes de clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solo mensajes de clientes": {
+      "main": [
+        [
+          {
+            "node": "Guardar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada minuto": {
+      "main": [
+        [
+          {
+            "node": "Interpretar solicitud",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Avisar a Jonay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Atlantic/Canary",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "executionTimeout": 180
+  },
+  "pinData": {}
+}
