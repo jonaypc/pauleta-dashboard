@@ -47,6 +47,11 @@ const navigation = [
     icon: FileCheck,
   },
   {
+    name: "Pedidos WhatsApp",
+    href: "/pedidos-whatsapp",
+    icon: ClipboardList,
+  },
+  {
     name: "Facturas",
     href: "/facturas",
     icon: FileText,
