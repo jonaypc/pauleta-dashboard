@@ -4,6 +4,7 @@ import { Printer, Settings } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { PrintFormatSelector } from "./PrintFormatSelector"
+import { generateInvoicePrintPDF } from "@/lib/invoice-print-pdf"
 
 interface PrintButtonProps {
     color?: string
@@ -35,6 +36,7 @@ export function PrintButton({
     const [pdfObjectUrl, setPdfObjectUrl] = useState("")
     const [pdfLoading, setPdfLoading] = useState(false)
     const [pdfError, setPdfError] = useState("")
+    const [pdfAttempt, setPdfAttempt] = useState(0)
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -58,10 +60,6 @@ export function PrintButton({
         ? safeFileName(`${invoiceNumber}${isCopy ? "-copia" : ""}`)
         : fallbackFileName
 
-    const invoicePdfUrl = invoiceId && !isThermal
-        ? `/api/facturas/${invoiceId}/pdf${isCopy ? "?copia=true" : ""}`
-        : ""
-
     // iOS 27 standalone PWAs may silently ignore window.print(). Prepare a real
     // PDF for every document, so the tap can use the native iOS share sheet.
     useEffect(() => {
@@ -83,14 +81,11 @@ export function PrintButton({
             try {
                 let blob: Blob
 
-                if (invoicePdfUrl) {
-                    const response = await fetch(invoicePdfUrl, {
-                        credentials: "same-origin",
-                        cache: "no-store",
+                if (invoiceId && !isThermal) {
+                    blob = await generateInvoicePrintPDF({
+                        fileName,
                         signal: controller.signal,
                     })
-                    if (!response.ok) throw new Error("No se pudo generar el PDF de la factura.")
-                    blob = await response.blob()
                 } else {
                     // For delivery notes, invoice relations and thermal receipts
                     // there is no server PDF route: preserve the visible layout.
@@ -132,7 +127,7 @@ export function PrintButton({
             } catch (error) {
                 if (!cancelled) {
                     console.error("Error preparing iOS PDF:", error)
-                    setPdfError("No se pudo preparar el PDF. Abre el documento en Chrome para imprimirlo.")
+                    setPdfError(error instanceof Error ? error.message : "No se pudo preparar el PDF. Pulsa para reintentar.")
                 }
             } finally {
                 window.clearTimeout(timeoutId)
@@ -146,7 +141,7 @@ export function PrintButton({
             window.clearTimeout(timeoutId)
             controller.abort()
         }
-    }, [standalone, invoicePdfUrl, fileName, pathname])
+    }, [standalone, invoiceId, isThermal, fileName, pathname, pdfAttempt])
 
     useEffect(() => {
         if (!serverPdf) {
@@ -165,9 +160,7 @@ export function PrintButton({
         }
 
         if (!serverPdf) {
-            setPdfError(pdfLoading
-                ? "Preparando el PDF… Vuelve a pulsar cuando aparezca «PDF listo»."
-                : "No hay un PDF disponible. Abre este documento en Chrome para imprimirlo.")
+            if (!pdfLoading) setPdfAttempt(attempt => attempt + 1)
             return
         }
 
@@ -202,6 +195,8 @@ export function PrintButton({
         <button
             type="button"
             onClick={() => void handlePrint()}
+            disabled={standalone && pdfLoading}
+            aria-busy={standalone && pdfLoading}
             className={showFormatSelector
                 ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 text-sm"
                 : "text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90"}
@@ -226,7 +221,7 @@ export function PrintButton({
             {pdfObjectUrl && (
                 <a
                     className="mt-2 block font-semibold text-blue-700 underline"
-                    href={invoicePdfUrl || pdfObjectUrl}
+                    href={pdfObjectUrl}
                     download={`${fileName}.pdf`}
                 >
                     Guardar / abrir PDF

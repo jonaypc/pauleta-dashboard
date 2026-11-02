@@ -23,6 +23,7 @@ function load(file, mocks = {}) {
   const requireMock = name => {
     if (name in mocks) return mocks[name]
     if (name === '@/lib/relacion-facturas') return load('lib/relacion-facturas.ts', mocks)
+    if (name === '@/lib/invoice-delivery') return load('lib/invoice-delivery.ts', mocks)
     if (name === '@/components/informes/ResumenMensualPrint') return load('components/informes/ResumenMensualPrint.tsx', mocks)
     if (name.startsWith('@/components/')) return { PrintButton: () => null }
     return require(name)
