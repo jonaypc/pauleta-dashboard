@@ -1,3 +1,4 @@
+import { invoiceStatusHref } from "@/lib/invoice-filters"
 import { createClient } from "@/lib/supabase/server"
 import { FacturasTableWithSelection } from "@/components/facturas/FacturasTableWithSelection"
 import { Button } from "@/components/ui/button"
@@ -144,11 +145,7 @@ export default async function FacturasPage({ searchParams }: PageProps) {
                     {estados.map((estado) => (
                         <Link
                             key={estado.value}
-                            href={
-                                estado.value
-                                    ? `/facturas?estado=${estado.value}`
-                                    : "/facturas?estado="
-                            }
+                            href={invoiceStatusHref(searchParams, estado.value)}
                         >
                             <Badge
                                 variant={
