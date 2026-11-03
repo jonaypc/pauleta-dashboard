@@ -3,6 +3,25 @@
 // ===========================================
 
 // Estados de factura
+export interface WhatsAppSolicitud {
+  id: string
+  telefono: string
+  nombre: string
+  texto: string
+  recibido_at: string
+  cliente_id: string | null
+  clasificacion: 'pedido' | 'consulta' | 'revision_manual' | null
+  procesamiento: 'recibido' | 'procesando' | 'completado'
+  revision: 'pendiente' | 'revisado' | 'descartado'
+  aviso_estado: 'no_necesario' | 'pendiente' | 'enviando' | 'aceptado_meta' | 'revisar_error'
+  propuesta: {
+    summary: string
+    items: { product_id: string | null; description: string; quantity: number | null; unit: string | null }[]
+    delivery: string | null
+    missing: string[]
+  } | null
+}
+
 export type EstadoFactura = 'borrador' | 'emitida' | 'cobrada' | 'anulada'
 
 // Tipos de factura
