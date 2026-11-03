@@ -79,63 +79,50 @@ export async function getTreasuryStats(): Promise<TreasuryStats> {
     const supabase = await createClient()
 
     try {
-        // 1. Calcular saldo actual (suma de todos los movimientos conciliados)
-        const { data: movimientos } = await supabase
-            .from("banco_movimientos")
-            .select("importe, estado")
+        const en30dias = new Date()
+        en30dias.setDate(en30dias.getDate() + 30)
+        const fechaLimite = en30dias.toISOString().split('T')[0]
 
+        const [
+            { data: movimientos },
+            { data: facturasPendientes },
+            { data: gastosPendientes },
+            { data: facturasProximas },
+            { data: gastosProximos },
+            { count: movimientosSinConciliar },
+        ] = await Promise.all([
+            supabase.from("banco_movimientos").select("importe, estado"),
+            supabase.from("facturas").select("total").eq("estado", "emitida"),
+            supabase.from("gastos").select("importe").eq("estado", "pendiente"),
+            supabase.from("facturas").select("total").eq("estado", "emitida")
+                .lte("fecha_vencimiento", fechaLimite),
+            supabase.from("gastos").select("importe").eq("estado", "pendiente")
+                .lte("fecha_vencimiento", fechaLimite),
+            supabase.from("banco_movimientos").select("*", { count: 'exact', head: true })
+                .eq("estado", "pendiente"),
+        ])
+
+        // 1. Calcular saldo actual (suma de todos los movimientos conciliados)
         const saldoActual = (movimientos || [])
             .filter(m => m.estado === 'conciliado')
             .reduce((sum, m) => sum + (Number(m.importe) || 0), 0)
 
         // 2. Ingresos pendientes (facturas emitidas sin cobrar)
-        const { data: facturasPendientes } = await supabase
-            .from("facturas")
-            .select("total")
-            .eq("estado", "emitida")
-
         const ingresosPendientes = (facturasPendientes || [])
             .reduce((sum, f) => sum + (Number(f.total) || 0), 0)
 
         // 3. Gastos pendientes
-        const { data: gastosPendientes } = await supabase
-            .from("gastos")
-            .select("importe")
-            .eq("estado", "pendiente")
-
         const gastosPendientesTotal = (gastosPendientes || [])
             .reduce((sum, g) => sum + (Number(g.importe) || 0), 0)
 
         // 4. Proyección a 30 días (facturas que vencen en los próximos 30 días)
-        const hoy = new Date()
-        const en30dias = new Date()
-        en30dias.setDate(hoy.getDate() + 30)
-
-        const { data: facturasProximas } = await supabase
-            .from("facturas")
-            .select("total")
-            .eq("estado", "emitida")
-            .lte("fecha_vencimiento", en30dias.toISOString().split('T')[0])
-
         const ingresosProximos = (facturasProximas || [])
             .reduce((sum, f) => sum + (Number(f.total) || 0), 0)
-
-        const { data: gastosProximos } = await supabase
-            .from("gastos")
-            .select("importe")
-            .eq("estado", "pendiente")
-            .lte("fecha_vencimiento", en30dias.toISOString().split('T')[0])
 
         const gastosProximosTotal = (gastosProximos || [])
             .reduce((sum, g) => sum + (Number(g.importe) || 0), 0)
 
         const proyeccion30dias = saldoActual + ingresosProximos - gastosProximosTotal
-
-        // 5. Movimientos sin conciliar
-        const { count: movimientosSinConciliar } = await supabase
-            .from("banco_movimientos")
-            .select("*", { count: 'exact', head: true })
-            .eq("estado", "pendiente")
 
         return {
             saldoActual,

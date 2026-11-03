@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Download, Loader2 } from "lucide-react"
-import JSZip from "jszip"
 
 export function ExportButton() {
     const [isExporting, setIsExporting] = useState(false)
@@ -29,6 +28,7 @@ export function ExportButton() {
         setIsExporting(true)
 
         try {
+            const { default: JSZip } = await import("jszip")
             // Step 1: Get Excel + report PDF + invoice list
             setProgress("Generando Excel y resumen...")
             const params = new URLSearchParams({ from, to })

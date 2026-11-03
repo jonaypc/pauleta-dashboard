@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef } from "react"
-import * as XLSX from "xlsx"
 import { Upload, FileUp, AlertTriangle, CheckCircle, Loader2, Download, Barcode, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,8 +49,9 @@ export function ProductBarcodeUpdater({ productosExistentes }: ProductBarcodeUpd
         setIsProcessing(true)
         const reader = new FileReader()
 
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
             try {
+                const XLSX = await import("xlsx")
                 const bstr = evt.target?.result
                 const wb = XLSX.read(bstr, { type: "binary" })
                 const wsname = wb.SheetNames[0]

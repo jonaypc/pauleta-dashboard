@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,7 @@ interface ResumenReposicionProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0']
 
 export function ResumenReposicion({ lineas: lineasIniciales, fechaDesde: fechaDesdeInicial, fechaHasta: fechaHastaInicial }: ResumenReposicionProps) {
+  const router = useRouter()
   const [fechaDesde, setFechaDesde] = useState(fechaDesdeInicial || "")
   const [fechaHasta, setFechaHasta] = useState(fechaHastaInicial || "")
 
@@ -84,11 +86,11 @@ export function ResumenReposicion({ lineas: lineasIniciales, fechaDesde: fechaDe
     const params = new URLSearchParams()
     if (fechaDesde) params.set("desde", fechaDesde)
     if (fechaHasta) params.set("hasta", fechaHasta)
-    window.location.href = `/control-cambios/resumen?${params.toString()}`
+    router.push(`/control-cambios/resumen?${params.toString()}`)
   }
 
   const handleLimpiarFiltros = () => {
-    window.location.href = "/control-cambios/resumen"
+    router.push("/control-cambios/resumen")
   }
 
   return (
