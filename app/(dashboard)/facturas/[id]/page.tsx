@@ -173,7 +173,7 @@ export default async function FacturaDetailPage({
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
                         <Link href="/facturas">
@@ -181,7 +181,7 @@ export default async function FacturaDetailPage({
                         </Link>
                     </Button>
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <h1 className="text-2xl font-bold tracking-tight">
                                 {factura.numero}
                             </h1>
@@ -210,7 +210,7 @@ export default async function FacturaDetailPage({
                         )}
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-start xl:justify-end [&>*]:min-w-0 [&>*]:h-auto [&>*]:min-h-10 [&>*]:whitespace-normal [&>*]:px-3 [&>*]:py-2 [&_svg]:shrink-0">
                     <Button variant="outline" asChild>
                         <Link href={`/print/facturas/${id}`}>
                             <Printer className="mr-2 h-4 w-4" />

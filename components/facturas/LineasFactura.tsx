@@ -1,6 +1,6 @@
 "use client"
 
-// ... imports
+import { useRef } from "react"
 import { Plus, Trash2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,9 +41,13 @@ export function LineasFactura({
     onChange,
     disabled = false,
 }: LineasFacturaProps) {
+    // Keep each product selector attached to its row when inserting at the top.
+    const rowKeys = useRef(lineas.map((_, index) => index))
+    const nextRowKey = useRef(lineas.length)
+
     const handleAddLinea = () => {
+        rowKeys.current.unshift(nextRowKey.current++)
         onChange([
-            ...lineas,
             {
                 producto_id: undefined,
                 descripcion: "",
@@ -52,10 +56,12 @@ export function LineasFactura({
                 igic: 7,
                 es_intercambio: false
             },
+            ...lineas,
         ])
     }
 
     const handleRemoveLinea = (index: number) => {
+        rowKeys.current.splice(index, 1)
         const newLineas = lineas.filter((_, i) => i !== index)
         onChange(newLineas)
     }
@@ -110,7 +116,7 @@ export function LineasFactura({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <Label className="text-base font-semibold">Líneas de factura</Label>
                 {!disabled && (
                     <Button
@@ -145,7 +151,7 @@ export function LineasFactura({
                     {/* Líneas */}
                     {lineas.map((linea, index) => (
                         <div
-                            key={index}
+                            key={rowKeys.current[index]}
                             className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-lg border p-3 ${linea.es_intercambio ? 'bg-orange-50 border-orange-200' : 'bg-card'
                                 }`}
                         >
@@ -164,7 +170,7 @@ export function LineasFactura({
                             </div>
 
                             {/* Producto */}
-                            <div className="sm:col-span-4">
+                            <div className="min-w-0 sm:col-span-4">
                                 <Select
                                     value={linea.producto_id || ""}
                                     onValueChange={(value) => handleProductoSelect(index, value)}
