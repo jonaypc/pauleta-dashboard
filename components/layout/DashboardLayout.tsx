@@ -17,7 +17,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="pauleta-app min-h-screen bg-background">
       {/* Sidebar para desktop */}
       <Sidebar className="hidden lg:flex" />
 

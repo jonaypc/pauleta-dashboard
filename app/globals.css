@@ -265,3 +265,87 @@
   }
 }
 
+
+/* Pauleta's management interface: screen styles only, with no extra assets. */
+@media screen {
+  .pauleta-app {
+    --background: 45 33% 97%;
+    --foreground: 153 24% 16%;
+    --primary: 150 38% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 43 28% 92%;
+    --secondary-foreground: 153 24% 20%;
+    --muted: 45 20% 93%;
+    --muted-foreground: 150 9% 40%;
+    --accent: 85 38% 91%;
+    --accent-foreground: 150 38% 24%;
+    --border: 45 17% 87%;
+    --input: 45 17% 83%;
+    --ring: 150 38% 27%;
+    --card-foreground: 153 24% 16%;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .pauleta-app > aside,
+  .pauleta-app > aside ~ aside,
+  .pauleta-app aside {
+    background: #173c30;
+    color: #f8f6ed;
+    border-color: #2d5042;
+    box-shadow: 4px 0 24px #173c3008;
+  }
+  .pauleta-app aside .text-foreground { color: #f8f6ed; }
+  .pauleta-app aside .text-muted-foreground { color: #c0cec5; }
+  .pauleta-app aside .border-b,
+  .pauleta-app aside .border-t { border-color: #ffffff18; }
+  .pauleta-app aside nav { gap: 5px; padding: 18px 12px; }
+  .pauleta-app aside nav a { color: #c0cec5; border-radius: 10px; }
+  .pauleta-app aside nav a:hover { background: #ffffff0d; color: white; }
+  .pauleta-app aside nav a[aria-current="page"] {
+    background: #d8edb7;
+    color: #173c30;
+    box-shadow: inset 3px 0 #83b64e;
+  }
+  .pauleta-app aside nav a[aria-current="page"] svg { color: #173c30; }
+  .pauleta-app aside button { color: #d8edb7; }
+  .pauleta-app aside button:hover { background: #ffffff14; }
+  .pauleta-app header {
+    background: #fffefa;
+    backdrop-filter: none;
+    border-bottom-color: #e7e5db;
+    box-shadow: 0 2px 12px #173c3003;
+  }
+  .pauleta-app main { max-width: 1680px; margin-inline: auto; }
+  .pauleta-app main h1 {
+    color: #173c30;
+    font-size: clamp(1.65rem, 2.1vw, 2rem);
+    letter-spacing: -.045em;
+    line-height: 1.2;
+  }
+  .pauleta-app main h1 + p { margin-top: 7px; font-size: .9rem; }
+  .pauleta-app main .bg-card,
+  .pauleta-app .stat-card {
+    border-radius: 16px;
+    border-color: #e7e5db;
+    box-shadow: 0 3px 14px #173c3006;
+  }
+  .pauleta-app .stat-card { padding: 22px; }
+  .pauleta-app .stat-card::before { display: none; }
+  .pauleta-app .stat-card .text-2xl { font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+  .pauleta-app main table { background: white; font-variant-numeric: tabular-nums; }
+  .pauleta-app main thead { background: #f0f2e9; }
+  .pauleta-app main th { font-size: .72rem; letter-spacing: .04em; color: #53675b; }
+  .pauleta-app main td { border-color: #edeee7; }
+  .pauleta-app main tbody tr:hover { background: #f6f8f1; }
+  .pauleta-app main button,
+  .pauleta-app main input,
+  .pauleta-app main [role="combobox"] { border-radius: 10px; }
+  .pauleta-app main button { transition-property: background-color, border-color, color; }
+  @media (min-width: 1024px) {
+    .pauleta-app main { padding: 30px 32px 40px; }
+  }
+  @media (max-width: 639px) {
+    .pauleta-app .stat-card { padding: 18px; }
+    .pauleta-app main { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  }
+}
