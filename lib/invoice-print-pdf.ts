@@ -1,6 +1,7 @@
 interface InvoicePrintPDFOptions {
     fileName: string
     signal: AbortSignal
+    copy?: boolean
 }
 
 // Asset loading and canvas rendering can stall in an installed iOS app. The
@@ -39,7 +40,7 @@ function waitForImage(image: HTMLImageElement, signal: AbortSignal): Promise<voi
     })
 }
 
-function preserveCopyStamp(clone: Document) {
+async function preserveCopyStamp(clone: Document) {
     const label = clone.querySelector<HTMLElement>(".html2pdf__container .invoice .copy-label")
     if (!label || !clone.defaultView) return
     const style = clone.defaultView.getComputedStyle(label)
@@ -70,11 +71,18 @@ function preserveCopyStamp(clone: Document) {
         border: "none", padding: "0", background: "transparent", borderRadius: "0",
     })
     label.replaceWith(image)
+    // Safari may capture a newly inserted SVG before its image has decoded.
+    // Do not produce an apparently original invoice if the stamp cannot load.
+    await image.decode()
 }
 
-export async function generateInvoicePrintPDF({ fileName, signal }: InvoicePrintPDFOptions): Promise<Blob> {
+export async function generateInvoicePrintPDF({ fileName, signal, copy = false }: InvoicePrintPDFOptions): Promise<Blob> {
     const invoice = document.querySelector<HTMLElement>(".invoice[data-print-root]")
     if (!invoice) throw new Error("No se ha encontrado la factura para imprimir.")
+
+    if (copy && !invoice.querySelector(".copy-label")) {
+        throw new Error("La copia aún no está preparada. Vuelve a pulsar para reintentar.")
+    }
 
     // Capture the configured print view itself: the server's email/download
     // renderer uses a different layout, including a different COPIA mark.

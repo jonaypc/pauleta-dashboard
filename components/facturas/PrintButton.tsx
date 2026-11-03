@@ -36,6 +36,7 @@ export function PrintButton({
     const [pdfObjectUrl, setPdfObjectUrl] = useState("")
     const [pdfLoading, setPdfLoading] = useState(false)
     const [pdfError, setPdfError] = useState("")
+    const [preparedKey, setPreparedKey] = useState("")
     const [pdfAttempt, setPdfAttempt] = useState(0)
     const router = useRouter()
     const pathname = usePathname()
@@ -60,6 +61,8 @@ export function PrintButton({
         ? safeFileName(`${invoiceNumber}${isCopy ? "-copia" : ""}`)
         : fallbackFileName
 
+    const documentKey = `${pathname}?${searchParams.toString()}:${invoiceId || ""}:${fileName}`
+
     // iOS 27 standalone PWAs may silently ignore window.print(). Prepare a real
     // PDF for every document, so the tap can use the native iOS share sheet.
     useEffect(() => {
@@ -78,12 +81,14 @@ export function PrintButton({
             setPdfLoading(true)
             setPdfError("")
             setServerPdf(null)
+            setPreparedKey("")
             try {
                 let blob: Blob
 
                 if (invoiceId && !isThermal) {
                     blob = await generateInvoicePrintPDF({
                         fileName,
+                        copy: isCopy,
                         signal: controller.signal,
                     })
                 } else {
@@ -122,6 +127,7 @@ export function PrintButton({
                 if (!cancelled) {
                     if (!blob.size) throw new Error("El PDF generado está vacío.")
                     setPdfError("")
+                    setPreparedKey(documentKey)
                     setServerPdf(new File([blob], `${fileName}.pdf`, { type: "application/pdf" }))
                 }
             } catch (error) {
@@ -141,17 +147,17 @@ export function PrintButton({
             window.clearTimeout(timeoutId)
             controller.abort()
         }
-    }, [standalone, invoiceId, isThermal, fileName, pathname, pdfAttempt])
+    }, [standalone, invoiceId, isThermal, isCopy, fileName, pathname, documentKey, pdfAttempt])
 
     useEffect(() => {
-        if (!serverPdf) {
+        if (!serverPdf || preparedKey !== documentKey) {
             setPdfObjectUrl("")
             return
         }
         const objectUrl = URL.createObjectURL(serverPdf)
         setPdfObjectUrl(objectUrl)
         return () => URL.revokeObjectURL(objectUrl)
-    }, [serverPdf])
+    }, [serverPdf, preparedKey, documentKey])
 
     const handlePrint = async () => {
         if (!standalone) {
@@ -159,7 +165,7 @@ export function PrintButton({
             return
         }
 
-        if (!serverPdf) {
+        if (!serverPdf || preparedKey !== documentKey) {
             if (!pdfLoading) setPdfAttempt(attempt => attempt + 1)
             return
         }
@@ -195,7 +201,7 @@ export function PrintButton({
         <button
             type="button"
             onClick={() => void handlePrint()}
-            disabled={standalone && pdfLoading}
+            disabled={standalone && (pdfLoading || (!!serverPdf && preparedKey !== documentKey))}
             aria-busy={standalone && pdfLoading}
             className={showFormatSelector
                 ? "bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition-opacity hover:opacity-90 text-sm"
@@ -213,12 +219,12 @@ export function PrintButton({
             role="status"
             aria-live="polite"
         >
-            {pdfError || (serverPdf
+            {pdfError || (serverPdf && preparedKey === documentKey
                 ? "PDF listo. Pulsa «Imprimir / compartir PDF» y elige «Imprimir» en iOS."
                 : pdfLoading
                     ? "Preparando el documento para imprimirlo desde la app…"
                     : "No se ha preparado ningún PDF.")}
-            {pdfObjectUrl && (
+            {pdfObjectUrl && preparedKey === documentKey && (
                 <a
                     className="mt-2 block font-semibold text-blue-700 underline"
                     href={pdfObjectUrl}
