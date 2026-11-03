@@ -38,7 +38,8 @@ self.addEventListener('fetch', event => {
   if (url.search || request.cache === 'no-store') return
 
   event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME)
+    const cache = await caches.open(CACHE_NAME).catch(() => null)
+    if (!cache) return fetch(request)
     const cached = await cache.match(request)
     if (cached) return cached
 

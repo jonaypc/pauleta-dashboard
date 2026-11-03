@@ -38,7 +38,7 @@ test('manifest retains the app identity, covers all routes and uses icons of the
   }
 })
 
-function serviceWorker(fetchImplementation) {
+function serviceWorker(fetchImplementation, { cacheUnavailable = false } = {}) {
   const handlers = {}
   const entries = new Map()
   const cache = {
@@ -49,7 +49,7 @@ function serviceWorker(fetchImplementation) {
   }
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/sw.js'), 'utf8'), {
     self: { location: { origin: 'https://pauleta.test' }, addEventListener(name, handler) { handlers[name] = handler } },
-    caches: { async open() { return cache }, async match() { return { offline: true } } },
+    caches: { async open() { if (cacheUnavailable) throw new Error('storage unavailable'); return cache }, async match() { return { offline: true } } },
     fetch: fetchImplementation,
     URL,
     Response,
@@ -108,4 +108,10 @@ test('redirects and non-immutable build responses are not cached', async () => {
     await worker.request('/_next/static/chunks/hash.js')
     assert.equal(worker.entries.size, 0)
   }
+})
+
+test('unavailable browser storage cannot prevent static assets from loading', async () => {
+  const response = { ok: true }
+  const worker = serviceWorker(async () => response, { cacheUnavailable: true })
+  assert.equal(await worker.request('/_next/static/chunks/hash.js'), response)
 })
