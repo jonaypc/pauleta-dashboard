@@ -114,7 +114,7 @@ export default async function RelacionFacturasPrintPage({
                 body { 
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     background: #f0f0f0;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
                 
                 .document {
@@ -128,7 +128,7 @@ export default async function RelacionFacturasPrintPage({
 
                 .header-title {
                     text-align: center;
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: 700;
                     color: ${color};
                     margin-bottom: 20px;
@@ -144,13 +144,13 @@ export default async function RelacionFacturasPrintPage({
                 }
 
                 .company-name {
-                    font-size: 16px;
+                    font-size: 14px;
                     font-weight: 700;
                     color: #1e293b;
                 }
 
                 .company-details {
-                    font-size: 11px;
+                    font-size: 9px;
                     color: #64748b;
                     margin-top: 6px;
                     line-height: 1.6;
@@ -163,7 +163,7 @@ export default async function RelacionFacturasPrintPage({
                     padding: 12px 15px;
                     background: #f1f5f9;
                     border-radius: 6px;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
 
                 .periodo-info strong {
@@ -181,7 +181,7 @@ export default async function RelacionFacturasPrintPage({
                     color: white;
                     padding: 10px 8px;
                     text-align: left;
-                    font-size: 10px;
+                    font-size: 8px;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
@@ -192,7 +192,7 @@ export default async function RelacionFacturasPrintPage({
                 td {
                     padding: 10px 8px;
                     border-bottom: 1px solid #e2e8f0;
-                    font-size: 11px;
+                    font-size: 9px;
                 }
 
                 td.right { text-align: right; font-family: monospace; }
@@ -208,7 +208,7 @@ export default async function RelacionFacturasPrintPage({
 
                 .total-row td {
                     border-top: 2px solid ${color};
-                    font-size: 13px;
+                    font-size: 11px;
                 }
 
                 .signatures {
@@ -223,7 +223,7 @@ export default async function RelacionFacturasPrintPage({
                 }
 
                 .signature-label {
-                    font-size: 11px;
+                    font-size: 9px;
                     color: #64748b;
                     margin-bottom: 50px;
                 }
@@ -231,7 +231,7 @@ export default async function RelacionFacturasPrintPage({
                 .signature-line {
                     border-top: 1px solid #1e293b;
                     padding-top: 8px;
-                    font-size: 11px;
+                    font-size: 9px;
                 }
 
                 .print-button-container {
@@ -279,7 +279,7 @@ export default async function RelacionFacturasPrintPage({
                     <div key={grupo.cif}>
                         {multiEmpresa && (
                             <div style={{
-                                fontSize: '13px',
+                                fontSize: '11px',
                                 fontWeight: 700,
                                 color: color,
                                 padding: '8px 0 4px',
@@ -333,7 +333,7 @@ export default async function RelacionFacturasPrintPage({
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontWeight: 700,
-                        fontSize: '14px'
+                        fontSize: '12px'
                     }}>
                         <span>TOTAL GENERAL ({facturas?.length || 0} facturas)</span>
                         <span>{total.toFixed(2)} €</span>
