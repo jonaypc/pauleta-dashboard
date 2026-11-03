@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,6 +46,7 @@ export function AnalisisRotacion({
   fechaDesde: fechaDesdeInicial,
   fechaHasta: fechaHastaInicial
 }: AnalisisRotacionProps) {
+  const router = useRouter()
   const [clienteId, setClienteId] = useState(clienteInicial || "all")
   const [fechaDesde, setFechaDesde] = useState(fechaDesdeInicial || "")
   const [fechaHasta, setFechaHasta] = useState(fechaHastaInicial || "")
@@ -94,11 +96,11 @@ export function AnalisisRotacion({
     if (clienteId && clienteId !== "all") params.set("cliente", clienteId)
     if (fechaDesde) params.set("desde", fechaDesde)
     if (fechaHasta) params.set("hasta", fechaHasta)
-    window.location.href = `/control-cambios/rotacion?${params.toString()}`
+    router.push(`/control-cambios/rotacion?${params.toString()}`)
   }
 
   const handleLimpiar = () => {
-    window.location.href = "/control-cambios/rotacion"
+    router.push("/control-cambios/rotacion")
   }
 
   const getRotacionColor = (porcentaje: number) => {

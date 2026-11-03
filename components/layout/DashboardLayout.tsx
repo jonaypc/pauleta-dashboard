@@ -19,7 +19,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar para desktop */}
-      <Sidebar className="hidden lg:block" />
+      <Sidebar className="hidden lg:flex" />
 
       {/* Sidebar móvil con overlay */}
       {sidebarOpen && (
@@ -28,7 +28,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
             className="fixed inset-0 z-40 bg-black/50 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-          <Sidebar className="lg:hidden z-50" />
+          <Sidebar className="lg:hidden z-50" onNavigate={() => setSidebarOpen(false)} />
         </>
       )}
 

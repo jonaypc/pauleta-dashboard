@@ -63,7 +63,16 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         query = query.eq("cliente_id", clienteFiltro)
     }
 
-    const { data: facturasRaw, error, count } = await query
+    const [
+        { data: facturasRaw, error, count },
+        { data: clientes },
+    ] = await Promise.all([
+        query,
+        supabase.from("clientes")
+            .select("id, nombre, persona_contacto")
+            .eq("activo", true)
+            .order("nombre", { ascending: true }),
+    ])
 
     // Ordenar borradores primero (client-side)
     const facturas = facturasRaw?.sort((a: any, b: any) => {
@@ -71,13 +80,6 @@ export default async function FacturasPage({ searchParams }: PageProps) {
         if (a.estado !== 'borrador' && b.estado === 'borrador') return 1
         return 0 // Mantener orden original (por fecha) para el resto
     }) || []
-
-    // 2. Fetch de Clientes para el filtro (solo nombre y contacto)
-    const { data: clientes } = await supabase
-        .from("clientes")
-        .select("id, nombre, persona_contacto")
-        .eq("activo", true)
-        .order("nombre", { ascending: true })
 
     const estados: { value: EstadoFactura | ""; label: string }[] = [
         { value: "", label: "Todos" },

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
+import { AppRuntime } from '@/components/layout/AppRuntime'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,9 +23,11 @@ export const metadata: Metadata = {
     template: '%s | Pauleta Canaria',
   },
   description: 'Portal de gestión empresarial de Pauleta Canaria S.L.',
+  applicationName: 'Pauleta',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: '/icons/icon-192.png',
+    apple: '/icons/apple-touch-icon.png',
   },
   appleWebApp: {
     capable: true,
@@ -42,6 +45,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
+        <AppRuntime />
         <Toaster />
       </body>
     </html>
