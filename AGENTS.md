@@ -4,6 +4,8 @@
 Este repositorio corresponde exclusivamente a Pauleta Canaria S.L. No mezclar información, código, cuentas, credenciales ni documentación de Ocio Tablero o Lumasa Soluciones.
 
 ## Fuente de verdad
+- **Regla explícita del 16-11-2026:** para el código y su evolución, tomar GitHub como referencia actual, **no** la antigua carpeta del escritorio. Confirmar rama y commit de trabajo; GitHub no sustituye los datos actuales del ERP.
+- Ante contradicciones con `CLAUDE.md` o `README.md` antiguos, aplicar estas reglas, contrastar el código y advertir antes de cambiar comportamiento.
 - Para el estado de la aplicación, inspeccionar código, rama, pruebas, configuración y despliegue real: los documentos de contexto NO certifican funcionalidades implementadas.
 - Para precios, clientes, costes, formulaciones, impuestos, financiación y operaciones, contrastar los registros vigentes: el historial puede estar desactualizado.
 - Separar siempre: **confirmado por el usuario**, **evidencia documental fechada**, **propuesta**, **estimación**, **pendiente** y **verificado en la aplicación**.
