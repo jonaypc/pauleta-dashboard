@@ -1,5 +1,7 @@
 # 🍦 Pauleta Canaria - Portal de Gestión
 
+> **Aviso (16-11-2026):** Este README conserva instrucciones y descripciones de la etapa inicial del proyecto y no es un inventario actualizado de funcionalidades, tarifas o esquema. Para trabajar con Codex, leer `AGENTS.md`, `CLAUDE.md` y `docs/contexto-pauleta/INDICE.md`. El **código actual de GitHub** y los datos vigentes del ERP tienen prioridad sobre los ejemplos históricos de esta página. **No ejecutar `supabase/schema.sql` contra una base existente**: revisar migraciones realmente aplicadas y solicitar autorización.
+
 Portal de gestión empresarial completo para **Pauleta Canaria S.L.**, empresa canaria de producción y venta de helados de fruta (polos/paletas).
 
 ## 📋 Características
@@ -12,11 +14,8 @@ Portal de gestión empresarial completo para **Pauleta Canaria S.L.**, empresa c
 - 📄 **Albaranes** - Generación desde facturas
 - 📊 **Dashboard** - Resumen de actividad y métricas
 
-### 🔜 Próximas fases
-- 💰 Tesorería y cobros
-- 📅 Pagos fijos programados
-- 📈 Informes y estadísticas
-- 🏭 Control de producción
+### 📌 Estado de módulos
+El listado siguiente de «próximas fases» quedó desactualizado: el repositorio ya contiene rutas/componentes de tesorería, cobros, pagos fijos, informes y producción. Su existencia no acredita pruebas funcionales ni estado de despliegue. Verificar cada módulo en el código y en un entorno autorizado antes de describirlo como operativo.
 
 ## 🛠️ Stack Tecnológico
 
@@ -36,7 +35,7 @@ Portal de gestión empresarial completo para **Pauleta Canaria S.L.**, empresa c
 
 1. Ve a [supabase.com](https://supabase.com) y crea una cuenta
 2. Crea un nuevo proyecto
-3. Ve a **SQL Editor** y ejecuta el contenido de `supabase/schema.sql`
+3. **Solo para un proyecto nuevo y aislado de prueba:** revisar el esquema y el historial de migraciones con un responsable técnico. No ejecutar `supabase/schema.sql` en la base real ni como actualización de un esquema existente.
 4. Ve a **Settings > API** y copia:
    - Project URL
    - `anon` public key
@@ -87,8 +86,9 @@ cd pauleta-dashboard
 npm install
 
 # Copiar variables de entorno
-cp .env.example .env.local
-# Edita .env.local con tus credenciales de Supabase
+# No existe necesariamente .env.example en la versión actual.
+# Crear .env.local únicamente con variables de un entorno de pruebas aislado.
+# Nunca versionar secretos ni reutilizar credenciales de producción sin autorización.
 
 # Iniciar servidor de desarrollo
 npm run dev
@@ -144,16 +144,10 @@ pauleta-dashboard/
 
 - **Nombre**: Pauleta Canaria S.L.
 - **CIF**: B70853163
-- **Cuenta bancaria**: ES96 3058 6109 1427 2001 9948 (Cajamar)
-- **Régimen fiscal**: IGIC 7% (Canarias)
+- **Régimen fiscal**: IGIC Canarias. No aplicar un porcentaje universal: comprobar tipo de operación, producto y documento en registros actuales.
 
 ### Productos (sabores)
-1. Polo de Fresa
-2. Polo de Mango
-3. Polo de Frutos Rojos
-4. Polo de Pera-Piña
-5. Polo de Melón
-6. Polo de Kiwi-Manzana-Uva
+La lista original de esta sección era histórica. La ficha comercial de octubre de 2026 documenta **Mango, Mango-Fresa, Fresa, Pera-Piña y Frutos Rojos**; la disponibilidad actual debe verificarse en la base de datos de productos. No usar este README para modificar automáticamente el catálogo.
 
 ## 🔒 Seguridad
 
