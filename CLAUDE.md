@@ -1,13 +1,15 @@
 # CLAUDE.md — Pauleta Canaria Dashboard
 
+> **Documento técnico histórico.** Antes de actuar, leer `AGENTS.md` y `docs/contexto-pauleta/INDICE.md`. La versión de GitHub de la rama de trabajo es la referencia del **código**, no la vieja carpeta del escritorio. Para negocio, impuestos y catálogo prevalecen los datos vigentes del ERP y documentos verificados, no los ejemplos ni reglas antiguas de este archivo. La existencia de una ruta no prueba por sí sola su funcionamiento.
+
 ## REGLAS OBLIGATORIAS
 - NUNCA toques `components/ui/` — son componentes shadcn, no se modifican
 - SIEMPRE usa Server Actions para mutaciones, NO fetch a API routes propias salvo excepciones
-- IGIC siempre al 7% — `const IGIC_RATE = 0.07`
+- IGIC: **no imponer un 7 % universal**. La ficha comercial de octubre de 2026 refiere 3 % para ese producto; el código contempla 0 %, 3 % y 7 % según operación. Verificar tipo aplicable por producto/documento, configuración vigente y normativa antes de cambiar defaults o emitir documentos. No alterar impuestos ni facturas reales sin autorización.
 - Todos los importes en DECIMAL(10,2), nunca float
 - Antes de crear una tabla nueva en Supabase, confirma que no existe ya
 - Usa `lib/supabase/server.ts` en Server Components, `lib/supabase/client.ts` en Client Components
-- PDFs se generan en `lib/pdf-generator.ts` — reutiliza lo que hay
+- PDFs e impresión: revisar el flujo vigente antes de modificarlo, incluidos `lib/pdf-generator.ts`, `lib/invoice-print-pdf.ts` y vistas `/print/`; reutilizar el camino real de cada documento.
 - Emails se envían con Resend desde `lib/email.ts`
 - Parseo de facturas con IA en `lib/ai/invoice-parser.ts`
 
@@ -16,9 +18,8 @@
 ## EMPRESA
 - **Nombre:** Pauleta Canaria S.L.
 - **CIF:** B70853163
-- **Régimen:** IGIC Canarias 3%
-- **Cuenta:** ES96 3058 6109 1427 2001 9948 (Cajamar)
-- **Productos:** Mango, Fresa, Frutos Rojos, Pera Piña, Kiwi Manzana Uva, Melón, platano 
+- **Fiscalidad:** IGIC Canarias; el porcentaje depende del producto/operación. Consultar registro vigente y asesoramiento aplicable. No asumir un tipo universal.
+- **Catálogo:** la ficha comercial de octubre de 2026 enumera Mango, Mango-Fresa, Fresa, Pera-Piña y Frutos Rojos. Los demás sabores de listados antiguos son históricos. **La base de datos vigente determina cuáles están activos**, pendiente de verificación. 
 
 ---
 
@@ -32,7 +33,10 @@
 
 ---
 
-## MÓDULOS EXISTENTES
+## MÓDULOS CON RUTAS EN EL REPOSITORIO
+
+> Los estados `✅` de la tabla siguiente documentan implementaciones declaradas en versiones anteriores. Confirmar código actual, pruebas y comportamiento antes de afirmar que están operativos.
+
 
 | Módulo | Ruta | Estado |
 |--------|------|--------|
@@ -149,6 +153,6 @@ Flujo:
 1. Lee `types/index.ts` para ver los tipos existentes
 2. Si tocas Supabase: verifica la tabla exacta antes de escribir queries
 3. Si creas componente nuevo: busca en `components/` si ya existe algo similar
-4. Si generas PDF: usa `lib/pdf-generator.ts` como base
+4. Si generas PDF: identifica la ruta de generación/impresión realmente utilizada, incluidos `lib/pdf-generator.ts` y `lib/invoice-print-pdf.ts`
 5. Si envías email: usa `lib/email.ts`
 6. Si trabajas con facturas: considera si aplica a rectificativas también
